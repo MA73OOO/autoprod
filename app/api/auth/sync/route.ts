@@ -22,10 +22,15 @@ export async function POST() {
       .first();
 
     if (!user) {
-      // Sync/Create the user record in Prisma
+      // Determine user role (e.g. mateo@autoprod.io is ADMIN)
+      const role = supabaseUser.email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
+
+      // Sync/Create the user record in Prisma using Supabase User ID (UUID)
       user = await db.orm.public.User.create({
+        id: supabaseUser.id,
         email: supabaseUser.email!,
         name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
+        role: role,
       });
     }
 

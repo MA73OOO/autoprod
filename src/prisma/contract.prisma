@@ -1,21 +1,171 @@
 // use prisma-next
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  username  String?
-  name      String?
-  posts     Post[]
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum Role {
+  @@type("pg/text@1")
+  USER  = "USER"
+  ADMIN = "ADMIN"
 }
 
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
+enum MessageSender {
+  @@type("pg/text@1")
+  USER   = "USER"
+  GEMINI = "GEMINI"
+}
+
+namespace public {
+
+  model User {
+    id            Uuid              @id @default(uuid())
+    email         String            @unique
+    name          String?
+    role          Role              @default(USER)
+    subscription  UserSubscription?
+    settings      UserSettings?     // Configuración 1-a-1 de Ajustes (Idioma, Tema)
+    apiKeys       ApiKey[]          // Llaves API de IA (Normalizado)
+    channels      Channel[]
+    conversations Conversation[]
+    createdAt     TimestamptzString @default(now())
+  }
+
+  // 2. Tabla Maestra de Idiomas (Dinámico)
+  model Language {
+    code      String            @id // Ej: "es", "en", "pt", "fr"
+    name      String            // Ej: "Español", "English", "Português", "Français"
+    settings  UserSettings[]    // Relación con configuraciones de usuarios
+    createdAt TimestamptzString @default(now())
+  }
+
+  // 3. Ajustes de Usuario (Idioma Relacional, Tema, Notificaciones)
+  model UserSettings {
+    id                 Uuid              @id @default(uuid())
+    userId             Uuid              @unique
+    user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    
+    // Relación con catálogo dinámico de idiomas
+    languageCode       String            @default("es")
+    language           Language          @relation(fields: [languageCode], references: [code])
+    
+    theme              String            @default("dark") // "dark", "light"
+    emailNotifications Boolean           @default(true)
+    defaultResolution  String            @default("1080p")// Preferencia de render
+    createdAt          TimestamptzString @default(now())
+    updatedAt          temporal.updatedAtString()
+  }
+
+  // 4. Gestión de Llaves API de IA (Normalizado)
+  model ApiKey {
+    id        Uuid              @id @default(uuid())
+    userId    Uuid
+    user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    provider  String            // "GOOGLE", "OPENAI", "ANTHROPIC"
+    key       String            // Encriptada
+    createdAt TimestamptzString @default(now())
+    updatedAt temporal.updatedAtString()
+
+    @@unique([userId, provider])
+  }
+
+  // 5. Suscripciones y Planes (CRUD disponible para administradores)
+  model UserSubscription {
+    id               Uuid              @id @default(uuid())
+    userId             Uuid              @unique
+    user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    planId           Uuid
+    plan             Plan              @relation(fields: [planId], references: [id])
+    status           String            @default("active") // "active", "canceled", "past_due"
+    currentPeriodEnd TimestamptzString @default(dbgenerated("(now() + '1 year'::interval)"))
+  }
+
+  model Plan {
+    id            Uuid               @id @default(uuid())
+    name          String             @unique // "FREE", "PRO", "ENTERPRISE"
+    priceId       String?            // Stripe Price ID
+    subscriptions UserSubscription[]
+    limits        PlanLimit?
+  }
+
+  model PlanLimit {
+    id                      Uuid    @id @default(uuid())
+    planId                  Uuid    @unique
+    plan                    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+    maxChannels             Int     @default(2)
+    maxVideosPerChannel     Int     @default(10)     // Cambiado de maxProjects a maxVideos
+    canRenderInCloud        Boolean @default(false)
+    maxMonthlyRenderMinutes Int     @default(0)
+    hasAdvancedTemplates    Boolean @default(false)
+  }
+
+  // 6. Canales de Youtube (Soporte para OAuth)
+  model Channel {
+    id               Uuid           @id @default(uuid())
+    name             String
+    userId           Uuid
+    user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+    videos           Video[]
+    conversations    Conversation[]
+    
+    // Integración de YouTube API
+    youtubeChannelId String?        @unique
+    accessToken      String?        
+    refreshToken     String?        
+    tokenExpiry      TimestamptzString?
+    profilePicture   String?        
+    
+    createdAt        TimestamptzString @default(now())
+  }
+
+  // 7. Videos (Antes: Project)
+  model Video {
+    id             Uuid              @id @default(uuid())
+    name           String
+    channelId      Uuid
+    channel        Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
+    title          String?
+    description    String?
+    tags           String?           // Comma-separated tags (String[] is unsupported)
+    status         String            @default("DRAFT") // "DRAFT", "RENDERING", "COMPLETED", "UPLOADED"
+    youtubeVideoId String?           @unique
+    
+    conversations  Conversation[]
+    createdAt      TimestamptzString @default(now())
+  }
+
+  // 8. Conversaciones (Chats)
+  model Conversation {
+    id           Uuid              @id @default(uuid())
+    title        String            @default("Nueva conversación")
+    systemPrompt String?           // Master prompt base para que el chat siempre recuerde su labor
+    userId       Uuid
+    user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    channelId    Uuid?
+    channel      Channel?          @relation(fields: [channelId], references: [id], onDelete: SetNull)
+    videoId      Uuid?
+    video        Video?            @relation(fields: [videoId], references: [id], onDelete: SetNull)
+    
+    messages     Message[]
+    createdAt    TimestamptzString @default(now())
+    updatedAt    temporal.updatedAtString()
+  }
+
+  // 9. Mensajes
+  model Message {
+    id             Uuid              @id @default(uuid())
+    conversationId Uuid
+    conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    sender         MessageSender
+    text           String
+    createdAt      TimestamptzString @default(now())
+  }
+
+  // 10. Plantillas de Prompts de Sistema (Para las herramientas y Gemini Copilot)
+  model PromptTemplate {
+    id           Uuid              @id @default(uuid())
+    name         String            @unique // Ej: "crear_canal", "crear_video", "crear_guion"
+    systemPrompt String
+    welcomeText  String?
+    description  String?
+    createdAt    TimestamptzString @default(now())
+    updatedAt    temporal.updatedAtString()
+  }
+
 }

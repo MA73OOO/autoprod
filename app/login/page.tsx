@@ -69,8 +69,14 @@ export default function LoginPage() {
             headers: { 'Content-Type': 'application/json' },
           });
 
-          router.push('/dashboard');
-          router.refresh();
+          toast.success('¡Inicio de sesión exitoso!', {
+            description: 'Bienvenido de vuelta, redirigiendo al panel...',
+          });
+
+          setTimeout(() => {
+            router.push('/dashboard');
+            router.refresh();
+          }, 1200);
         }
       }
     } catch (err: any) {
