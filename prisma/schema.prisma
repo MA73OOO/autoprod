@@ -1,0 +1,79 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Usuarios y Roles
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  name         String?
+  role         Role              @default(USER)
+  geminiApiKey String?
+  subscription UserSubscription?
+  channels     Channel[]
+  createdAt    DateTime          @default(now())
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+// 2. Suscripciones y Planes Modulares (Feature Flags)
+model UserSubscription {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId           String
+  plan             Plan     @relation(fields: [planId], references: [id])
+  status           String   @default("active") // "active", "canceled", "past_due"
+  currentPeriodEnd DateTime @default(dbgenerated("NOW() + interval '1 year'"))
+}
+
+model Plan {
+  id            String             @id @default(uuid())
+  name          String             @unique // "FREE", "PRO", "ENTERPRISE", etc.
+  priceId       String? // Stripe Price ID
+  subscriptions UserSubscription[]
+  limits        PlanLimit?
+}
+
+model PlanLimit {
+  id                      String  @id @default(uuid())
+  planId                  String  @unique
+  plan                    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  maxChannels             Int     @default(2)
+  maxProjectsPerChannel   Int     @default(10)
+  canRenderInCloud        Boolean @default(false)
+  maxMonthlyRenderMinutes Int     @default(0)
+  hasAdvancedTemplates    Boolean @default(false)
+}
+
+// 3. Canales de Youtube
+model Channel {
+  id        String    @id @default(uuid())
+  name      String
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  createdAt DateTime  @default(now())
+}
+
+// 4. Proyectos de Videos
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  channelId   String
+  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title       String?
+  description String?
+  tags        String[]
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+}

@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 AutoProd — Gemini Video Organizer App (Web App PWA)
 
-## Getting Started
+**AutoProd** es una plataforma web progresiva (PWA) de nivel profesional diseñada para automatizar la producción de video, optimizar contenido SEO mediante IA (Google Gemini) y renderizar videos automáticamente para canales de YouTube. 
 
-First, run the development server:
+El núcleo del proyecto está diseñado bajo una arquitectura híbrida que garantiza un **costo operativo de $0 USD** para el creador:
+1. **Frontend y APIs en la Nube**: Servidos de forma gratuita en Vercel, gestionando la base de datos y autenticación mediante Supabase.
+2. **Procesamiento de Video Local**: Un agente helper local (Python + FFmpeg) que aprovecha los recursos locales (CPU/GPU) del propio usuario para el renderizado pesado, eliminando la necesidad de costosos servidores de renderizado en la nube.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 📂 Estructura del Proyecto
+
+```text
+AutoProd/
+├── app/                  <-- Código de la aplicación Next.js 15 (App Router)
+├── docs/                 <-- Módulos de documentación
+│   ├── frontend/         <-- UI PWA (React / Next.js, Tailwind, Shadcn UI)
+│   ├── backend/          <-- API Cloud (TypeScript) y Local Helper (Python)
+│   ├── database/         <-- Esquema Prisma, Supabase y Terraform
+│   └── functions/        <-- Catálogo de funciones (Interceptor, BYOK, Render)
+├── harness/              <-- Arnés de validación de entornos y despliegues
+│   ├── deploy/           <-- Scripts de automatización de despliegues
+│   └── validations/      <-- Validaciones de Git y variables de entorno
+├── README.md             <-- Este archivo
+└── .gitignore
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Tecnologías Principales
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+*   **Front-End**: Next.js 15 (App Router), React 19, Tailwind CSS, Shadcn UI, PWA (`@ducanh2912/next-pwa`).
+*   **Backend Cloud**: Next.js API Routes (TypeScript), Prisma ORM, Supabase (PostgreSQL).
+*   **Agente Helper Local**: Python (FastAPI / PyInstaller) + FFmpeg.
+*   **Infraestructura**: Terraform IaC + Vercel.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Inicio Rápido (Desarrollo Frontend)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para levantar la interfaz y el servidor de desarrollo de la web app:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 1. Instalar Dependencias
+Asegúrate de utilizar `pnpm`:
+```bash
+pnpm install
+```
 
-## Deploy on Vercel
+### 2. Configurar Variables de Entorno
+Copia el archivo `.env.example` a `.env.local` y rellena las variables de Supabase y Prisma:
+```bash
+cp .env.example .env.local
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 3. Iniciar Servidor de Desarrollo
+```bash
+pnpm dev
+```
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador para ver la aplicación.
