@@ -1,49 +1,115 @@
-# Estado del Proyecto - AutoProd Console (Hoy)
+# Estado del Proyecto - AutoProd Console
 
-Este documento resume el estado actual del repositorio, las APIs implementadas, el esquema de la base de datos en Supabase y los próximos pasos de desarrollo.
-
----
-
-## 1. Base de Datos (PostgreSQL & Prisma Next)
-
-El esquema relacional ha sido migrado exitosamente a **Prisma 8 (Prisma Next)** y está totalmente sincronizado en **Supabase** (todos los tipos y restricciones se encuentran aplicados).
-
-- **Estructura UUID:** Todas las claves primarias y relaciones de usuario (`User.id`, `Conversation.userId`, `Channel.userId`, etc.) utilizan ahora identificadores nativos `Uuid` compatibles con Supabase Auth.
-- **Enums Nativos:** Los enums de sistema (`Role`, `MessageSender`) se han definido a nivel global con el códec `@@type("pg/text@1")` y asignaciones de texto plano (`USER = "USER"`), asegurando la compatibilidad de base de datos en Postgres.
-- **Campo de Prompt Maestro:** Se añadió la columna `systemPrompt String?` a la tabla `Conversation` para almacenar las instrucciones iniciales que guían la IA.
+Último commit: `92c5aac` — rama `master` sincronizada con `origin/master`, working tree limpio.
 
 ---
 
-## 2. Capa de Servidor (APIs & Endpoints)
+## 1. Base de Datos (PostgreSQL + Prisma 8 / Prisma Next)
 
-Todas las APIs están escritas usando el App Router de Next.js y cuentan con verificación de sesión de Supabase:
+El contrato [`contract.prisma`](file:///e:/autoprod/src/prisma/contract.prisma) está completamente definido y sincronizado en **Supabase**. Todos los modelos, enums y restricciones se encuentran aplicados en PostgreSQL.
 
-- **`/api/auth/sync` (POST):** Sincroniza al usuario logueado en Supabase Auth con la tabla `User` de PostgreSQL.
-- **`/api/prompts` (GET):** Recupera las plantillas de prompts de la base de datos. **Auto-seeding incorporado:** si la tabla está vacía (como tras una limpieza), inserta de inmediato los prompts maestros por defecto (`crear_canal`, `crear_video`, `crear_guion`).
-- **`/api/conversations` (GET, POST):**
-  - **GET:** Lista los chats ordenados por fecha de actualización.
-  - **POST:** Crea un chat asociando el título, el `systemPrompt` y el `welcomeText`.
-  - **Lazy Sync de Usuario:** Si por alguna razón el usuario se elimina de la base de datos (por ejemplo, al limpiar esquemas), este endpoint lo re-crea en caliente antes de procesar la petición para evitar errores de clave foránea.
-- **`/api/channels` (GET):** Lista los canales del usuario incluyendo sus videos asociados. Incorpora también *lazy sync* para garantizar consistencia.
+### Enums globales
+
+| Enum | Valores | Tipo PG |
+|---|---|---|
+| `Role` | `USER`, `ADMIN` | `pg/text@1` |
+| `MessageSender` | `USER`, `GEMINI` | `pg/text@1` |
+
+### Modelos en el namespace `public` (11 modelos)
+
+| Modelo             | Descripción                                                                                      |
+| --------------------| --------------------------------------------------------------------------------------------------|
+| `User`             | Usuario base con UUID compatible con Supabase Auth. Lleva rol, suscripción, settings y API Keys. |
+| `Language`         | Catálogo dinámico de idiomas (`es`, `en`, `pt`, `fr`).                                           |
+| `UserSettings`     | Idioma (relacional), tema (`dark`/`light`), notificaciones, resolución de render por defecto.    |
+| `ApiKey`           | Llaves de IA por proveedor (`GOOGLE`, `OPENAI`, `ANTHROPIC`). Unique por `[userId, provider]`.   |
+| `UserSubscription` | Plan activo del usuario con fecha de vencimiento.                                                |
+| `Plan`             | Planes (`FREE`, `PRO`, `ENTERPRISE`) con Stripe Price ID.                                        |
+| `PlanLimit`        | Límites por plan: canales, videos, render en la nube, minutos mensuales, templates avanzados.    |
+| `Channel`          | Canal de YouTube. Soporta integración OAuth (`youtubeChannelId`, `accessToken`, `refreshToken`). |
+| `Video`            | Video dentro de un canal. Status: `DRAFT`, `RENDERING`, `COMPLETED`, `UPLOADED`.                 |
+| `Conversation`     | Chat vinculable opcionalmente a un `Channel` o `Video`. Incluye `systemPrompt` maestro.          |
+| `Message`          | Mensaje dentro de una conversación. Sender: `USER` o `GEMINI`.                                   |
+| `PromptTemplate`   | Plantillas maestras para los asistentes (`crear_canal`, `crear_video`, `crear_guion`).           |
 
 ---
 
-## 3. Frontend (Dashboard & Interfaz)
+## 2. Capa de Servidor (API Routes — Next.js App Router)
 
-Ubicado en [`app/dashboard/page.tsx`](file:///E:/autoprod/app/dashboard/page.tsx), el dashboard incluye:
+Todas las rutas en [`app/api/`](file:///e:/autoprod/app/api) están protegidas con verificación de sesión via Supabase SSR (`@/lib/supabase/server`).
 
-- **Home Launchpad:** Vista de inicio limpia que muestra las tarjetas de acción rápida.
-- **Conexión Real de Canales y Chats:** El panel izquierdo muestra dinámicamente las conversaciones reales y la lista de canales/videos de la base de datos.
-- **Paneles Ajustables (Resizable):** El panel de chat izquierdo y el panel de configuración derecho admiten redimensionado arrastrable fluido en vanilla React.
-- **Botones de Launchpad Dinámicos:** Los botones de "Crear Canal", "Crear Video" y "Crear Guion" están vinculados a la creación de chats con sus respectivos roles de IA.
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/auth/sync` | `POST` | Sincroniza el usuario de Supabase Auth con la tabla `User` de PostgreSQL. |
+| `/api/prompts` | `GET` | Lista plantillas de prompt. **Auto-seeding:** si la tabla está vacía, inserta los 3 prompts por defecto en caliente. |
+| `/api/conversations` | `GET` | Lista conversaciones del usuario ordenadas por `updatedAt` desc, incluyendo sus mensajes. |
+| `/api/conversations` | `POST` | Crea conversación con `title`, `systemPrompt`, `welcomeText`, `channelId?`, `videoId?`. Crea automáticamente el mensaje de bienvenida de `GEMINI`. |
+| `/api/channels` | `GET` | Lista canales del usuario incluyendo sus videos (`include('videos')`). |
+
+> **Patrón Lazy Sync de Usuario:** Las rutas `/api/conversations` y `/api/channels` verifican si el `User` existe en PostgreSQL antes de operar. Si fue eliminado (p.ej., al limpiar el esquema), lo re-crea automáticamente desde la sesión de Supabase Auth.
 
 ---
 
-## Próxima Fase: Lanzamiento de Asistentes de Configuración (Wizard Modal)
+## 3. Frontend
 
-Según lo acordado (Opción A), el siguiente paso será implementar los modales de configuración rápida que se activarán al hacer clic en las tarjetas de Launchpad:
-1. **Crear Canal Wizard:** Pregunta temática, público y nombre objetivo.
-2. **Crear Video Wizard:** Permite elegir a qué canal pertenece el video, su título y enfoque.
-3. **Crear Guion Wizard:** Pregunta sobre la temática, duración estimada y tono del guion.
+### Landing Page — [`app/page.tsx`](file:///e:/autoprod/app/page.tsx)
+- Página pública de marketing con diseño oscuro (gradientes púrpura/índigo).
+- Secciones: Hero, Features Grid (3 tarjetas), How It Works (3 pasos), Footer.
+- **Bilingüe ES/EN** con selector persistido en `localStorage` via [`app/translations.ts`](file:///e:/autoprod/app/translations.ts).
+- CTA principal redirige a `/login`.
 
-Las respuestas de estos formularios se compilarán y se concatenarán directamente al `systemPrompt` maestro de la conversación antes de abrir el chat.
+### Dashboard — [`app/dashboard/page.tsx`](file:///e:/autoprod/app/dashboard/page.tsx)
+Componente `'use client'` de ~1000 líneas. Capacidades implementadas:
+
+- **Autenticación:** Carga sesión en mount, ejecuta `POST /api/auth/sync`, muestra perfil. Logout con toast de `sonner`.
+- **Paneles redimensionables:** Panel izquierdo (256px default, rango 180–450px) y panel derecho (320px default, rango 240–500px) con drag handlers nativos.
+- **Vistas:** Alterna entre `'home'` (Launchpad) y `'chat'` (interfaz de chat).
+- **Carga de datos en mount:** Fetcha prompts, canales+videos y conversaciones. Si no hay conversaciones, auto-crea una inicial.
+- **Launchpad dinámico:** Botones "Crear Canal 📺", "Crear Video 🎬" y "Crear Guion 📄" buscan la `PromptTemplate` en BD y crean la conversación con `systemPrompt` y `welcomeText` personalizados.
+- **Modal de Settings:** Componente `UserSettingsModal` (`@/components/dashboard/UserSettingsModal`).
+- **Render Simulator:** Estado local de progreso de render (`isRendering`, `renderProgress`).
+- **Checklist de prompt interceptor:** Estado para `cta`, `timestamps`, `tags`, `saveThumbnail`.
+- **Bilingüe:** Mismo sistema de `translations.ts` que la landing.
+
+### Login — [`app/login/`](file:///e:/autoprod/app/login)
+Autenticación Google OAuth via Supabase Auth.
+
+---
+
+## 4. Infraestructura
+
+| Capa | Tecnología |
+|---|---|
+| Framework | Next.js (App Router) |
+| Auth | Supabase Auth + Google OAuth |
+| Base de datos | PostgreSQL via Supabase |
+| ORM | Prisma 8 (Prisma Next) — `db.orm.public.*` |
+| Despliegue | Vercel |
+| Notificaciones UI | `sonner` |
+
+---
+
+## 5. Roadmap — Próximas Fases
+
+### 🔲 Fase 0 — Wizard Modals de Configuración Rápida ← **SIGUIENTE**
+Al pulsar las tarjetas del Launchpad, abrir un modal de asistente paso a paso en lugar de ir directo al chat libre:
+- **Crear Canal Wizard:** Temática, público objetivo, nombres propuestos.
+- **Crear Video Wizard:** Selección de canal existente (desde BD), título, enfoque, referencias.
+- **Crear Guion Wizard:** Temática, tono del narrador, duración estimada.
+- Las respuestas se concatenan al `systemPrompt` maestro antes de crear la conversación.
+
+### 🔲 Fase 0.5 — Configuración de IA y BYOK
+- Flujo híbrido: Google One AI Premium (OAuth) o API Key manual (Google AI Studio).
+- Persistencia en `localStorage` y tabla `ApiKey` en Supabase.
+- Selector de modelo: `gemini-2.5-flash`, `gemini-2.5-pro`, `imagen-3.0-generate-002`.
+
+### 🔲 Fase 1 — API de Workspace Local (`E:\Youtube`)
+- `GET /api/workspace`: lista canales/videos leyendo el sistema de archivos local.
+- `POST /api/workspace/init`: inicializa estructura de carpetas para un nuevo video/canal.
+
+### 🔲 Fase 2 — Parseador de `config_subida.md`
+- Leer, renderizar en el panel derecho del dashboard y reescribir el archivo de metadatos de subida a YouTube.
+
+### 🔲 Fase 3 — Copilot Integrado + Estadísticas + Edición Automática (Python)
+- YouTube Data API para métricas de canal.
+- Scripts Python locales para compilación de audio/video y miniaturas.
