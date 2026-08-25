@@ -46,3 +46,10 @@ next-env.d.ts
 node_modules/
 dist/
 .env
+
+
+# AI Agents / Claude local cache
+/.claude/
+/.agents/
+/.cursor/
+/.devin/

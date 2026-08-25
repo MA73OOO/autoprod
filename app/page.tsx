@@ -53,13 +53,13 @@ export default function Home() {
             </button>
 
             <Link 
-              href="/dashboard" 
+              href="/login" 
               className="text-sm font-medium text-zinc-300 hover:text-white transition-colors"
             >
               {t.login}
             </Link>
             <Link
-              href="/dashboard"
+              href="/login"
               className="px-4 py-2 rounded-lg text-sm font-semibold bg-white text-black hover:bg-zinc-200 transition-colors shadow-md"
             >
               {t.startFree}
@@ -92,7 +92,7 @@ export default function Home() {
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
-              href="/dashboard"
+              href="/login"
               className="w-full sm:w-auto px-8 py-4 rounded-xl text-base font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-90 transition-opacity shadow-lg shadow-purple-500/20"
             >
               {t.startFree}
