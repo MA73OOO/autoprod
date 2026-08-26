@@ -85,7 +85,60 @@ export class LocalInstaller {
         await execAsync(`"${actualPythonExe}" -m pip install -r "${reqPath}"`);
       }
 
-      log('¡Instalación completada exitosamente!');
+      // 6. Configurar Protocolo Custom (autoprod://) y Auto-Arranque
+      log('Configurando Protocolo y Auto-arranque silencioso...');
+      
+      const motorDir = path.join(PROJECT_ROOT, 'controlador');
+      let launcherCmd = '';
+
+      if (isWin) {
+        // Crear script VBS para ejecución silenciosa (sin consola)
+        const vbsPath = path.join(INSTALL_DIR, 'run_motor.vbs');
+        const vbsContent = `
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.CurrentDirectory = "${motorDir}"
+WshShell.Run "cmd /c """"${actualPythonExe}"""" -m uvicorn main:app --port 8000 --host 127.0.0.1", 0, False
+        `.trim();
+        await fs.writeFile(vbsPath, vbsContent);
+
+        // Registrar en Regedit (HKCU)
+        const psReg = `
+$base = 'HKCU:\\Software\\Classes\\autoprod'
+New-Item -Path $base -Force | Out-Null
+New-ItemProperty -Path $base -Name '(default)' -Value 'URL:AutoProd Motor Protocol' -Force | Out-Null
+New-ItemProperty -Path $base -Name 'URL Protocol' -Value '' -Force | Out-Null
+New-Item -Path "$base\\shell\\open\\command" -Force | Out-Null
+New-ItemProperty -Path "$base\\shell\\open\\command" -Name '(default)' -Value 'wscript.exe "${vbsPath}"' -Force | Out-Null
+        `.trim();
+        await execAsync(`powershell -NoProfile -Command "${psReg}"`);
+        
+        launcherCmd = `wscript.exe "${vbsPath}"`;
+
+      } else {
+        // Mac: Crear bash script y AppleScript applet para el protocolo
+        const shPath = path.join(INSTALL_DIR, 'run_motor.sh');
+        const shContent = `#!/bin/bash\ncd "${motorDir}"\nnohup "${actualPythonExe}" -m uvicorn main:app --port 8000 --host 127.0.0.1 > /dev/null 2>&1 &\n`;
+        await fs.writeFile(shPath, shContent);
+        await execAsync(`chmod +x "${shPath}"`);
+
+        // Registrar en Mac usando osacompile para crear una .app rápida
+        const appPath = path.join(INSTALL_DIR, 'AutoProdMotor.app');
+        const asContent = `do shell script "${shPath}"`;
+        await execAsync(`osacompile -o "${appPath}" -e '${asContent}'`);
+        
+        // Modificar Info.plist para asociar el protocolo autoprod://
+        const plistEdit = `/usr/libexec/PlistBuddy -c "Add :CFBundleURLTypes array" -c "Add :CFBundleURLTypes:0 dict" -c "Add :CFBundleURLTypes:0:CFBundleURLName string 'AutoProd Motor'" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes array" -c "Add :CFBundleURLTypes:0:CFBundleURLSchemes:0 string 'autoprod'" "${appPath}/Contents/Info.plist"`;
+        await execAsync(plistEdit).catch(() => {}); // ignore if already exists
+        await execAsync(`open -a "${appPath}"`); // Registrar con Launch Services
+        
+        launcherCmd = `"${shPath}"`;
+      }
+
+      // 7. Arrancar inmediatamente
+      log('Iniciando el Motor en segundo plano...');
+      exec(launcherCmd); // No await, es un proceso detached
+
+      log('¡Instalación completada exitosamente! El Motor ya está corriendo.');
       return { success: true, pythonPath: actualPythonExe };
 
     } catch (error: any) {

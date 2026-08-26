@@ -7,14 +7,18 @@ import { toast } from 'sonner';
 
 import { translations, Language } from '@/app/translations';
 import { createClient } from '@/lib/supabase/client';
+import { ControladorClient } from '@/lib/controlador-client';
 
 import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
 import ConversationSidebar from '@/components/dashboard/ConversationSidebar';
 import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
 import RightInspector from '@/components/dashboard/RightInspector';
+import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
+import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 
-import { Channel, Conversation, Message } from '@/components/dashboard/types';
+import { Conversation, Message } from '@/components/dashboard/types';
+import { FileNode } from '@/components/dashboard/FileTree';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -49,6 +53,83 @@ export default function Dashboard() {
   const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+  // ── Workspace State ──
+  const [workspacePath, setWorkspacePath] = useState<string | null>(null);
+  const [workspaceTree, setWorkspaceTree] = useState<FileNode[]>([]);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [modalParentPath, setModalParentPath] = useState<string | null>(null);
+  const [creationMode, setCreationMode] = useState<'channel' | 'video' | null>(null);
+  const [motorStatus, setMotorStatus] = useState<boolean>(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const loadWorkspaceTree = async (path: string) => {
+    try {
+      const data = await ControladorClient.getWorkspace(path);
+      setWorkspaceTree(data.tree || []);
+    } catch (error) {
+      console.warn("Could not load workspace tree:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Poll Motor Status every 5 seconds
+    const checkMotor = async () => {
+      const isOnline = await ControladorClient.checkStatus();
+      setMotorStatus(isOnline);
+      if (isOnline) {
+        // If it comes online and we have a path, reload tree
+        const savedPath = localStorage.getItem('autoprod_workspace_path');
+        if (savedPath) loadWorkspaceTree(savedPath);
+      }
+    };
+    checkMotor();
+    const interval = setInterval(checkMotor, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const savedPath = localStorage.getItem('autoprod_workspace_path');
+    if (savedPath) {
+      setWorkspacePath(savedPath);
+      if (motorStatus) loadWorkspaceTree(savedPath);
+    }
+  }, [motorStatus]);
+
+  const handleLinkWorkspace = (path: string) => {
+    localStorage.setItem('autoprod_workspace_path', path);
+    setWorkspacePath(path);
+    loadWorkspaceTree(path);
+    toast.success('Ruta maestra vinculada');
+  };
+
+  const handleCreateNode = async (parentPath: string, folderName: string, subfolders: string[]) => {
+    try {
+      // In the backend, we will update init_workspace to just accept a folderName and subfolders
+      // But for now, using the old schema: if channel, video_name="", folders=[]. If video, channel_name="", video_name=folderName.
+      // Wait, let's assume we update the backend.
+      await ControladorClient.createFolder(parentPath, folderName, subfolders);
+      if (workspacePath) {
+        loadWorkspaceTree(workspacePath);
+      }
+    } catch (error) {
+      alert("Error al crear carpeta");
+    }
+  };
+
+  const handleCreateChannel = async (basePath: string, channelName: string, folders: string[]) => {
+    const toastId = toast.loading('Creando estructura...');
+    try {
+      // In this specific UI flow, the target is basePath (the folder where + was clicked)
+      // so we use basePath as the root, the channel name as the directory, and no video_name for now.
+      // Or we can adapt initVideoWorkspace. Since we are creating a channel/video hybrid:
+      await ControladorClient.initVideoWorkspace(basePath, channelName, "Estructura_Base", folders);
+      toast.success('Estructura de canal creada correctamente', { id: toastId });
+      if (workspacePath) loadWorkspaceTree(workspacePath);
+    } catch (err: any) {
+      toast.error(err.message, { id: toastId });
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -87,7 +168,6 @@ export default function Dashboard() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
 
   // ── Data State ──
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<any[]>([]);
   const [geminiKey, setGeminiKey] = useState('');
@@ -97,6 +177,7 @@ export default function Dashboard() {
   // ── Derived Variables ──
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages ?? [];
+  const channels = workspaceTree.map(node => ({ id: node.name, name: node.name }));
 
   useEffect(() => {
     const saved = localStorage.getItem('gemini_api_key');
@@ -108,17 +189,12 @@ export default function Dashboard() {
     let active = true;
     const load = async () => {
       try {
-        const [pr, cr, co] = await Promise.all([
+        const [pr, co] = await Promise.all([
           fetch('/api/prompts'),
-          fetch('/api/channels'),
           fetch('/api/conversations'),
         ]);
         if (!active) return;
         if (pr.ok) setPromptTemplates(await pr.json());
-        if (cr.ok) {
-          const ch = await cr.json();
-          setChannels(ch);
-        }
         if (co.ok) {
           const raw = await co.json();
           const formatted: Conversation[] = raw.map((c: any) => ({
@@ -199,6 +275,46 @@ export default function Dashboard() {
         toast.success(lang === 'es' ? 'Nueva conversación creada' : 'New conversation created');
       }
     } catch { toast.error('Error al crear conversación'); }
+  };
+
+  const confirmDeleteConversation = async () => {
+    if (!deleteTargetId) return;
+    const id = deleteTargetId;
+    try {
+      const res = await fetch(`/api/conversations/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setConversations(prev => prev.filter(c => c.id !== id));
+        if (activeConversationId === id) {
+          setActiveConversationId(null);
+          setActiveView('home');
+        }
+        toast.success(lang === 'es' ? 'Conversación eliminada' : 'Conversation deleted');
+      } else {
+        toast.error('Error al eliminar conversación');
+      }
+    } catch {
+      toast.error('Error al eliminar conversación');
+    }
+    setDeleteTargetId(null);
+  };
+
+  const handleRenameConversation = async (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    try {
+      const res = await fetch(`/api/conversations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (res.ok) {
+        setConversations(prev => prev.map(c => c.id === id ? { ...c, title: newTitle } : c));
+        toast.success(lang === 'es' ? 'Nombre actualizado' : 'Name updated');
+      } else {
+        toast.error('Error al renombrar');
+      }
+    } catch {
+      toast.error('Error al renombrar');
+    }
   };
 
   const handleNewConversationWithRole = async (roleType: 'channel' | 'video' | 'script' | 'prompt') => {
@@ -439,12 +555,32 @@ export default function Dashboard() {
         <aside style={{ width: `${leftWidth}px` }} className="bg-[#0f0f12] shrink-0 overflow-hidden">
           <ConversationSidebar
             lang={lang}
-            channels={channels}
             conversations={conversations}
             activeConversationId={activeConversationId}
             activeView={activeView}
+            workspacePath={workspacePath}
+            workspaceTree={workspaceTree}
+            motorStatus={motorStatus}
             onNewConversation={handleNewConversation}
             onSelectConversation={(id) => { setActiveConversationId(id); setActiveView('chat'); }}
+            onDeleteConversation={(id) => setDeleteTargetId(id)}
+            onRenameConversation={handleRenameConversation}
+            onLinkWorkspace={() => {
+              setModalParentPath(null);
+              setCreationMode(null);
+              setIsWorkspaceModalOpen(true);
+            }}
+            onAddNode={(parentPath, type) => {
+              if (type === 'channel' && userProfile?.role !== 'ADMIN' && workspaceTree.length >= 1) {
+                toast.error(lang === 'es'
+                  ? 'Límite alcanzado. Tu plan solo permite 1 canal. Actualiza a Pro para más.'
+                  : 'Limit reached. Your plan only allows 1 channel. Upgrade to Pro for more.');
+                return;
+              }
+              setModalParentPath(parentPath);
+              setCreationMode(type);
+              setIsWorkspaceModalOpen(true);
+            }}
           />
         </aside>
 
@@ -501,6 +637,27 @@ export default function Dashboard() {
         onClose={() => setIsSettingsModalOpen(false)}
         lang={lang}
         user={userProfile}
+      />
+
+      {/* Workspace Modal */}
+      <WorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
+        onLinkWorkspace={handleLinkWorkspace}
+        onCreateNode={handleCreateNode}
+        parentPath={modalParentPath}
+        creationMode={creationMode}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal 
+        isOpen={!!deleteTargetId}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDeleteConversation}
+        title={lang === 'es' ? '¿Eliminar conversación?' : 'Delete conversation?'}
+        description={lang === 'es' 
+          ? 'Esta acción no se puede deshacer. Se borrarán todos los mensajes asociados a este chat.' 
+          : 'This action cannot be undone. All messages associated with this chat will be deleted.'}
       />
     </div>
   );

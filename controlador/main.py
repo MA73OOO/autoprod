@@ -1,3 +1,7 @@
+import os
+import signal
+import threading
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import workspace
@@ -29,6 +33,16 @@ app.include_router(workspace.router)
 @app.get("/status")
 def get_status():
     return {"status": "online", "message": "Motor local conectado correctamente."}
+
+@app.post("/shutdown")
+def shutdown_server():
+    """Apaga el servidor de manera remota matando el proceso actual."""
+    def kill_it():
+        time.sleep(1) # Dar un segundo para que la respuesta HTTP se envíe
+        os.kill(os.getpid(), signal.SIGTERM)
+    
+    threading.Thread(target=kill_it).start()
+    return {"status": "success", "message": "Apagando el motor local..."}
 
 if __name__ == "__main__":
     import uvicorn

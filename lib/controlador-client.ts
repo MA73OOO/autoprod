@@ -19,6 +19,33 @@ export class ControladorClient {
   }
 
   /**
+   * Apaga el motor local de Python
+   */
+  static async shutdownMotor(): Promise<void> {
+    try {
+      await fetch(`${CONTROLADOR_URL}/shutdown`, { method: 'POST' });
+    } catch (e) {
+      console.warn('Motor apagado', e);
+    }
+  }
+
+  /**
+   * Abre el explorador de archivos nativo del SO para que el usuario elija una carpeta.
+   */
+  static async pickWorkspace(): Promise<{ path: string }> {
+    try {
+      const response = await fetch(`${CONTROLADOR_URL}/workspace/pick`);
+      if (!response.ok) {
+        throw new Error('No se seleccionó carpeta o hubo un error');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: pickWorkspace failed', error);
+      throw error;
+    }
+  }
+
+  /**
    * Lista el contenido del workspace.
    */
   static async getWorkspace(basePath: string) {
@@ -35,21 +62,19 @@ export class ControladorClient {
   }
 
   /**
-   * Inicializa la estructura de carpetas de un video.
+   * Crea una nueva carpeta, opcionalmente con subcarpetas.
    */
-  static async initVideoWorkspace(basePath: string, channelName: string, videoName: string, customFolders?: string[]) {
+  static async createFolder(targetPath: string, folderName: string, subfolders?: string[]) {
     try {
-      const response = await fetch(`${CONTROLADOR_URL}/workspace/init`, {
+      const response = await fetch(`${CONTROLADOR_URL}/workspace/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base_path: basePath,
-          channel_name: channelName,
-          video_name: videoName,
-          folders: customFolders
-        })
+          target_path: targetPath,
+          folder_name: folderName,
+          subfolders: subfolders || []
+        }),
       });
-      
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Error initializing workspace');

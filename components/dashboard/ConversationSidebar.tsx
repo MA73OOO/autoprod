@@ -1,108 +1,256 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Language } from '@/app/translations';
-import { Channel, Conversation } from './types';
+import { Conversation } from './types';
+import FileTree, { FileNode } from './FileTree';
+import { ControladorClient } from '@/lib/controlador-client';
 
 interface Props {
   lang: Language;
-  channels: Channel[];
   conversations: Conversation[];
   activeConversationId: string | null;
   activeView: 'home' | 'chat';
+  workspacePath: string | null;
+  workspaceTree: FileNode[];
+  motorStatus: boolean;
   onNewConversation: () => void;
   onSelectConversation: (id: string) => void;
+  onDeleteConversation?: (id: string) => void;
+  onRenameConversation?: (id: string, newTitle: string) => void;
+  onLinkWorkspace: () => void;
+  onAddNode: (parentPath: string, type: 'channel' | 'video') => void;
 }
 
 export default function ConversationSidebar({
   lang,
-  channels,
   conversations,
   activeConversationId,
   activeView,
+  workspacePath,
+  workspaceTree,
+  motorStatus,
   onNewConversation,
   onSelectConversation,
+  onDeleteConversation,
+  onRenameConversation,
+  onLinkWorkspace,
+  onAddNode,
 }: Props) {
-  return (
-    <div className="flex flex-col gap-6 h-full overflow-y-auto p-4">
-      {/* New Conversation Button */}
-      <button
-        onClick={onNewConversation}
-        className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 rounded-lg text-xs font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
-      >
-        💬 {lang === 'es' ? 'Nueva Conversación' : 'New Conversation'}
-      </button>
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
 
-      {/* Conversations History */}
-      <div className="space-y-2 shrink-0">
-        <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-          {lang === 'es' ? 'Historial de Chats' : 'Chat History'}
-        </h4>
-        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-          {conversations.map(conv => (
-            <button
-              key={conv.id}
-              onClick={() => onSelectConversation(conv.id)}
-              className={`w-full text-left py-2 px-2.5 rounded-lg text-xs transition-all flex flex-col gap-1 ${
-                activeView === 'chat' && activeConversationId === conv.id
-                  ? 'bg-zinc-800 text-purple-400 font-semibold border border-zinc-700'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
-              }`}
+  const startEditing = (conv: Conversation) => {
+    setEditingId(conv.id);
+    setEditTitle(conv.title);
+  };
+
+  const saveEditing = () => {
+    if (editingId && onRenameConversation && editTitle.trim()) {
+      onRenameConversation(editingId, editTitle);
+    }
+    setEditingId(null);
+  };
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const closeMenu = () => setActiveMenuId(null);
+    if (activeMenuId) {
+      document.addEventListener('click', closeMenu);
+      document.addEventListener('contextmenu', closeMenu);
+    }
+    return () => {
+      document.removeEventListener('click', closeMenu);
+      document.removeEventListener('contextmenu', closeMenu);
+    };
+  }, [activeMenuId]);
+
+  return (
+    <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
+      
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+
+        {/* Motor Status Section */}
+        <div className="flex items-center justify-between bg-zinc-900/50 rounded-lg p-2.5 border border-zinc-800/50">
+          <div className="flex items-center gap-2">
+            <div className="relative flex h-3 w-3">
+              {motorStatus && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${motorStatus ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+            </div>
+            <span className="text-xs font-semibold text-zinc-300">
+              Motor {motorStatus ? 'Conectado' : 'Apagado'}
+            </span>
+          </div>
+          {!motorStatus ? (
+            <a 
+              href="autoprod://start"
+              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded shadow transition-colors"
             >
-              <span className="truncate w-full font-medium text-left">{conv.title}</span>
-              <div className="flex justify-between items-center w-full text-[9px] text-zinc-600 font-mono">
-                <span>{conv.createdAt}</span>
-                {conv.channelId && (
-                  <span className="text-[8px] px-1 py-0.2 bg-purple-500/10 text-purple-400 rounded">
-                    {channels.find(ch => ch.id === conv.channelId)?.name || 'Canal'}
+              Encender
+            </a>
+          ) : (
+            <button 
+              onClick={() => ControladorClient.shutdownMotor()}
+              className="px-2.5 py-1 bg-zinc-800 hover:bg-red-600/80 text-zinc-300 hover:text-white text-[10px] font-bold rounded shadow transition-colors"
+            >
+              Apagar
+            </button>
+          )}
+        </div>
+        
+        {/* Workspace / Project Section */}
+        <div className="space-y-3 shrink-0">
+          <div className="flex items-center justify-between mb-3 px-2">
+            <h3 className="text-[10px] font-bold text-zinc-500 tracking-wider">PROYECTO / WORKSPACE</h3>
+            <button 
+              onClick={onLinkWorkspace}
+              className="text-zinc-500 hover:text-white transition-colors"
+              title="Vincular nueva carpeta raíz"
+            >
+              +
+            </button>
+          </div>
+          <div className="bg-zinc-900/50 rounded-lg p-2 border border-zinc-800/50">
+            {!workspacePath ? (
+              <div className="text-xs text-zinc-500 text-center py-2 italic">
+                Sin ruta vinculada
+              </div>
+            ) : (
+              <>
+                {/* The root folder */}
+                <div className="flex items-center group py-1 px-2 rounded hover:bg-zinc-800/50 transition-colors cursor-default mb-2">
+                  <span className="text-yellow-500 mr-2">📁</span>
+                  <span className="text-sm font-medium text-zinc-300 truncate flex-1" title={workspacePath || ''}>
+                    {workspacePath}
                   </span>
+                  {onAddNode && (
+                    <button 
+                      onClick={() => onAddNode(workspacePath, 'channel')}
+                      className="opacity-50 group-hover:opacity-100 px-1.5 py-0.5 rounded bg-zinc-700 hover:bg-indigo-600 text-white text-[10px] transition-all"
+                      title="Añadir Canal"
+                    >
+                      + Añadir
+                    </button>
+                  )}
+                </div>
+
+                {/* The File Tree */}
+                <div className="overflow-x-auto pb-2">
+                  {workspaceTree.map((node, i) => (
+                    <FileTree key={i} node={node} onAddNode={onAddNode} />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        <span className="h-[1px] bg-zinc-800/50 shrink-0" />
+
+        {/* New Conversation Button */}
+        <button
+          onClick={onNewConversation}
+          className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 rounded-lg text-xs font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
+        >
+          💬 {lang === 'es' ? 'Nueva Conversación' : 'New Conversation'}
+        </button>
+
+        {/* Conversations History */}
+        <div className="space-y-2 shrink-0">
+          <h4 className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">
+            {lang === 'es' ? 'Historial de Chats' : 'Chat History'}
+          </h4>
+          <div className="space-y-1">
+            {conversations.map(conv => (
+              <div
+                key={conv.id}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setActiveMenuId(conv.id);
+                }}
+                className={`relative w-full text-left py-2 px-2.5 rounded-lg text-xs transition-all flex flex-col gap-1 group ${
+                  activeView === 'chat' && activeConversationId === conv.id
+                    ? 'bg-zinc-800 text-purple-400 font-semibold border border-zinc-700'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                }`}
+              >
+                {editingId === conv.id ? (
+                  <input 
+                    type="text" 
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    onBlur={saveEditing}
+                    onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
+                    autoFocus
+                    className="w-full bg-zinc-950 border border-zinc-700 text-zinc-200 px-2 py-1 rounded outline-none"
+                  />
+                ) : (
+                  <div className="flex justify-between items-center w-full group">
+                    <button 
+                      className="truncate flex-1 font-medium text-left mr-2"
+                      onClick={() => onSelectConversation(conv.id)}
+                    >
+                      {conv.title}
+                    </button>
+                    <div className="opacity-0 group-hover:opacity-100 flex gap-1 items-center shrink-0">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === conv.id ? null : conv.id);
+                        }}
+                        className="text-zinc-500 hover:text-white px-1.5 py-0.5 rounded hover:bg-zinc-700"
+                        title="Opciones"
+                      >
+                        ⋮
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {editingId !== conv.id && (
+                  <div className="flex justify-between items-center w-full text-[9px] text-zinc-600 font-mono">
+                    <span>{conv.createdAt}</span>
+                  </div>
+                )}
+
+                {/* Dropdown Menu */}
+                {activeMenuId === conv.id && (
+                  <div 
+                    className="absolute right-2 top-8 w-32 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl z-50 py-1 overflow-hidden"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={() => {
+                        setActiveMenuId(null);
+                        startEditing(conv);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:text-white hover:bg-zinc-800 flex items-center gap-2"
+                    >
+                      ✏️ Renombrar
+                    </button>
+                    {onDeleteConversation && (
+                      <button
+                        onClick={() => {
+                          setActiveMenuId(null);
+                          onDeleteConversation(conv.id);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-2"
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-
-      {/* Channels list */}
-      {channels.length > 0 && (
-        <>
-          <span className="h-[1px] bg-zinc-800" />
-          <div className="space-y-4">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">
-              {lang === 'es' ? 'Canales' : 'Channels'}
-            </h4>
-            <div className="space-y-3">
-              {channels.map(channel => (
-                <div key={channel.id} className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-300">
-                    <svg className="h-3.5 w-3.5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
-                    </svg>
-                    {channel.name}
-                  </div>
-                  <div className="pl-5 space-y-1">
-                    {channel.videos.map(video => (
-                      <div
-                        key={video.id}
-                        className="text-[11px] text-zinc-500 py-0.5 flex items-center gap-1.5"
-                      >
-                        <span className="h-1 w-1 rounded-full bg-zinc-700 shrink-0" />
-                        <span className="truncate">{video.name}</span>
-                        <span className={`ml-auto text-[9px] px-1 rounded shrink-0 ${
-                          video.status === 'COMPLETED' ? 'text-emerald-400 bg-emerald-500/10' :
-                          video.status === 'RENDERING' ? 'text-yellow-400 bg-yellow-500/10' :
-                          'text-zinc-500 bg-zinc-800'
-                        }`}>
-                          {video.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
