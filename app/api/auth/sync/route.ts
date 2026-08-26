@@ -36,10 +36,12 @@ export async function POST() {
 
     return NextResponse.json({
       success: true,
+      role: user.role,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       }
     });
   } catch (err: any) {

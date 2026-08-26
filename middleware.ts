@@ -47,16 +47,25 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Admin role check (email based or metadata check)
-    // We can also allow configuring admin emails in env or query database.
-    // As a robust check, we check user metadata role or hardcoded admin emails.
-    const isAdmin =
-      user.app_metadata?.role === 'ADMIN' ||
-      user.user_metadata?.role === 'ADMIN' ||
-      user.email === 'mateo@autoprod.io'; // Hardcoded fallback for owner
+    // Role lives in Prisma DB — check via internal API route.
+    // Fallback: allow known owner email so the admin is never locked out.
+    let isAdmin = user.email === 'henaorangelmateo@gmail.com' || user.email === 'mateo@autoprod.io';
 
     if (!isAdmin) {
-      // If not admin, redirect to general dashboard
+      try {
+        const roleRes = await fetch(`${request.nextUrl.origin}/api/auth/me-role`, {
+          headers: { cookie: request.headers.get('cookie') || '' },
+        });
+        if (roleRes.ok) {
+          const { role } = await roleRes.json();
+          isAdmin = role === 'ADMIN';
+        }
+      } catch {
+        // If the fetch fails, deny access to be safe
+      }
+    }
+
+    if (!isAdmin) {
       url.pathname = '/dashboard';
       return NextResponse.redirect(url);
     }
