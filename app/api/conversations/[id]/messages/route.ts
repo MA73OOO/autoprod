@@ -1,20 +1,49 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { db } from '@/src/prisma/db';
+import { getAuthUser } from '@/lib/auth';
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: conversationId } = await params;
+    const auth = await getAuthUser();
+    if (!auth.ok) return auth.response;
+    const { user } = auth;
+
+    // Execute conversation ownership check and messages fetch in parallel to reduce database roundtrip latency
+    const [conversation, messages] = await Promise.all([
+      db.orm.public.Conversation
+        .where({ id: conversationId, userId: user.id })
+        .first(),
+      db.orm.public.Message
+        .where({ conversationId })
+        .orderBy((m) => m.createdAt.asc())
+        .all()
+    ]);
+
+    if (!conversation) {
+      return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 });
+    }
+
+    return NextResponse.json(messages || []);
+  } catch (err: any) {
+    console.error('Error fetching conversation messages:', err);
+    return NextResponse.json({ error: err.message || 'Error interno del servidor' }, { status: 500 });
+  }
+}
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const auth = await getAuthUser();
+    if (!auth.ok) return auth.response;
+    const { user } = auth;
 
-    if (error || !user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
-    const { id: conversationId } = params;
+    const { id: conversationId } = await params;
     const body = await request.json();
     const { text, checklist } = body;
 

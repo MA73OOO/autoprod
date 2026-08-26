@@ -8,11 +8,10 @@ export async function GET() {
     if (!auth.ok) return auth.response;
     const { user } = auth;
 
-    // Fetch conversations and include messages
+    // Fetch conversations lightweight (no messages included)
     const conversations = await db.orm.public.Conversation
       .where({ userId: user.id })
       .orderBy((c) => c.updatedAt.desc())
-      .include('messages', (m) => m.orderBy((msg) => msg.createdAt.asc()))
       .all();
 
     return NextResponse.json(conversations);

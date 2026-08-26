@@ -51,21 +51,25 @@ export default function Dashboard() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !active) return;
       let role = 'USER';
       try {
         const res = await fetch('/api/auth/sync', { method: 'POST' });
-        if (res.ok) role = (await res.json())?.role ?? 'USER';
+        if (res.ok && active) role = (await res.json())?.role ?? 'USER';
       } catch { /* non-fatal */ }
-      setUserProfile({
-        name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
-        email: user.email || '',
-        role,
-      });
+      if (active) {
+        setUserProfile({
+          name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
+          email: user.email || '',
+          role,
+        });
+      }
     };
     init();
+    return () => { active = false; };
   }, [supabase]);
 
   const handleLogout = async () => {
@@ -78,12 +82,21 @@ export default function Dashboard() {
     }
   };
 
-  // ── Data ──
+  // ── Navigation State ──
+  const [activeView, setActiveView] = useState<'home' | 'chat'>('home');
+  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+
+  // ── Data State ──
   const [channels, setChannels] = useState<Channel[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<any[]>([]);
   const [geminiKey, setGeminiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
+  const [loadedConversations, setLoadedConversations] = useState<Record<string, boolean>>({});
+
+  // ── Derived Variables ──
+  const activeConversation = conversations.find(c => c.id === activeConversationId);
+  const messages = activeConversation?.messages ?? [];
 
   useEffect(() => {
     const saved = localStorage.getItem('gemini_api_key');
@@ -92,6 +105,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!userProfile) return;
+    let active = true;
     const load = async () => {
       try {
         const [pr, cr, co] = await Promise.all([
@@ -99,6 +113,7 @@ export default function Dashboard() {
           fetch('/api/channels'),
           fetch('/api/conversations'),
         ]);
+        if (!active) return;
         if (pr.ok) setPromptTemplates(await pr.json());
         if (cr.ok) {
           const ch = await cr.json();
@@ -107,23 +122,51 @@ export default function Dashboard() {
         if (co.ok) {
           const raw = await co.json();
           const formatted: Conversation[] = raw.map((c: any) => ({
-            ...c, messages: formatMessages(c.messages),
+            ...c,
+            messages: [], // Initialize empty for lazy loading
           }));
           setConversations(formatted);
-          if (formatted.length > 0) setActiveConversationId(formatted[0].id);
-          else await createInitialConversation();
+          if (formatted.length > 0) {
+            setActiveConversationId(formatted[0].id);
+          } else {
+            await createInitialConversation();
+          }
         }
       } catch (e) { console.error('load error', e); }
     };
     load();
+    return () => { active = false; };
   }, [userProfile]);
 
-  // ── Navigation ──
-  const [activeView, setActiveView] = useState<'home' | 'chat'>('home');
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  // ── Lazy Load Messages Effect ──
+  useEffect(() => {
+    if (!activeConversationId) return;
+    
+    // Check if we already loaded or are currently loading this conversation
+    if (loadedConversations[activeConversationId]) return;
 
-  const activeConversation = conversations.find(c => c.id === activeConversationId);
-  const messages = activeConversation?.messages ?? [];
+    const fetchMessages = async () => {
+      // Mark as loaded before fetching to prevent concurrent requests for the same ID
+      setLoadedConversations(prev => ({ ...prev, [activeConversationId]: true }));
+      try {
+        const res = await fetch(`/api/conversations/${activeConversationId}/messages`);
+        if (res.ok) {
+          const rawMessages = await res.json();
+          const formatted = formatMessages(rawMessages);
+          setConversations(prev => prev.map(c => 
+            c.id === activeConversationId ? { ...c, messages: formatted } : c
+          ));
+        } else {
+          // If failed, reset state so it can be retried if clicked again
+          setLoadedConversations(prev => ({ ...prev, [activeConversationId]: false }));
+        }
+      } catch (err) {
+        console.error('Error lazy loading messages:', err);
+        setLoadedConversations(prev => ({ ...prev, [activeConversationId]: false }));
+      }
+    };
+    fetchMessages();
+  }, [activeConversationId]);
 
   // ── Conversation actions ──
   const createInitialConversation = async () => {
