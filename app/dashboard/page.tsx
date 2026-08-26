@@ -394,6 +394,33 @@ export default function Dashboard() {
                 <button onClick={() => { setIsSettingsModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-zinc-800 rounded transition-colors text-zinc-300 hover:text-white flex items-center gap-2">
                   ⚙️ {t.configGeneral}
                 </button>
+                <div className="px-3 py-1 mt-1 text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
+                  Instalar Controlador
+                </div>
+                <button onClick={async () => { 
+                  setIsProfileOpen(false);
+                  const toastId = toast.loading('Descargando instalador para Windows...');
+                  try {
+                    const res = await fetch('/api/setup/install?os=win32', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) toast.success('Motor instalado correctamente', { id: toastId });
+                    else toast.error('Error al instalar: ' + data.error, { id: toastId });
+                  } catch (e: any) { toast.error('Fallo de red', { id: toastId }); }
+                }} className="w-full text-left px-3 py-2 hover:bg-indigo-500/10 rounded transition-colors text-indigo-400 hover:text-indigo-300 flex items-center gap-2 pl-4">
+                  🪟 Windows (.exe)
+                </button>
+                <button onClick={async () => { 
+                  setIsProfileOpen(false);
+                  const toastId = toast.loading('Descargando instalador para Mac...');
+                  try {
+                    const res = await fetch('/api/setup/install?os=darwin', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) toast.success('Motor instalado correctamente', { id: toastId });
+                    else toast.error('Error al instalar: ' + data.error, { id: toastId });
+                  } catch (e: any) { toast.error('Fallo de red', { id: toastId }); }
+                }} className="w-full text-left px-3 py-2 hover:bg-indigo-500/10 rounded transition-colors text-indigo-400 hover:text-indigo-300 flex items-center gap-2 pl-4">
+                  🍎 Mac (.dmg)
+                </button>
                 <div className="border-t border-zinc-800 mt-1 pt-1">
                   <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 hover:text-red-300 rounded transition-colors">
                     🚪 {t.logout}

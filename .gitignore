@@ -53,3 +53,12 @@ dist/
 /.agents/
 /.cursor/
 /.devin/
+
+# Python / Motor Local
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+.env.motor
+/.autoprod/

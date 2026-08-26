@@ -1,0 +1,96 @@
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs/promises';
+import { existsSync } from 'fs';
+
+const execAsync = promisify(exec);
+
+// Configuramos la instalación dentro de la carpeta del proyecto actual
+const PROJECT_ROOT = process.cwd();
+const INSTALL_DIR = path.join(PROJECT_ROOT, '.autoprod', 'python');
+const PYTHON_URL = 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip';
+const GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py';
+
+export class LocalInstaller {
+  /**
+   * Descarga y configura un entorno de Python Portable local.
+   */
+  static async installPythonPortable(targetOs: string = process.platform, onProgress?: (msg: string) => void) {
+    const log = (msg: string) => {
+      console.log(msg);
+      if (onProgress) onProgress(msg);
+    };
+
+    try {
+      // 1. Crear directorios
+      log('Preparando directorios de instalación...');
+      await fs.mkdir(INSTALL_DIR, { recursive: true });
+
+      const zipPath = path.join(INSTALL_DIR, 'python.zip');
+      const getPipPath = path.join(INSTALL_DIR, 'get-pip.py');
+      const pythonExe = path.join(INSTALL_DIR, 'python.exe');
+
+      // 2. Descargar Python si no existe
+      if (!existsSync(pythonExe)) {
+        log(`Descargando Python Portable para ${targetOs}...`);
+        
+        if (targetOs === 'win32') {
+          // Lógica Windows (PowerShell)
+          await execAsync(`powershell -Command "Invoke-WebRequest -Uri '${PYTHON_URL}' -OutFile '${zipPath}'"`);
+          log('Extrayendo Python...');
+          await execAsync(`powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${INSTALL_DIR}' -Force"`);
+          await fs.unlink(zipPath); // Limpiar zip
+
+          // Modificar el archivo _pth (solo en Windows embeddable) para habilitar pip
+          log('Configurando entorno Windows...');
+          const pthPath = path.join(INSTALL_DIR, 'python310._pth');
+          let pthContent = await fs.readFile(pthPath, 'utf8');
+          pthContent = pthContent.replace('#import site', 'import site');
+          await fs.writeFile(pthPath, pthContent);
+
+        } else if (targetOs === 'darwin') {
+          // Lógica Mac (Standalone Python Build)
+          const MAC_PYTHON = "https://github.com/indygreg/python-build-standalone/releases/download/20240107/cpython-3.10.13+20240107-aarch64-apple-darwin-install_only.tar.gz";
+          const tarPath = path.join(INSTALL_DIR, 'python.tar.gz');
+          
+          await execAsync(`curl -L -o '${tarPath}' '${MAC_PYTHON}'`);
+          log('Extrayendo Python...');
+          await execAsync(`tar -xzf '${tarPath}' -C '${INSTALL_DIR}' --strip-components=1`);
+          await fs.unlink(tarPath); // Limpiar tar
+        } else {
+          throw new Error('Sistema operativo no soportado por el instalador desatendido.');
+        }
+      } else {
+        log('Python Portable ya está instalado.');
+      }
+
+      // 4. Instalar pip si no existe
+      const isWin = targetOs === 'win32';
+      const actualPythonExe = isWin ? path.join(INSTALL_DIR, 'python.exe') : path.join(INSTALL_DIR, 'bin', 'python3');
+      const pipPath = isWin ? path.join(INSTALL_DIR, 'Scripts', 'pip.exe') : path.join(INSTALL_DIR, 'bin', 'pip3');
+
+      if (!existsSync(pipPath)) {
+        log('Descargando pip...');
+        await execAsync(`curl -sSLo '${getPipPath}' '${GET_PIP_URL}' || powershell -Command "Invoke-WebRequest -Uri '${GET_PIP_URL}' -OutFile '${getPipPath}'"`);
+        
+        log('Instalando pip...');
+        await execAsync(`"${actualPythonExe}" "${getPipPath}"`);
+      }
+
+      // 5. Instalar requirements.txt del controlador
+      log('Instalando dependencias del motor local...');
+      const reqPath = path.join(PROJECT_ROOT, 'controlador', 'requirements.txt');
+      if (existsSync(reqPath)) {
+        await execAsync(`"${actualPythonExe}" -m pip install -r "${reqPath}"`);
+      }
+
+      log('¡Instalación completada exitosamente!');
+      return { success: true, pythonPath: actualPythonExe };
+
+    } catch (error: any) {
+      log(`Error durante la instalación: ${error.message}`);
+      return { success: false, error: error.message };
+    }
+  }
+}
