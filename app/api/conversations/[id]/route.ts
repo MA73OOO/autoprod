@@ -4,7 +4,7 @@ import { db } from '@/src/prisma/db';
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -14,7 +14,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { id: conversationId } = params;
+    const { id: conversationId } = await params;
     const body = await request.json();
     const { title, channelId, videoId } = body;
 
@@ -49,7 +49,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -59,7 +59,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { id: conversationId } = params;
+    const { id: conversationId } = await params;
 
     // Verify ownership
     const conversation = await db.orm.public.Conversation

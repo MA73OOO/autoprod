@@ -13,21 +13,26 @@ interface FileTreeProps {
   node: FileNode;
   level?: number;
   onAddNode?: (parentPath: string, type: 'channel' | 'video') => void;
+  onOpenFile?: (path: string) => void;
 }
 
-export default function FileTree({ node, level = 0, onAddNode }: FileTreeProps) {
+export default function FileTree({ node, level = 0, onAddNode, onOpenFile }: FileTreeProps) {
   const [isOpen, setIsOpen] = useState(level < 1); // Auto-open root level
   const isDir = node.type === 'directory';
+  const isMarkdown = !isDir && (node.name.toLowerCase().endsWith('.md') || node.name.toLowerCase().endsWith('.txt'));
 
   return (
     <div className="text-sm">
       <div 
-        className={`flex items-center group py-1 px-2 rounded cursor-pointer hover:bg-zinc-800/50 transition-colors ${level === 0 ? 'font-semibold text-zinc-200' : 'text-zinc-400'}`}
+        className={`flex items-center group py-1 px-2 rounded ${isMarkdown ? 'cursor-pointer hover:bg-zinc-800/80 hover:text-indigo-400' : isDir ? 'cursor-pointer hover:bg-zinc-800/50' : 'cursor-default'} transition-colors ${level === 0 ? 'font-semibold text-zinc-200' : 'text-zinc-400'}`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
-        onClick={() => isDir && setIsOpen(!isOpen)}
+        onClick={() => {
+          if (isDir) setIsOpen(!isOpen);
+          else if (isMarkdown && onOpenFile) onOpenFile(node.path);
+        }}
       >
         <span className="w-4 inline-block opacity-70">
-          {isDir ? (isOpen ? '▼' : '▶') : '📄'}
+          {isDir ? (isOpen ? '▼' : '▶') : isMarkdown ? '📝' : '📄'}
         </span>
         <span className="ml-1 truncate flex-1">{node.name}</span>
         
@@ -57,7 +62,7 @@ export default function FileTree({ node, level = 0, onAddNode }: FileTreeProps) 
             </div>
           ) : (
             node.children.map((child, i) => (
-              <FileTree key={i} node={child} level={level + 1} onAddNode={onAddNode} />
+              <FileTree key={i} node={child} level={level + 1} onAddNode={onAddNode} onOpenFile={onOpenFile} />
             ))
           )}
         </div>

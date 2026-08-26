@@ -5,6 +5,7 @@ import { Language } from '@/app/translations';
 import { Conversation } from './types';
 import FileTree, { FileNode } from './FileTree';
 import { ControladorClient } from '@/lib/controlador-client';
+import { toast } from 'sonner';
 
 interface Props {
   lang: Language;
@@ -20,6 +21,7 @@ interface Props {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onLinkWorkspace: () => void;
   onAddNode: (parentPath: string, type: 'channel' | 'video') => void;
+  onOpenFile?: (path: string) => void;
 }
 
 export default function ConversationSidebar({
@@ -36,6 +38,7 @@ export default function ConversationSidebar({
   onRenameConversation,
   onLinkWorkspace,
   onAddNode,
+  onOpenFile,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -73,33 +76,48 @@ export default function ConversationSidebar({
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
 
         {/* Motor Status Section */}
-        <div className="flex items-center justify-between bg-zinc-900/50 rounded-lg p-2.5 border border-zinc-800/50">
+        <div className="flex items-center justify-between bg-zinc-900/50 rounded-lg p-3 border border-zinc-800/50">
           <div className="flex items-center gap-2">
             <div className="relative flex h-3 w-3">
               {motorStatus && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               )}
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${motorStatus ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+              <span className={`relative inline-flex rounded-full h-3 w-3 ${motorStatus ? 'bg-emerald-500' : 'bg-zinc-600'}`}></span>
             </div>
             <span className="text-xs font-semibold text-zinc-300">
-              Motor {motorStatus ? 'Conectado' : 'Apagado'}
+              {motorStatus ? 'Online' : 'Offline'}
             </span>
           </div>
-          {!motorStatus ? (
-            <a 
-              href="autoprod://start"
-              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold rounded shadow transition-colors"
-            >
-              Encender
-            </a>
-          ) : (
-            <button 
-              onClick={() => ControladorClient.shutdownMotor()}
-              className="px-2.5 py-1 bg-zinc-800 hover:bg-red-600/80 text-zinc-300 hover:text-white text-[10px] font-bold rounded shadow transition-colors"
-            >
-              Apagar
-            </button>
-          )}
+          
+          {/* Toggle Switch */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={motorStatus}
+            onClick={async () => {
+              if (motorStatus) {
+                ControladorClient.shutdownMotor();
+              } else {
+                const toastId = toast.loading('Instalando/Validando motor...');
+                try {
+                  await ControladorClient.installMotor();
+                  toast.success('Motor listo y ejecutándose', { id: toastId });
+                } catch (error: any) {
+                  toast.error(error.message || 'Error validando motor', { id: toastId });
+                }
+              }
+            }}
+            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+              motorStatus ? 'bg-emerald-500' : 'bg-zinc-700'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                motorStatus ? 'translate-x-4' : 'translate-x-0'
+              }`}
+            />
+          </button>
         </div>
         
         {/* Workspace / Project Section */}
@@ -141,7 +159,7 @@ export default function ConversationSidebar({
                 {/* The File Tree */}
                 <div className="overflow-x-auto pb-2">
                   {workspaceTree.map((node, i) => (
-                    <FileTree key={i} node={node} onAddNode={onAddNode} />
+                    <FileTree key={i} node={node} onAddNode={onAddNode} onOpenFile={onOpenFile} />
                   ))}
                 </div>
               </>

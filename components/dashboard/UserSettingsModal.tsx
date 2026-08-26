@@ -12,7 +12,7 @@ interface UserSettingsModalProps {
 }
 
 export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserSettingsModalProps) {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'profile' | 'billing' | 'password'>('profile');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'commands' | 'profile' | 'billing' | 'password'>('general');
   const t = translations[lang];
 
   if (!isOpen) return null;
@@ -27,6 +27,24 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
             <p className="text-[10px] text-zinc-500">{user?.email || 'demo@autoprod.io'}</p>
           </div>
 
+          <button
+            onClick={() => setActiveSettingsTab('general')}
+            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'general'
+              ? 'bg-purple-500/10 text-purple-400 font-semibold'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}
+          >
+            {lang === 'es' ? 'General' : 'General'}
+          </button>
+          <button
+            onClick={() => setActiveSettingsTab('commands')}
+            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'commands'
+              ? 'bg-purple-500/10 text-purple-400 font-semibold'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}
+          >
+            {lang === 'es' ? 'Comandos' : 'Commands'}
+          </button>
           <button
             onClick={() => setActiveSettingsTab('profile')}
             className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'profile'
@@ -65,6 +83,90 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
 
         {/* Modal Content Panel */}
         <div className="flex-1 p-6 overflow-y-auto flex flex-col bg-[#121214]">
+          {/* General Tab */}
+          {activeSettingsTab === 'general' && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+                {lang === 'es' ? 'Configuración General' : 'General Settings'}
+              </h4>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="text-zinc-500 block mb-1">
+                    {lang === 'es' ? 'Puerto del Motor (Predeterminado: 8000)' : 'Motor Port (Default: 8000)'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      id="motorPortInput"
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_motor_port') || '8000' : '8000'}
+                      placeholder="8000"
+                      className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none focus:border-purple-500"
+                    />
+                    <button
+                      onClick={() => {
+                        const val = (document.getElementById('motorPortInput') as HTMLInputElement)?.value;
+                        if (val && typeof window !== 'undefined') {
+                          localStorage.setItem('autoprod_motor_port', val);
+                          toast.success(lang === 'es' ? 'Puerto guardado' : 'Port saved');
+                          // Simple reload to reconnect
+                          window.location.reload();
+                        }
+                      }}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      {lang === 'es' ? 'Guardar Puerto' : 'Save Port'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Commands Tab */}
+          {activeSettingsTab === 'commands' && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+                {lang === 'es' ? 'Comandos y Atajos' : 'Commands & Shortcuts'}
+              </h4>
+              <div className="space-y-3 text-xs">
+                <div className="flex items-center justify-between bg-[#18181b] border border-zinc-800 rounded p-3">
+                  <div>
+                    <label className="text-zinc-300 font-bold block mb-1">
+                      {lang === 'es' ? 'Atajo Vista Previa (Markdown)' : 'Markdown Preview Shortcut'}
+                    </label>
+                    <p className="text-zinc-500 text-[10px]">
+                      {lang === 'es' ? 'Alterna entre vista previa y edición con Ctrl+Shift+V' : 'Toggle between preview and edit mode with Ctrl+Shift+V'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={typeof window !== 'undefined' ? localStorage.getItem('autoprod_md_shortcuts_enabled') !== 'false' : true}
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        const isEnabled = localStorage.getItem('autoprod_md_shortcuts_enabled') !== 'false';
+                        localStorage.setItem('autoprod_md_shortcuts_enabled', (!isEnabled).toString());
+                        toast.success(lang === 'es' ? 'Atajos actualizados' : 'Shortcuts updated');
+                        // Simple re-render trigger by updating local variable or reloading
+                        window.location.reload();
+                      }
+                    }}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (typeof window !== 'undefined' ? localStorage.getItem('autoprod_md_shortcuts_enabled') !== 'false' : true) ? 'bg-purple-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        (typeof window !== 'undefined' ? localStorage.getItem('autoprod_md_shortcuts_enabled') !== 'false' : true) ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Profile Tab */}
           {activeSettingsTab === 'profile' && (
             <div className="space-y-4">

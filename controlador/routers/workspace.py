@@ -101,3 +101,40 @@ def create_folder(req: CreateFolderRequest):
         return {"status": "success", "message": f"Estructura creada en {new_path}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creando carpetas: {str(e)}")
+
+class SaveFileRequest(BaseModel):
+    path: str
+    content: str
+
+@router.get("/file")
+def read_file(path: str):
+    """Lee el contenido de un archivo (preferiblemente .md o .txt)."""
+    file_path = Path(path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="El archivo no existe.")
+    
+    if file_path.suffix.lower() not in ['.md', '.txt']:
+        raise HTTPException(status_code=400, detail="Solo se permite leer archivos .md o .txt por seguridad.")
+        
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return {"content": f.read()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error leyendo el archivo: {str(e)}")
+
+@router.post("/file")
+def save_file(req: SaveFileRequest):
+    """Guarda el contenido de un archivo."""
+    file_path = Path(req.path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="El archivo no existe.")
+        
+    if file_path.suffix.lower() not in ['.md', '.txt']:
+        raise HTTPException(status_code=400, detail="Solo se permite editar archivos .md o .txt por seguridad.")
+        
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(req.content)
+        return {"status": "success", "message": "Archivo guardado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error guardando el archivo: {str(e)}")

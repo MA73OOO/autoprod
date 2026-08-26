@@ -16,6 +16,7 @@ import ChatPanel from '@/components/dashboard/ChatPanel';
 import RightInspector from '@/components/dashboard/RightInspector';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
+import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
 
 import { Conversation, Message } from '@/components/dashboard/types';
 import { FileNode } from '@/components/dashboard/FileTree';
@@ -73,14 +74,22 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    let treeLoaded = false;
     // Poll Motor Status every 5 seconds
     const checkMotor = async () => {
       const isOnline = await ControladorClient.checkStatus();
       setMotorStatus(isOnline);
       if (isOnline) {
-        // If it comes online and we have a path, reload tree
-        const savedPath = localStorage.getItem('autoprod_workspace_path');
-        if (savedPath) loadWorkspaceTree(savedPath);
+        // Only load tree if we haven't loaded it yet since coming online
+        if (!treeLoaded) {
+          const savedPath = localStorage.getItem('autoprod_workspace_path');
+          if (savedPath) {
+            loadWorkspaceTree(savedPath);
+            treeLoaded = true;
+          }
+        }
+      } else {
+        treeLoaded = false;
       }
     };
     checkMotor();
@@ -164,8 +173,9 @@ export default function Dashboard() {
   };
 
   // ── Navigation State ──
-  const [activeView, setActiveView] = useState<'home' | 'chat'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor'>('home');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [activeEditorPath, setActiveEditorPath] = useState<string | null>(null);
 
   // ── Data State ──
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -217,7 +227,7 @@ export default function Dashboard() {
   // ── Lazy Load Messages Effect ──
   useEffect(() => {
     if (!activeConversationId) return;
-    
+
     // Check if we already loaded or are currently loading this conversation
     if (loadedConversations[activeConversationId]) return;
 
@@ -229,7 +239,7 @@ export default function Dashboard() {
         if (res.ok) {
           const rawMessages = await res.json();
           const formatted = formatMessages(rawMessages);
-          setConversations(prev => prev.map(c => 
+          setConversations(prev => prev.map(c =>
             c.id === activeConversationId ? { ...c, messages: formatted } : c
           ));
         } else {
@@ -510,33 +520,6 @@ export default function Dashboard() {
                 <button onClick={() => { setIsSettingsModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-zinc-800 rounded transition-colors text-zinc-300 hover:text-white flex items-center gap-2">
                   ⚙️ {t.configGeneral}
                 </button>
-                <div className="px-3 py-1 mt-1 text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
-                  Instalar Controlador
-                </div>
-                <button onClick={async () => { 
-                  setIsProfileOpen(false);
-                  const toastId = toast.loading('Descargando instalador para Windows...');
-                  try {
-                    const res = await fetch('/api/setup/install?os=win32', { method: 'POST' });
-                    const data = await res.json();
-                    if (data.success) toast.success('Motor instalado correctamente', { id: toastId });
-                    else toast.error('Error al instalar: ' + data.error, { id: toastId });
-                  } catch (e: any) { toast.error('Fallo de red', { id: toastId }); }
-                }} className="w-full text-left px-3 py-2 hover:bg-indigo-500/10 rounded transition-colors text-indigo-400 hover:text-indigo-300 flex items-center gap-2 pl-4">
-                  🪟 Windows (.exe)
-                </button>
-                <button onClick={async () => { 
-                  setIsProfileOpen(false);
-                  const toastId = toast.loading('Descargando instalador para Mac...');
-                  try {
-                    const res = await fetch('/api/setup/install?os=darwin', { method: 'POST' });
-                    const data = await res.json();
-                    if (data.success) toast.success('Motor instalado correctamente', { id: toastId });
-                    else toast.error('Error al instalar: ' + data.error, { id: toastId });
-                  } catch (e: any) { toast.error('Fallo de red', { id: toastId }); }
-                }} className="w-full text-left px-3 py-2 hover:bg-indigo-500/10 rounded transition-colors text-indigo-400 hover:text-indigo-300 flex items-center gap-2 pl-4">
-                  🍎 Mac (.dmg)
-                </button>
                 <div className="border-t border-zinc-800 mt-1 pt-1">
                   <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 hover:text-red-300 rounded transition-colors">
                     🚪 {t.logout}
@@ -581,6 +564,10 @@ export default function Dashboard() {
               setCreationMode(type);
               setIsWorkspaceModalOpen(true);
             }}
+            onOpenFile={(path) => {
+              setActiveEditorPath(path);
+              setActiveView('editor');
+            }}
           />
         </aside>
 
@@ -594,6 +581,14 @@ export default function Dashboard() {
         <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden">
           {activeView === 'home' ? (
             <Launchpad lang={lang} onSelect={handleNewConversationWithRole} />
+          ) : activeView === 'editor' && activeEditorPath ? (
+            <MarkdownEditor
+              filePath={activeEditorPath}
+              onClose={() => {
+                setActiveEditorPath(null);
+                setActiveView('home');
+              }}
+            />
           ) : (
             <ChatPanel
               lang={lang}
@@ -650,13 +645,13 @@ export default function Dashboard() {
       />
 
       {/* Confirm Delete Modal */}
-      <ConfirmDeleteModal 
+      <ConfirmDeleteModal
         isOpen={!!deleteTargetId}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={confirmDeleteConversation}
         title={lang === 'es' ? '¿Eliminar conversación?' : 'Delete conversation?'}
-        description={lang === 'es' 
-          ? 'Esta acción no se puede deshacer. Se borrarán todos los mensajes asociados a este chat.' 
+        description={lang === 'es'
+          ? 'Esta acción no se puede deshacer. Se borrarán todos los mensajes asociados a este chat.'
           : 'This action cannot be undone. All messages associated with this chat will be deleted.'}
       />
     </div>
