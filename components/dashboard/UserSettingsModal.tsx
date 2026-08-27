@@ -235,6 +235,36 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                       {lang === 'es' ? 'Guardar Llave' : 'Save Key'}
                     </button>
                   </div>
+
+                  <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-3">
+                    <label className="text-xs font-bold text-zinc-200 block mb-1">Anthropic API Key (Claude)</label>
+                    <input
+                      type="password"
+                      id="anthropicKeyInput"
+                      placeholder="sk-ant-..."
+                      className="w-full bg-[#0f0f12] border border-zinc-700 rounded p-2 text-white text-xs focus:outline-none focus:border-purple-500 mb-2"
+                    />
+                    <button
+                      onClick={async () => {
+                        const val = (document.getElementById('anthropicKeyInput') as HTMLInputElement)?.value;
+                        if (!val) return;
+                        try {
+                          const res = await fetch('/api/settings/keys', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider: 'anthropic', apiKey: val })
+                          });
+                          if (res.ok) toast.success(lang === 'es' ? 'Llave de Anthropic guardada' : 'Anthropic Key saved');
+                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                        } catch (e) {
+                          toast.error('Error de conexión');
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] rounded font-bold transition-colors"
+                    >
+                      {lang === 'es' ? 'Guardar Llave' : 'Save Key'}
+                    </button>
+                  </div>
                 </div>
               </div>
 

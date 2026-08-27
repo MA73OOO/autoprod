@@ -55,6 +55,7 @@ export default function ChatPanel({
       const cloudReady = (cloudData.configured || []).map((provider: string) => {
         if (provider === 'gemini') return { id: 'gemini', name: 'Google Gemini (Cloud)' };
         if (provider === 'openai' || provider === 'chatgpt') return { id: 'openai', name: 'OpenAI ChatGPT (Cloud)' };
+        if (provider === 'anthropic') return { id: 'anthropic', name: 'Anthropic Claude (Cloud)' };
         return { id: provider, name: provider };
       });
 
@@ -154,11 +155,22 @@ export default function ChatPanel({
                 defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || readyClis[0].id : readyClis[0].id}
                 onChange={(e) => {
                   if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_provider', e.target.value);
+                  // Dispatch a custom event or trigger re-render so model options update
+                  window.dispatchEvent(new Event('providerChanged'));
                 }}
+                id="providerSelector"
               >
                 {readyClis.map(cli => (
                   <option key={cli.id} value={cli.id}>{cli.name}</option>
                 ))}
+              </select>
+              
+              <select 
+                className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
+                id="modelSelector"
+              >
+                 <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
+                 {/* Aquí se pueden añadir dinámicamente opciones según el proveedor */}
               </select>
               <input
                 type="text"
