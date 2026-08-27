@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Language, translations } from '@/app/translations';
 
@@ -18,7 +18,6 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
   const [isDetecting, setIsDetecting] = useState(false);
 
   // Fetch CLIs when AI tab is opened
-  import { useEffect } from 'react';
   useEffect(() => {
     if (activeSettingsTab === 'ai') {
       setIsDetecting(true);
@@ -164,57 +163,125 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
 
           {/* AI Settings Tab */}
           {activeSettingsTab === 'ai' && (
-            <div className="space-y-4 overflow-y-auto pr-2 max-h-[350px] custom-scrollbar">
-              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
-                {lang === 'es' ? 'Tus Motores Locales' : 'Your Local Engines'}
-              </h4>
-              <p className="text-xs text-zinc-400">
-                {lang === 'es' 
-                  ? 'AutoProd detecta automáticamente las herramientas de IA instaladas en tu computadora. Asegúrate de iniciar sesión para poder usarlas en el chat.'
-                  : 'AutoProd automatically detects AI tools installed on your computer. Make sure to log in to use them in chat.'}
-              </p>
+            <div className="space-y-6 overflow-y-auto pr-2 max-h-[350px] custom-scrollbar">
               
-              <div className="space-y-3 mt-4">
-                {isDetecting ? (
-                  <div className="text-center py-8 text-zinc-500 text-xs flex flex-col items-center gap-2">
-                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                    {lang === 'es' ? 'Buscando motores instalados...' : 'Scanning installed engines...'}
+              {/* Cloud Engines (API Keys) */}
+              <div>
+                <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2 mb-3">
+                  {lang === 'es' ? 'Motores en la Nube (API Keys)' : 'Cloud Engines (API Keys)'}
+                </h4>
+                <p className="text-[10px] text-zinc-400 mb-3">
+                  {lang === 'es' 
+                    ? 'Ingresa tus API Keys para usar motores premium. Tus llaves se encriptan de forma segura en nuestra base de datos (Supabase Vault).'
+                    : 'Enter your API Keys to use premium engines. Your keys are securely encrypted in our database (Supabase Vault).'}
+                </p>
+                <div className="space-y-3">
+                  <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-3">
+                    <label className="text-xs font-bold text-zinc-200 block mb-1">Google Gemini API Key</label>
+                    <input
+                      type="password"
+                      id="geminiKeyInput"
+                      placeholder="AIzaSy..."
+                      className="w-full bg-[#0f0f12] border border-zinc-700 rounded p-2 text-white text-xs focus:outline-none focus:border-purple-500 mb-2"
+                    />
+                    <button
+                      onClick={async () => {
+                        const val = (document.getElementById('geminiKeyInput') as HTMLInputElement)?.value;
+                        if (!val) return;
+                        try {
+                          const res = await fetch('/api/settings/keys', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider: 'gemini', apiKey: val })
+                          });
+                          if (res.ok) toast.success(lang === 'es' ? 'Llave de Gemini guardada' : 'Gemini Key saved');
+                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                        } catch (e) {
+                          toast.error('Error de conexión');
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] rounded font-bold transition-colors"
+                    >
+                      {lang === 'es' ? 'Guardar Llave' : 'Save Key'}
+                    </button>
                   </div>
-                ) : detectedClis.length === 0 ? (
-                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-center">
-                    <p className="text-zinc-400 text-xs mb-2">
-                      {lang === 'es' ? 'No se detectó ningún motor local (Gemini, ChatGPT, Ollama).' : 'No local engines detected (Gemini, ChatGPT, Ollama).'}
-                    </p>
-                    <a href="https://github.com/google/generative-ai-cli" target="_blank" rel="noreferrer" className="text-purple-400 text-xs hover:underline">
-                      {lang === 'es' ? 'Ver tutorial de instalación' : 'View installation tutorial'}
-                    </a>
+                  
+                  <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-3">
+                    <label className="text-xs font-bold text-zinc-200 block mb-1">OpenAI API Key (ChatGPT)</label>
+                    <input
+                      type="password"
+                      id="openaiKeyInput"
+                      placeholder="sk-..."
+                      className="w-full bg-[#0f0f12] border border-zinc-700 rounded p-2 text-white text-xs focus:outline-none focus:border-purple-500 mb-2"
+                    />
+                    <button
+                      onClick={async () => {
+                        const val = (document.getElementById('openaiKeyInput') as HTMLInputElement)?.value;
+                        if (!val) return;
+                        try {
+                          const res = await fetch('/api/settings/keys', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ provider: 'openai', apiKey: val })
+                          });
+                          if (res.ok) toast.success(lang === 'es' ? 'Llave de OpenAI guardada' : 'OpenAI Key saved');
+                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                        } catch (e) {
+                          toast.error('Error de conexión');
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white text-[10px] rounded font-bold transition-colors"
+                    >
+                      {lang === 'es' ? 'Guardar Llave' : 'Save Key'}
+                    </button>
                   </div>
-                ) : (
-                  detectedClis.map((cli) => (
-                    <div key={cli.id} className="bg-[#18181b] border border-zinc-800 rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <h5 className="text-sm font-bold text-zinc-200">{cli.name}</h5>
-                        <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: {cli.bin}</p>
-                      </div>
-                      
-                      {cli.is_authenticated ? (
+                </div>
+              </div>
+
+              {/* Local Engines (Ollama) */}
+              <div>
+                <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+                  {lang === 'es' ? 'Tus Motores Locales' : 'Your Local Engines'}
+                </h4>
+                <p className="text-xs text-zinc-400 mt-2">
+                  {lang === 'es' 
+                    ? 'Motores 100% gratuitos que corren en tu computadora (ej: Ollama).'
+                    : '100% free engines running on your computer (e.g. Ollama).'}
+                </p>
+                
+                <div className="space-y-3 mt-4">
+                  {isDetecting ? (
+                    <div className="text-center py-4 text-zinc-500 text-xs flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                      {lang === 'es' ? 'Buscando motores instalados...' : 'Scanning installed engines...'}
+                    </div>
+                  ) : detectedClis.length === 0 ? (
+                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-center">
+                      <p className="text-zinc-400 text-xs mb-2">
+                        {lang === 'es' ? 'No se detectó ningún motor local (Ollama).' : 'No local engines detected (Ollama).'}
+                      </p>
+                      <a href="https://ollama.com/" target="_blank" rel="noreferrer" className="text-purple-400 text-xs hover:underline">
+                        {lang === 'es' ? 'Descargar Ollama' : 'Download Ollama'}
+                      </a>
+                    </div>
+                  ) : (
+                    detectedClis.map((cli) => (
+                      <div key={cli.id} className="bg-[#18181b] border border-zinc-800 rounded-lg p-3 flex items-center justify-between">
+                        <div>
+                          <h5 className="text-sm font-bold text-zinc-200">{cli.name}</h5>
+                          <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: {cli.bin}</p>
+                        </div>
+                        
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-xs font-semibold">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
                           {lang === 'es' ? 'Listo' : 'Ready'}
                         </div>
-                      ) : (
-                        <button
-                          onClick={() => handleLogin(cli.id)}
-                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs rounded font-bold transition-colors shadow-lg shadow-purple-500/20"
-                        >
-                          {lang === 'es' ? 'Iniciar Sesión' : 'Login'}
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           )}

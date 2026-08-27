@@ -43,13 +43,23 @@ export default function ChatPanel({
   const [readyClis, setReadyClis] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch('http://localhost:8000/chat/detect_clis')
-      .then(res => res.json())
-      .then(data => {
-        const auth = (data.detected || []).filter((cli: any) => cli.is_authenticated);
-        setReadyClis(auth);
-      })
-      .catch(err => console.error("Error fetching CLIs for chat:", err));
+    Promise.all([
+      fetch('http://localhost:8000/chat/detect_clis').then(res => res.json()).catch(() => ({ detected: [] })),
+      fetch('/api/settings/keys').then(res => res.json()).catch(() => ({ configured: [] }))
+    ]).then(([localData, cloudData]) => {
+      
+      // Filtra motores locales (Ollama)
+      const localReady = (localData.detected || []).filter((cli: any) => cli.is_authenticated);
+      
+      // Motores Cloud configurados en Vault
+      const cloudReady = (cloudData.configured || []).map((provider: string) => {
+        if (provider === 'gemini') return { id: 'gemini', name: 'Google Gemini (Cloud)' };
+        if (provider === 'openai' || provider === 'chatgpt') return { id: 'openai', name: 'OpenAI ChatGPT (Cloud)' };
+        return { id: provider, name: provider };
+      });
+
+      setReadyClis([...cloudReady, ...localReady]);
+    });
   }, []);
 
   return (
@@ -173,5 +183,4 @@ export default function ChatPanel({
       </div>
     </>
   );
-}  );
 }

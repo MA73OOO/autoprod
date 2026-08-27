@@ -399,19 +399,29 @@ export default function Dashboard() {
       // 1. Obtener el proveedor seleccionado
       const provider = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || 'gemini' : 'gemini';
       
-      // 2. Mapear a comando CLI (Oculto al usuario)
-      let commandTemplate = 'gemini-cli ask "{prompt}"'; // Default
-      if (provider === 'chatgpt') commandTemplate = 'chatgpt -p "{prompt}"';
-      if (provider === 'ollama') commandTemplate = 'ollama run llama3 "{prompt}"';
-      if (provider === 'imagen3') commandTemplate = 'gemini-cli image "{prompt}"';
-
-      // 3. Ejecutar consola vía Python
-      // TODO: Aquí podríamos inyectar el historial si es necesario
+      // 2. Mapear a comando CLI o llamar a API REST Cloud
       let aiResponseText = '';
+
       try {
-        aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
+        if (provider === 'gemini' || provider === 'chatgpt' || provider === 'openai') {
+          // Motor Cloud (Usa API Keys desde Supabase Vault)
+          const res = await fetch('/api/chat/ask', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: text, provider })
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Error en la nube');
+          aiResponseText = data.response;
+          
+        } else {
+          // Motor Local (Usa Controlador en Python vía subprocess)
+          let commandTemplate = 'ollama run llama3 "{prompt}"';
+          if (provider === 'imagen3') commandTemplate = 'gemini-cli image "{prompt}"';
+          aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
+        }
       } catch (e: any) {
-        aiResponseText = `❌ Error en el motor local: ${e.message}. Asegúrate de tener '${provider}' instalado en tu terminal y de haber iniciado sesión.`;
+        aiResponseText = `❌ Error de IA: ${e.message}. Si es un motor en la nube, asegúrate de haber guardado tu API Key en Ajustes. Si es local, verifica que esté encendido.`;
       }
 
       // 4. Guardar en Base de Datos (Next.js)

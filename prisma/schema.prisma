@@ -14,7 +14,8 @@ model User {
   email        String            @unique
   name         String?
   role         Role              @default(USER)
-  geminiApiKey String?
+  geminiVaultId String?
+  openaiVaultId String?
   subscription UserSubscription?
   channels     Channel[]
   createdAt    DateTime          @default(now())
