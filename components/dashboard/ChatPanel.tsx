@@ -44,12 +44,15 @@ export default function ChatPanel({
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8000/chat/detect_clis').then(res => res.json()).catch(() => ({ detected: [] })),
+      fetch('http://localhost:8001/chat/detect_clis').then(res => res.json()).catch(() => ({ detected: [] })),
       fetch('/api/settings/keys').then(res => res.json()).catch(() => ({ configured: [] }))
     ]).then(([localData, cloudData]) => {
       
-      // Filtra motores locales (Ollama)
-      const localReady = (localData.detected || []).filter((cli: any) => cli.is_authenticated);
+      // Permite usar los motores locales (Ollama) detectados, incluso si el ping falló momentáneamente
+      const localReady = (localData.detected || []).map((cli: any) => ({
+        id: cli.id,
+        name: cli.name
+      }));
       
       // Motores Cloud configurados en Vault
       const cloudReady = (cloudData.configured || []).map((provider: string) => {
@@ -168,9 +171,18 @@ export default function ChatPanel({
               <select 
                 className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
                 id="modelSelector"
+                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default'}
+                onChange={(e) => {
+                  if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
+                }}
               >
                  <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
-                 {/* Aquí se pueden añadir dinámicamente opciones según el proveedor */}
+                 <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                 <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
+                 <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
+                 <option value="models/gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
+                 <option value="models/gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
+                 <option value="llama3.1">Llama 3.1 (Ollama Local)</option>
               </select>
               <input
                 type="text"

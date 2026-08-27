@@ -403,25 +403,65 @@ export default function Dashboard() {
       let aiResponseText = '';
 
       try {
-        if (provider === 'gemini' || provider === 'chatgpt' || provider === 'openai') {
-          // Motor Cloud (Usa API Keys desde Supabase Vault)
-          const res = await fetch('/api/chat/ask', {
+        if (provider === 'imagen3') {
+          // Motor Local (Imágenes)
+          const commandTemplate = 'gemini-cli image "{prompt}"';
+          aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
+        } else {
+          // Motor Texto (Nube o Ollama Local) usando Vercel AI SDK
+          const model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default';
+          
+          const chatHistory = activeConversation?.messages.map(m => ({
+             role: m.sender === 'user' ? 'user' : 'assistant',
+             content: m.text
+          })) || [];
+
+          const res = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: text, provider })
+            body: JSON.stringify({ 
+              messages: [...chatHistory, { role: 'user', content: text }], 
+              provider,
+              model
+            })
           });
-          const data = await res.json();
-          if (!res.ok) throw new Error(data.error || 'Error en la nube');
-          aiResponseText = data.response;
+
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Error conectando con la IA');
+          }
+
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
           
-        } else {
-          // Motor Local (Usa Controlador en Python vía subprocess)
-          let commandTemplate = 'ollama run llama3 "{prompt}"';
-          if (provider === 'imagen3') commandTemplate = 'gemini-cli image "{prompt}"';
-          aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
+          if (reader) {
+            // Limpiar "Pensando..."
+            setConversations(prev => prev.map(c => {
+              if (c.id !== activeConversationId) return c;
+              const newMsgs = [...c.messages];
+              newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: '' };
+              return { ...c, messages: newMsgs };
+            }));
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value, { stream: true });
+              aiResponseText += chunk;
+              
+              // Actualizar UI en tiempo real (streaming)
+              setConversations(prev => prev.map(c => {
+                if (c.id !== activeConversationId) return c;
+                const newMsgs = [...c.messages];
+                newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText };
+                return { ...c, messages: newMsgs };
+              }));
+            }
+          }
         }
       } catch (e: any) {
-        aiResponseText = `❌ Error de IA: ${e.message}. Si es un motor en la nube, asegúrate de haber guardado tu API Key en Ajustes. Si es local, verifica que esté encendido.`;
+        aiResponseText = `❌ Error de IA: ${e.message}. Verifica tus API Keys en Ajustes o si tu motor local está encendido.`;
       }
 
       // 4. Guardar en Base de Datos (Next.js)

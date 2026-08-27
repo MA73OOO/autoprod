@@ -117,7 +117,7 @@ export async function POST(req: Request) {
       system: 'You are a helpful assistant integrated into AutoProd. Be professional and concise.',
     });
 
-    return result.toDataStreamResponse();
+    return result.toTextStreamResponse();
   } catch (error: any) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

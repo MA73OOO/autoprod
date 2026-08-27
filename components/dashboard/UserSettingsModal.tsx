@@ -21,7 +21,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
   useEffect(() => {
     if (activeSettingsTab === 'ai') {
       setIsDetecting(true);
-      fetch('http://localhost:8000/chat/detect_clis')
+      fetch('http://localhost:8001/chat/detect_clis')
         .then(res => res.json())
         .then(data => {
           setDetectedClis(data.detected || []);
@@ -33,7 +33,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
 
   const handleLogin = async (providerId: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/chat/auth/${providerId}`, { method: 'POST' });
+      const res = await fetch(`http://localhost:8001/chat/auth/${providerId}`, { method: 'POST' });
       if (res.ok) {
         toast.info(lang === 'es' ? 'Sigue las instrucciones en la ventana de terminal que se acaba de abrir.' : 'Follow the instructions in the terminal window that just opened.');
       } else {
@@ -290,9 +290,21 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                       <p className="text-zinc-400 text-xs mb-2">
                         {lang === 'es' ? 'No se detectó ningún motor local (Ollama).' : 'No local engines detected (Ollama).'}
                       </p>
-                      <a href="https://ollama.com/" target="_blank" rel="noreferrer" className="text-purple-400 text-xs hover:underline">
-                        {lang === 'es' ? 'Descargar Ollama' : 'Download Ollama'}
-                      </a>
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const res = await fetch('http://localhost:8001/ollama/install', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) toast.info(data.message);
+                            else toast.error(data.detail || 'Error instalando Ollama');
+                          } catch (e) {
+                            toast.error('No se pudo contactar con el motor local en el puerto 8001.');
+                          }
+                        }}
+                        className="text-purple-400 text-xs hover:underline cursor-pointer"
+                      >
+                        {lang === 'es' ? 'Descargar e Instalar Ollama' : 'Download and Install Ollama'}
+                      </button>
                     </div>
                   ) : (
                     detectedClis.map((cli) => (
