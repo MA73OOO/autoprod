@@ -390,29 +390,61 @@ export default function Dashboard() {
     const text = inputPrompt;
     setInputPrompt('');
     const tempMsg: Message = { sender: 'user', text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-    setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg] } : c));
+    
+    // Añadimos mensaje del usuario y mensaje temporal de "Pensando..."
+    const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '' };
+    setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
 
     try {
+      // 1. Obtener el proveedor seleccionado
+      const provider = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || 'gemini' : 'gemini';
+      
+      // 2. Mapear a comando CLI (Oculto al usuario)
+      let commandTemplate = 'gemini-cli ask "{prompt}"'; // Default
+      if (provider === 'chatgpt') commandTemplate = 'chatgpt -p "{prompt}"';
+      if (provider === 'ollama') commandTemplate = 'ollama run llama3 "{prompt}"';
+      if (provider === 'imagen3') commandTemplate = 'gemini-cli image "{prompt}"';
+
+      // 3. Ejecutar consola vía Python
+      // TODO: Aquí podríamos inyectar el historial si es necesario
+      let aiResponseText = '';
+      try {
+        aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
+      } catch (e: any) {
+        aiResponseText = `❌ Error en el motor local: ${e.message}. Asegúrate de tener '${provider}' instalado en tu terminal y de haber iniciado sesión.`;
+      }
+
+      // 4. Guardar en Base de Datos (Next.js)
       const res = await fetch(`/api/conversations/${activeConversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, checklist, aiResponseText }),
       });
+      
       if (res.ok) {
         const data = await res.json();
         const userMsg: Message = { sender: 'user', text: data.userMessage.text, timestamp: new Date(data.userMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
         const geminiMsg: Message = { sender: 'gemini', text: data.geminiMessage.text, timestamp: new Date(data.geminiMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
         setConversations(prev => prev.map(c => {
           if (c.id !== activeConversationId) return c;
-          return { ...c, title: data.conversationTitle, messages: [...c.messages.filter(m => m !== tempMsg), userMsg, geminiMsg] };
+          // Filtramos los temporales y ponemos los reales
+          return { ...c, title: data.conversationTitle, messages: [...c.messages.filter(m => m !== tempMsg && m !== tempAiMsg), userMsg, geminiMsg] };
         }));
-        setSeoOutput({
-          title: `Optimizado: ${text.substring(0, 45)}...`,
-          tags: 'seo, gemini, autoprod, youtube automation',
-          description: `Metadatos generados para: "${text}".\n\n📌 SEO aplicado.${checklist.cta ? '\n\n¡Dale Like y Suscríbete! 👍' : ''}`,
-        });
+        
+        // Simular SEO Update si era chat de texto
+        if (provider !== 'imagen3') {
+          setSeoOutput({
+            title: `Optimizado: ${text.substring(0, 45)}...`,
+            tags: 'seo, gemini, autoprod, youtube automation',
+            description: `Metadatos generados para: "${text}".\n\n📌 SEO aplicado.${checklist.cta ? '\n\n¡Dale Like y Suscríbete! 👍' : ''}`,
+          });
+        }
       }
-    } catch { toast.error('Error al enviar mensaje'); }
+    } catch { 
+      toast.error('Error al enviar mensaje'); 
+      // Revertir mensajes temporales en caso de error fatal
+      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: c.messages.filter(m => m !== tempMsg && m !== tempAiMsg) } : c));
+    }
   };
 
   const handleAssociateChannel = async (channelId: string | null) => {

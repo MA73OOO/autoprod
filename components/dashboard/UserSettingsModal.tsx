@@ -12,10 +12,41 @@ interface UserSettingsModalProps {
 }
 
 export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserSettingsModalProps) {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'commands' | 'profile' | 'billing' | 'password'>('general');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'commands' | 'profile' | 'billing' | 'password'>('general');
   const t = translations[lang];
+  const [detectedClis, setDetectedClis] = useState<any[]>([]);
+  const [isDetecting, setIsDetecting] = useState(false);
+
+  // Fetch CLIs when AI tab is opened
+  import { useEffect } from 'react';
+  useEffect(() => {
+    if (activeSettingsTab === 'ai') {
+      setIsDetecting(true);
+      fetch('http://localhost:8000/chat/detect_clis')
+        .then(res => res.json())
+        .then(data => {
+          setDetectedClis(data.detected || []);
+        })
+        .catch(err => console.error("Error detecting CLIs:", err))
+        .finally(() => setIsDetecting(false));
+    }
+  }, [activeSettingsTab]);
+
+  const handleLogin = async (providerId: string) => {
+    try {
+      const res = await fetch(`http://localhost:8000/chat/auth/${providerId}`, { method: 'POST' });
+      if (res.ok) {
+        toast.info(lang === 'es' ? 'Sigue las instrucciones en la ventana de terminal que se acaba de abrir.' : 'Follow the instructions in the terminal window that just opened.');
+      } else {
+        toast.error('Error al abrir la autenticación.');
+      }
+    } catch (err) {
+      toast.error('No se pudo contactar con el motor local.');
+    }
+  };
 
   if (!isOpen) return null;
+
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -37,13 +68,22 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
             {lang === 'es' ? 'General' : 'General'}
           </button>
           <button
+            onClick={() => setActiveSettingsTab('ai')}
+            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'ai'
+              ? 'bg-purple-500/10 text-purple-400 font-semibold'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}
+          >
+            🧠 {lang === 'es' ? 'Inteligencia Artificial' : 'Artificial Intelligence'}
+          </button>
+          <button
             onClick={() => setActiveSettingsTab('commands')}
             className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'commands'
               ? 'bg-purple-500/10 text-purple-400 font-semibold'
               : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
               }`}
           >
-            {lang === 'es' ? 'Comandos' : 'Commands'}
+            {lang === 'es' ? 'Comandos Rápidos' : 'Shortcuts'}
           </button>
           <button
             onClick={() => setActiveSettingsTab('profile')}
@@ -122,7 +162,64 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
             </div>
           )}
 
-          {/* Commands Tab */}
+          {/* AI Settings Tab */}
+          {activeSettingsTab === 'ai' && (
+            <div className="space-y-4 overflow-y-auto pr-2 max-h-[350px] custom-scrollbar">
+              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+                {lang === 'es' ? 'Tus Motores Locales' : 'Your Local Engines'}
+              </h4>
+              <p className="text-xs text-zinc-400">
+                {lang === 'es' 
+                  ? 'AutoProd detecta automáticamente las herramientas de IA instaladas en tu computadora. Asegúrate de iniciar sesión para poder usarlas en el chat.'
+                  : 'AutoProd automatically detects AI tools installed on your computer. Make sure to log in to use them in chat.'}
+              </p>
+              
+              <div className="space-y-3 mt-4">
+                {isDetecting ? (
+                  <div className="text-center py-8 text-zinc-500 text-xs flex flex-col items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                    {lang === 'es' ? 'Buscando motores instalados...' : 'Scanning installed engines...'}
+                  </div>
+                ) : detectedClis.length === 0 ? (
+                  <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-center">
+                    <p className="text-zinc-400 text-xs mb-2">
+                      {lang === 'es' ? 'No se detectó ningún motor local (Gemini, ChatGPT, Ollama).' : 'No local engines detected (Gemini, ChatGPT, Ollama).'}
+                    </p>
+                    <a href="https://github.com/google/generative-ai-cli" target="_blank" rel="noreferrer" className="text-purple-400 text-xs hover:underline">
+                      {lang === 'es' ? 'Ver tutorial de instalación' : 'View installation tutorial'}
+                    </a>
+                  </div>
+                ) : (
+                  detectedClis.map((cli) => (
+                    <div key={cli.id} className="bg-[#18181b] border border-zinc-800 rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <h5 className="text-sm font-bold text-zinc-200">{cli.name}</h5>
+                        <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: {cli.bin}</p>
+                      </div>
+                      
+                      {cli.is_authenticated ? (
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-xs font-semibold">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {lang === 'es' ? 'Listo' : 'Ready'}
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleLogin(cli.id)}
+                          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs rounded font-bold transition-colors shadow-lg shadow-purple-500/20"
+                        >
+                          {lang === 'es' ? 'Iniciar Sesión' : 'Login'}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Commands (Shortcuts) Tab */}
           {activeSettingsTab === 'commands' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">

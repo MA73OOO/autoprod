@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
 
@@ -39,14 +40,26 @@ export default function ChatPanel({
 }: Props) {
   const t = translations[lang];
 
+  const [readyClis, setReadyClis] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('http://localhost:8000/chat/detect_clis')
+      .then(res => res.json())
+      .then(data => {
+        const auth = (data.detected || []).filter((cli: any) => cli.is_authenticated);
+        setReadyClis(auth);
+      })
+      .catch(err => console.error("Error fetching CLIs for chat:", err));
+  }, []);
+
   return (
     <>
-      {/* Channel Association Banner — only shown on first message */}
+      {/* Channel Association Banner - only shown on first message */}
       {activeConversation && activeConversation.messages.length <= 1 && (
         <div className="p-4 bg-zinc-950/40 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div className="space-y-0.5">
             <p className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-              📺 {lang === 'es' ? 'Asociar conversación a un Canal' : 'Associate conversation to a Channel'}
+              💡 {lang === 'es' ? 'Asociar conversación a un Canal' : 'Associate conversation to a Channel'}
             </p>
             <p className="text-[10px] text-zinc-500">
               {lang === 'es'
@@ -120,25 +133,45 @@ export default function ChatPanel({
 
         {/* Input bar */}
         <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder={t.promptPlaceholder}
-            value={inputPrompt}
-            onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSend()}
-            className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
-          />
-          <button
-            onClick={onSend}
-            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
-          >
-            {t.sendBtn}
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
+          {readyClis.length === 0 ? (
+             <div className="flex-1 flex items-center justify-center bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-500">
+               {lang === 'es' ? 'Ve a Ajustes ⚙️ para iniciar sesión en tus motores locales' : 'Go to Settings ⚙️ to login to your local engines'}
+             </div>
+          ) : (
+            <>
+              <select 
+                className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
+                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || readyClis[0].id : readyClis[0].id}
+                onChange={(e) => {
+                  if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_provider', e.target.value);
+                }}
+              >
+                {readyClis.map(cli => (
+                  <option key={cli.id} value={cli.id}>{cli.name}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder={t.promptPlaceholder}
+                value={inputPrompt}
+                onChange={(e) => onInputChange(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onSend()}
+                className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+              />
+              <button
+                onClick={onSend}
+                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {t.sendBtn}
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </>
   );
+}  );
 }

@@ -91,10 +91,10 @@ export async function POST(
         updatedAt: new Date().toISOString()
       });
 
-    // 4. Simulate Gemini Response (Mock optimization return)
-    const responseText = `Entendido. He optimizado el contenido para tu video utilizando la configuración enriquecida. He actualizado los resultados SEO del panel derecho con el título optimizado, etiquetas clave y descripción mejorada.`;
+    // 4. Simulate or use provided AI Response
+    const responseText = body.aiResponseText || `Entendido. He optimizado el contenido para tu video utilizando la configuración enriquecida. He actualizado los resultados SEO del panel derecho con el título optimizado, etiquetas clave y descripción mejorada.`;
 
-    // Save Gemini Response Message
+    // Save AI Response Message
     const geminiMessage = await db.orm.public.Message.create({
       conversationId,
       sender: 'GEMINI',

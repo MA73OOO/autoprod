@@ -55,6 +55,28 @@ export class ControladorClient {
   }
 
   /**
+   * Envía un mensaje a la consola local de IA
+   */
+  static async askConsoleAI(prompt: string, commandTemplate: string): Promise<string> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/chat/ask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, command_template: commandTemplate }),
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || 'Error en la consola de IA');
+      }
+      return data.response;
+    } catch (error) {
+      console.error('Controlador Client: askConsoleAI failed', error);
+      throw error;
+    }
+  }
+
+  /**
    * Abre el explorador de archivos nativo del SO para que el usuario elija una carpeta.
    */
   static async pickWorkspace(): Promise<{ path: string }> {
