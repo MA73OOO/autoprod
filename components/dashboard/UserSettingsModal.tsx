@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Language, translations } from '@/app/translations';
+import { getControladorUrl } from '@/lib/controlador-client';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -21,7 +22,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
   useEffect(() => {
     if (activeSettingsTab === 'ai') {
       setIsDetecting(true);
-      fetch('http://localhost:8001/chat/detect_clis')
+      fetch(`${getControladorUrl()}/chat/detect_clis`)
         .then(res => res.json())
         .then(data => {
           setDetectedClis(data.detected || []);
@@ -33,7 +34,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
 
   const handleLogin = async (providerId: string) => {
     try {
-      const res = await fetch(`http://localhost:8001/chat/auth/${providerId}`, { method: 'POST' });
+      const res = await fetch(`${getControladorUrl()}/chat/auth/${providerId}`, { method: 'POST' });
       if (res.ok) {
         toast.info(lang === 'es' ? 'Sigue las instrucciones en la ventana de terminal que se acaba de abrir.' : 'Follow the instructions in the terminal window that just opened.');
       } else {
@@ -292,13 +293,19 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                       </p>
                       <button 
                         onClick={async () => {
+                          const confirmMsg = lang === 'es' 
+                            ? 'Se descargará el instalador oficial de Ollama en segundo plano y se lanzará la instalación. Esto puede tardar unos minutos. ¿Deseas continuar?'
+                            : 'The official Ollama installer will be downloaded in the background and launched. This may take a few minutes. Do you want to continue?';
+                          
+                          if (!window.confirm(confirmMsg)) return;
+
                           try {
-                            const res = await fetch('http://localhost:8001/ollama/install', { method: 'POST' });
+                            const res = await fetch(`${getControladorUrl()}/ollama/install`, { method: 'POST' });
                             const data = await res.json();
                             if (res.ok) toast.info(data.message);
                             else toast.error(data.detail || 'Error instalando Ollama');
                           } catch (e) {
-                            toast.error('No se pudo contactar con el motor local en el puerto 8001.');
+                            toast.error('No se pudo contactar con el motor local en el puerto configurado.');
                           }
                         }}
                         className="text-purple-400 text-xs hover:underline cursor-pointer"

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
+import { getControladorUrl } from '@/lib/controlador-client';
 
 interface Checklist {
   cta: boolean;
@@ -44,7 +45,7 @@ export default function ChatPanel({
 
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8001/chat/detect_clis').then(res => res.json()).catch(() => ({ detected: [] })),
+      fetch(`${getControladorUrl()}/chat/detect_clis`).then(res => res.json()).catch(() => ({ detected: [] })),
       fetch('/api/settings/keys').then(res => res.json()).catch(() => ({ configured: [] }))
     ]).then(([localData, cloudData]) => {
       

@@ -186,9 +186,21 @@ def detect_clis():
         }
     ]
     
+    import os
+    import platform
     detected = []
     for cli in known_clis:
-        if shutil.which(cli["bin"]):
+        bin_path = shutil.which(cli["bin"])
+        
+        # Fallback para Ollama en Windows si no está en el PATH
+        if not bin_path and cli["id"] == "ollama" and platform.system() == "Windows":
+            fallback_path = os.path.expanduser('~\\AppData\\Local\\Programs\\Ollama\\ollama.exe')
+            if os.path.exists(fallback_path):
+                bin_path = fallback_path
+                cli["ping_cmd"] = f'"{fallback_path}" list' # Usar la ruta completa para el ping
+                cli["template"] = cli["template"].replace('ollama run', f'"{fallback_path}" run')
+
+        if bin_path:
             is_auth = True
             if cli["ping_cmd"]:
                 try:

@@ -1,6 +1,9 @@
 export function getControladorUrl() {
-  // Ignoramos el localStorage si guardó el 8000 anteriormente
-  return 'http://localhost:8001';
+  if (typeof window !== 'undefined') {
+    const port = localStorage.getItem('autoprod_motor_port') || '8000';
+    return `http://localhost:${port}`;
+  }
+  return 'http://localhost:8000';
 };
 
 export class ControladorClient {
@@ -24,9 +27,18 @@ export class ControladorClient {
   /**
    * Instala o valida el motor de Python llamando a la API local de Next.js
    */
-  static async installMotor(): Promise<void> {
+  static async installMotor(port: number = 8000): Promise<void> {
     try {
-      const response = await fetch('/api/setup/install', { method: 'POST' });
+      const response = await fetch('/api/setup/install', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ port })
+      });
+      
+      if (response.status === 409) {
+        throw new Error('PORT_IN_USE');
+      }
+      
       if (!response.ok) {
         throw new Error('Error al instalar o validar el motor');
       }

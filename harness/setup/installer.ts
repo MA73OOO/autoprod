@@ -4,6 +4,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 
+import net from 'net';
+
 const execAsync = promisify(exec);
 
 // Configuramos la instalación dentro de la carpeta del proyecto actual
@@ -14,15 +16,41 @@ const GET_PIP_URL = 'https://bootstrap.pypa.io/get-pip.py';
 
 export class LocalInstaller {
   /**
+   * Verifica si un puerto está libre en localhost
+   */
+  static async checkPortAvailable(port: number): Promise<boolean> {
+    return new Promise((resolve) => {
+      const server = net.createServer();
+      server.once('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          resolve(false);
+        } else {
+          resolve(true); // Tratamos otros errores como disponibles o manejables luego
+        }
+      });
+      server.once('listening', () => {
+        server.close();
+        resolve(true);
+      });
+      server.listen(port, '127.0.0.1');
+    });
+  }
+
+  /**
    * Descarga y configura un entorno de Python Portable local.
    */
-  static async installPythonPortable(targetOs: string = process.platform, onProgress?: (msg: string) => void) {
+  static async installPythonPortable(targetOs: string = process.platform, port: number = 8000, onProgress?: (msg: string) => void) {
     const log = (msg: string) => {
       console.log(msg);
       if (onProgress) onProgress(msg);
     };
 
     try {
+      // Verificar si el puerto está libre antes de hacer nada
+      const isAvailable = await LocalInstaller.checkPortAvailable(port);
+      if (!isAvailable) {
+        return { success: false, error: 'PORT_IN_USE', port };
+      }
       // 1. Crear directorios
       log('Preparando directorios de instalación...');
       await fs.mkdir(INSTALL_DIR, { recursive: true });
@@ -97,7 +125,7 @@ export class LocalInstaller {
         const vbsContent = `
 Set WshShell = CreateObject("WScript.Shell")
 WshShell.CurrentDirectory = "${motorDir}"
-WshShell.Run "cmd /c """"${actualPythonExe}"""" -m uvicorn main:app --port 8000 --host 127.0.0.1", 0, False
+WshShell.Run "cmd /c """"${actualPythonExe}"""" -m uvicorn main:app --port ${port} --host 127.0.0.1", 0, False
         `.trim();
         await fs.writeFile(vbsPath, vbsContent);
 
@@ -117,7 +145,7 @@ New-ItemProperty -Path "$base\\shell\\open\\command" -Name '(default)' -Value 'w
       } else {
         // Mac: Crear bash script y AppleScript applet para el protocolo
         const shPath = path.join(INSTALL_DIR, 'run_motor.sh');
-        const shContent = `#!/bin/bash\ncd "${motorDir}"\nnohup "${actualPythonExe}" -m uvicorn main:app --port 8000 --host 127.0.0.1 > /dev/null 2>&1 &\n`;
+        const shContent = `#!/bin/bash\ncd "${motorDir}"\nnohup "${actualPythonExe}" -m uvicorn main:app --port ${port} --host 127.0.0.1 > /dev/null 2>&1 &\n`;
         await fs.writeFile(shPath, shContent);
         await execAsync(`chmod +x "${shPath}"`);
 
