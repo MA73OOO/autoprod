@@ -17,18 +17,10 @@ export async function POST(req: Request) {
       auth: { persistSession: false }
     });
     
-    // We get userId from the request headers like in GET
-    const authHeader = req.headers.get('Authorization');
-    let userId = null;
-    
-    if (authHeader) {
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
-      userId = user?.id;
-    } else {
-      const { data: userData } = await supabaseAdmin.auth.getUser();
-      userId = userData?.user?.id;
-    }
+    const { createClient: createServerClient } = require('@/lib/supabase/server');
+    const supabaseServer = await createServerClient();
+    const { data: userData } = await supabaseServer.auth.getUser();
+    const userId = userData?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized. Missing valid session.' }, { status: 401 });
     }
