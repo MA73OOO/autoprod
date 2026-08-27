@@ -396,9 +396,21 @@ export default function Dashboard() {
     setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
 
     try {
-      // 1. Obtener el proveedor seleccionado
-      const provider = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || 'gemini' : 'gemini';
+      // 1. Obtener el modelo y deducir el proveedor seleccionado
+      const model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default';
       
+      let provider = 'gemini';
+      let actualModel = model;
+      const firstColonIndex = model.indexOf(':');
+      if (firstColonIndex !== -1) {
+        provider = model.substring(0, firstColonIndex);
+        actualModel = model.substring(firstColonIndex + 1);
+      } else {
+        if (model.includes('gpt')) provider = 'openai';
+        else if (model.includes('claude')) provider = 'anthropic';
+        else if (model.includes('llama')) provider = 'ollama';
+      }
+
       // 2. Mapear a comando CLI o llamar a API REST Cloud
       let aiResponseText = '';
 
@@ -409,8 +421,6 @@ export default function Dashboard() {
           aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
         } else {
           // Motor Texto (Nube o Ollama Local) usando Vercel AI SDK
-          const model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default';
-          
           const chatHistory = activeConversation?.messages.map(m => ({
              role: m.sender === 'user' ? 'user' : 'assistant',
              content: m.text
@@ -422,7 +432,7 @@ export default function Dashboard() {
             body: JSON.stringify({ 
               messages: [...chatHistory, { role: 'user', content: text }], 
               provider,
-              model
+              model: actualModel
             })
           });
 

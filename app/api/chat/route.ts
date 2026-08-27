@@ -4,7 +4,7 @@ import { generateText, streamText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { google } from '@ai-sdk/google';
-import { createOllama } from 'ollama-ai-provider';
+
 
 // For now, we will handle text streaming based on the provider and model
 export async function POST(req: Request) {
@@ -41,18 +41,29 @@ export async function POST(req: Request) {
       console.warn("No auth header provided. This will fail in production.");
     }
 
-    // 2. Fetch the corresponding Vault ID from the User table
-    // In Prisma the table is mapped exactly or lowercase? Usually 'User' in Prisma implies table 'User' in Postgres 
-    // unless mapped with @@map("users"). Let's assume 'User'.
-    const { data: userRecord, error: userError } = await supabase
-      .from('User')
-      .select('openaiVaultId, geminiVaultId, anthropicVaultId')
-      .eq('id', userId)
-      .single();
+    const { db } = require('@/src/prisma/db');
+    // 2. Fetch the corresponding Vault ID from the User table using Prisma
+    let userRecord = null;
+    let userError = null;
+    try {
+      if (userId) {
+        userRecord = await db.user.findUnique({
+          where: { id: userId },
+          select: { openaiVaultId: true, geminiVaultId: true, anthropicVaultId: true }
+        });
+      }
+    } catch (e: any) {
+      userError = e;
+    }
 
     if (userError && provider !== 'ollama') {
       console.error('Error fetching user vault IDs:', userError);
       return NextResponse.json({ error: 'Failed to retrieve user settings' }, { status: 500 });
+    }
+    
+    if (!userRecord && provider !== 'ollama') {
+       console.error('User not found in DB');
+       return NextResponse.json({ error: 'Failed to retrieve user settings' }, { status: 500 });
     }
 
     // 3. Fetch the actual decrypted API key from Supabase Vault via RPC
@@ -103,8 +114,12 @@ export async function POST(req: Request) {
         aiModel = customGoogle;
         break;
       case 'ollama':
-        const ollama = createOllama({ baseURL: 'http://localhost:11434/api' });
-        aiModel = ollama(model || 'llama3.1');
+        const { createOpenAI } = require('@ai-sdk/openai');
+        const ollamaProvider = createOpenAI({ 
+          baseURL: 'http://127.0.0.1:11434/v1',
+          apiKey: 'ollama' // dummy key required by openai provider
+        });
+        aiModel = ollamaProvider(model || 'llama3.1');
         break;
       default:
         return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });

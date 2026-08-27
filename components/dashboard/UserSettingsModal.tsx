@@ -18,17 +18,21 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
   const [detectedClis, setDetectedClis] = useState<any[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
 
+  const detectEngines = () => {
+    setIsDetecting(true);
+    fetch(`${getControladorUrl()}/chat/detect_clis`)
+      .then(res => res.json())
+      .then(data => {
+        setDetectedClis(data.detected || []);
+      })
+      .catch(err => console.error("Error detecting CLIs:", err))
+      .finally(() => setIsDetecting(false));
+  };
+
   // Fetch CLIs when AI tab is opened
   useEffect(() => {
     if (activeSettingsTab === 'ai') {
-      setIsDetecting(true);
-      fetch(`${getControladorUrl()}/chat/detect_clis`)
-        .then(res => res.json())
-        .then(data => {
-          setDetectedClis(data.detected || []);
-        })
-        .catch(err => console.error("Error detecting CLIs:", err))
-        .finally(() => setIsDetecting(false));
+      detectEngines();
     }
   }, [activeSettingsTab]);
 
@@ -195,7 +199,10 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ provider: 'gemini', apiKey: val })
                           });
-                          if (res.ok) toast.success(lang === 'es' ? 'Llave de Gemini guardada' : 'Gemini Key saved');
+                          if (res.ok) {
+                            toast.success(lang === 'es' ? 'Llave de Gemini guardada' : 'Gemini Key saved');
+                            window.dispatchEvent(new Event('settingsUpdated'));
+                          }
                           else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
@@ -225,7 +232,10 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ provider: 'openai', apiKey: val })
                           });
-                          if (res.ok) toast.success(lang === 'es' ? 'Llave de OpenAI guardada' : 'OpenAI Key saved');
+                          if (res.ok) {
+                            toast.success(lang === 'es' ? 'Llave de OpenAI guardada' : 'OpenAI Key saved');
+                            window.dispatchEvent(new Event('settingsUpdated'));
+                          }
                           else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
@@ -255,7 +265,10 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ provider: 'anthropic', apiKey: val })
                           });
-                          if (res.ok) toast.success(lang === 'es' ? 'Llave de Anthropic guardada' : 'Anthropic Key saved');
+                          if (res.ok) {
+                            toast.success(lang === 'es' ? 'Llave de Anthropic guardada' : 'Anthropic Key saved');
+                            window.dispatchEvent(new Event('settingsUpdated'));
+                          }
                           else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
@@ -281,55 +294,65 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                 </p>
                 
                 <div className="space-y-3 mt-4">
-                  {isDetecting ? (
-                    <div className="text-center py-4 text-zinc-500 text-xs flex flex-col items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                      {lang === 'es' ? 'Buscando motores instalados...' : 'Scanning installed engines...'}
-                    </div>
-                  ) : detectedClis.length === 0 ? (
-                    <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 text-center">
-                      <p className="text-zinc-400 text-xs mb-2">
-                        {lang === 'es' ? 'No se detectó ningún motor local (Ollama).' : 'No local engines detected (Ollama).'}
-                      </p>
-                      <button 
-                        onClick={async () => {
-                          const confirmMsg = lang === 'es' 
-                            ? 'Se descargará el instalador oficial de Ollama en segundo plano y se lanzará la instalación. Esto puede tardar unos minutos. ¿Deseas continuar?'
-                            : 'The official Ollama installer will be downloaded in the background and launched. This may take a few minutes. Do you want to continue?';
+                  {(() => {
+                    const isOllamaConnected = detectedClis.some(cli => cli.id === 'ollama');
+                    
+                    return (
+                      <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-4 flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                          <div>
+                            <h5 className="text-sm font-bold text-zinc-200">Ollama (Local)</h5>
+                            <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: ollama</p>
+                          </div>
                           
-                          if (!window.confirm(confirmMsg)) return;
+                          {isDetecting ? (
+                            <div className="flex items-center gap-2 text-zinc-500 text-xs">
+                              <div className="w-3.5 h-3.5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                              {lang === 'es' ? 'Conectando...' : 'Connecting...'}
+                            </div>
+                          ) : isOllamaConnected ? (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-xs font-bold">
+                              🟢 {lang === 'es' ? 'Conectado' : 'Connected'}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-xs font-bold">
+                              🔴 {lang === 'es' ? 'Desconectado' : 'Disconnected'}
+                            </div>
+                          )}
+                        </div>
 
-                          try {
-                            const res = await fetch(`${getControladorUrl()}/ollama/install`, { method: 'POST' });
-                            const data = await res.json();
-                            if (res.ok) toast.info(data.message);
-                            else toast.error(data.detail || 'Error instalando Ollama');
-                          } catch (e) {
-                            toast.error('No se pudo contactar con el motor local en el puerto configurado.');
-                          }
-                        }}
-                        className="text-purple-400 text-xs hover:underline cursor-pointer"
-                      >
-                        {lang === 'es' ? 'Descargar e Instalar Ollama' : 'Download and Install Ollama'}
-                      </button>
-                    </div>
-                  ) : (
-                    detectedClis.map((cli) => (
-                      <div key={cli.id} className="bg-[#18181b] border border-zinc-800 rounded-lg p-3 flex items-center justify-between">
-                        <div>
-                          <h5 className="text-sm font-bold text-zinc-200">{cli.name}</h5>
-                          <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: {cli.bin}</p>
-                        </div>
-                        
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-xs font-semibold">
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          {lang === 'es' ? 'Listo' : 'Ready'}
-                        </div>
+                        {!isOllamaConnected && !isDetecting && (
+                          <div className="flex flex-col sm:flex-row gap-2 mt-2 pt-3 border-t border-zinc-800/50">
+                            <button 
+                              onClick={detectEngines}
+                              className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors text-center"
+                            >
+                              {lang === 'es' ? '🔌 Conectar a Ollama' : '🔌 Connect to Ollama'}
+                            </button>
+                            <button 
+                              onClick={async () => {
+                                const confirmMsg = lang === 'es' 
+                                  ? 'Se descargará e instalará Ollama en segundo plano. ¿Continuar?'
+                                  : 'Ollama will be downloaded and installed in the background. Continue?';
+                                if (!window.confirm(confirmMsg)) return;
+                                try {
+                                  const res = await fetch(`${getControladorUrl()}/ollama/install`, { method: 'POST' });
+                                  const data = await res.json();
+                                  if (res.ok) toast.info(data.message);
+                                  else toast.error(data.detail || 'Error instalando Ollama');
+                                } catch (e) {
+                                  toast.error('No se pudo contactar con el backend.');
+                                }
+                              }}
+                              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-4 py-2 rounded-lg transition-colors text-center"
+                            >
+                              {lang === 'es' ? 'Descargar Instalar' : 'Download Install'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    ))
-                  )}
+                    );
+                  })()}
                 </div>
               </div>
             </div>

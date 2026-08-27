@@ -61,9 +61,10 @@ export async function POST(
     }
 
     // Check count of messages to see if we should auto-update the title
-    const messageCount = await db.orm.public.Message
+    const countResult = await db.orm.public.Message
       .where({ conversationId })
-      .count();
+      .aggregate(a => ({ total: a.count() }));
+    const messageCount = countResult.total;
 
     // 2. Save User Message
     const userMessage = await db.orm.public.Message.create({

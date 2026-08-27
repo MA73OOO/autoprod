@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: Request) {
   try {
@@ -9,18 +10,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Provider and API Key are required' }, { status: 400 });
     }
 
-    // Initialize Supabase client
-    const supabase = await createClient();
+    // Initialize Supabase admin client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false }
+    });
     
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-
-    let userId = userData?.user?.id;
+    // We get userId from the request headers like in GET
+    const authHeader = req.headers.get('Authorization');
+    let userId = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      userId = user?.id;
+    } else {
+      const { data: userData } = await supabaseAdmin.auth.getUser();
+      userId = userData?.user?.id;
+    }
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized. Missing valid session.' }, { status: 401 });
     }
 
     // Call the RPC function created in Supabase Vault setup
-    const { error: rpcError } = await supabase.rpc('save_api_key', {
+    const { error: rpcError } = await supabaseAdmin.rpc('save_api_key', {
       p_user_id: userId,
       p_provider: provider,
       p_api_key: apiKey
@@ -40,15 +54,34 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    const supabase = await createClient();
+    const authHeader = req.headers.get('Authorization');
+    
+    // Initialize Supabase admin client to bypass RLS on user_api_keys
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false }
+    });
 
-    const { data: userData } = await supabase.auth.getUser();
-    let userId = userData?.user?.id;
+    let userId = null;
+    
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+      if (error) throw error;
+      userId = user?.id;
+    } else {
+      // Fallback a la sesión del servidor para cuando se llama directo en la app de Next.js
+      const { data: userData } = await supabaseAdmin.auth.getUser();
+      userId = userData?.user?.id;
+    }
+
     if (!userId) {
+      console.warn("No auth header provided. This will fail in production.");
       return NextResponse.json({ configured: [] });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('user_api_keys')
       .select('provider')
       .eq('user_id', userId);

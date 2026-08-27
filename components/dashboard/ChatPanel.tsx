@@ -42,19 +42,20 @@ export default function ChatPanel({
   const t = translations[lang];
 
   const [readyClis, setReadyClis] = useState<any[]>([]);
+  const [ollamaModels, setOllamaModels] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch(`${getControladorUrl()}/chat/detect_clis`).then(res => res.json()).catch(() => ({ detected: [] })),
       fetch('/api/settings/keys').then(res => res.json()).catch(() => ({ configured: [] }))
     ]).then(([localData, cloudData]) => {
-      
+
       // Permite usar los motores locales (Ollama) detectados, incluso si el ping falló momentáneamente
       const localReady = (localData.detected || []).map((cli: any) => ({
         id: cli.id,
         name: cli.name
       }));
-      
+
       // Motores Cloud configurados en Vault
       const cloudReady = (cloudData.configured || []).map((provider: string) => {
         if (provider === 'gemini') return { id: 'gemini', name: 'Google Gemini (Cloud)' };
@@ -64,6 +65,18 @@ export default function ChatPanel({
       });
 
       setReadyClis([...cloudReady, ...localReady]);
+
+      // If Ollama is ready, fetch models directly from local API
+      if (localReady.some((cli: any) => cli.id === 'ollama')) {
+        fetch('http://127.0.0.1:11434/api/tags')
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.models) {
+              setOllamaModels(data.models);
+            }
+          })
+          .catch(e => console.warn('No se pudieron obtener modelos de ollama local', e));
+      }
     });
   }, []);
 
@@ -102,18 +115,16 @@ export default function ChatPanel({
             key={index}
             className={`flex gap-3 max-w-3xl ${msg.sender === 'user' ? 'ml-auto flex-row-reverse' : ''}`}
           >
-            <div className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${
-              msg.sender === 'user'
-                ? 'bg-purple-600 text-white'
-                : 'bg-zinc-800 text-purple-400 border border-zinc-700'
-            }`}>
+            <div className={`h-8 w-8 rounded-full shrink-0 flex items-center justify-center font-bold text-xs ${msg.sender === 'user'
+              ? 'bg-purple-600 text-white'
+              : 'bg-zinc-800 text-purple-400 border border-zinc-700'
+              }`}>
               {msg.sender === 'user' ? 'U' : 'G'}
             </div>
-            <div className={`rounded-xl p-4 text-sm leading-relaxed ${
-              msg.sender === 'user'
-                ? 'bg-purple-600/10 border border-purple-500/20 text-purple-100'
-                : 'bg-[#18181b] border border-zinc-800 text-zinc-300'
-            }`}>
+            <div className={`rounded-xl p-4 text-sm leading-relaxed ${msg.sender === 'user'
+              ? 'bg-purple-600/10 border border-purple-500/20 text-purple-100'
+              : 'bg-[#18181b] border border-zinc-800 text-zinc-300'
+              }`}>
               <p className="whitespace-pre-line">{msg.text}</p>
               <span className="text-[10px] text-zinc-500 block mt-2 text-right">{msg.timestamp}</span>
             </div>
@@ -148,28 +159,8 @@ export default function ChatPanel({
 
         {/* Input bar */}
         <div className="flex gap-2">
-          {readyClis.length === 0 ? (
-             <div className="flex-1 flex items-center justify-center bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2 text-xs text-zinc-500">
-               {lang === 'es' ? 'Ve a Ajustes ⚙️ para iniciar sesión en tus motores locales' : 'Go to Settings ⚙️ to login to your local engines'}
-             </div>
-          ) : (
-            <>
-              <select 
-                className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
-                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_provider') || readyClis[0].id : readyClis[0].id}
-                onChange={(e) => {
-                  if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_provider', e.target.value);
-                  // Dispatch a custom event or trigger re-render so model options update
-                  window.dispatchEvent(new Event('providerChanged'));
-                }}
-                id="providerSelector"
-              >
-                {readyClis.map(cli => (
-                  <option key={cli.id} value={cli.id}>{cli.name}</option>
-                ))}
-              </select>
-              
-              <select 
+
+              <select
                 className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
                 id="modelSelector"
                 defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default'}
@@ -177,13 +168,29 @@ export default function ChatPanel({
                   if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
                 }}
               >
-                 <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
-                 <option value="gpt-4o">GPT-4o (OpenAI)</option>
-                 <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
-                 <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
-                 <option value="models/gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
-                 <option value="models/gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
-                 <option value="llama3.1">Llama 3.1 (Ollama Local)</option>
+                <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
+                {readyClis.some(cli => cli.id === 'openai') && (
+                  <>
+                    <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
+                  </>
+                )}
+                {readyClis.some(cli => cli.id === 'anthropic') && (
+                  <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
+                )}
+                {readyClis.some(cli => cli.id === 'gemini') && (
+                  <>
+                    <option value="models/gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
+                    <option value="models/gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
+                  </>
+                )}
+                {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
+                  ollamaModels.map(model => (
+                    <option key={model.name} value={`ollama:${model.name}`}>{model.name} (Ollama Local)</option>
+                  ))
+                ) : readyClis.some(cli => cli.id === 'ollama') ? (
+                  <option value="ollama:llama3.1">Llama 3.1 (Ollama Local)</option>
+                ) : null}
               </select>
               <input
                 type="text"
@@ -202,8 +209,7 @@ export default function ChatPanel({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
-            </>
-          )}
+
         </div>
       </div>
     </>

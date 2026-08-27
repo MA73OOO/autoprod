@@ -67,80 +67,6 @@ def ask_console_ai(request: ChatRequest):
             detail=f"Error ejecutando consola: {str(e)}"
         )
 
-@router.get("/detect_clis")
-def detect_clis():
-    """
-    Escanea el sistema (PATH) en busca de herramientas CLI conocidas.
-    Hace un 'ping' rápido para ver si están autenticadas.
-    """
-    import shutil
-    import subprocess
-    
-    known_clis = [
-        {
-            "id": "ollama",
-            "name": "Ollama (Local)", 
-            "bin": "ollama", 
-            "template": 'ollama run llama3 "{prompt}"',
-            "ping_cmd": "ollama list",
-            "auth_cmd": None
-        }
-    ]
-    
-    detected = []
-    for cli in known_clis:
-        if shutil.which(cli["bin"]):
-            is_auth = True
-            if cli["ping_cmd"]:
-                try:
-                    # Ping rápido invisible
-                    res = subprocess.run(
-                        cli["ping_cmd"], 
-                        shell=True, 
-                        capture_output=True, 
-                        text=True, 
-                        timeout=5
-                    )
-                    output = (res.stdout + res.stderr).lower()
-                    if res.returncode != 0 or "unauthorized" in output or "login" in output:
-                        is_auth = False
-                except:
-                    is_auth = False
-                    
-            cli["is_authenticated"] = is_auth
-            detected.append(cli)
-            
-    return {"detected": detected}
-
-@router.post("/auth/{provider_id}")
-def auth_cli(provider_id: str):
-    """
-    Abre una terminal externa para que el usuario inicie sesión interactivamente.
-    """
-    import subprocess
-    import platform
-
-    auth_cmds = {
-        "gemini": "gemini auth",
-        "gemini-node": "gemini-cli auth",
-        "chatgpt": "chatgpt auth"
-    }
-
-    cmd = auth_cmds.get(provider_id)
-    if not cmd:
-        raise HTTPException(status_code=400, detail="Comando de auth no definido para este proveedor")
-
-    try:
-        if platform.system() == "Windows":
-            subprocess.Popen(f'start cmd /k "echo ============================== && echo INICIO DE SESION IA && echo ============================== && echo. && {cmd} && echo. && echo Puedes cerrar esta ventana cuando termines. && pause > nul"', shell=True)
-        elif platform.system() == "Darwin":
-            subprocess.Popen(f'osascript -e \'tell app "Terminal" to do script "{cmd}"\'', shell=True)
-        else:
-            subprocess.Popen(f'x-terminal-emulator -e "{cmd}"', shell=True)
-            
-        return {"status": "success", "message": "Ventana de autenticación abierta"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/detect_clis")
 def detect_clis():
@@ -188,6 +114,8 @@ def detect_clis():
     
     import os
     import platform
+    import urllib.request
+    
     detected = []
     for cli in known_clis:
         bin_path = shutil.which(cli["bin"])
@@ -197,14 +125,39 @@ def detect_clis():
             fallback_path = os.path.expanduser('~\\AppData\\Local\\Programs\\Ollama\\ollama.exe')
             if os.path.exists(fallback_path):
                 bin_path = fallback_path
-                cli["ping_cmd"] = f'"{fallback_path}" list' # Usar la ruta completa para el ping
+                cli["ping_cmd"] = f'"{fallback_path}" list'
                 cli["template"] = cli["template"].replace('ollama run', f'"{fallback_path}" run')
 
-        if bin_path:
-            is_auth = True
-            if cli["ping_cmd"]:
+        # Si seguimos sin binario pero es ollama, intentemos ver si el servicio web está corriendo
+        ollama_running_http = False
+        if cli["id"] == "ollama":
+            def check_http():
+                import urllib.error
                 try:
-                    # Ping rápido invisible
+                    response = urllib.request.urlopen("http://127.0.0.1:11434/", timeout=1)
+                    return response.status == 200
+                except urllib.error.HTTPError:
+                    return True
+                except Exception:
+                    return False
+            
+            ollama_running_http = check_http()
+            
+            # Intento de despertar automático (Versión 2)
+            if not ollama_running_http and bin_path:
+                try:
+                    # Lanzar 'ollama serve' en segundo plano de manera silenciosa
+                    import time
+                    subprocess.Popen([bin_path, "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    time.sleep(2.0) # Darle tiempo al servidor local para levantar
+                    ollama_running_http = check_http()
+                except Exception as e:
+                    pass
+
+        if bin_path or ollama_running_http:
+            is_auth = True
+            if not ollama_running_http and cli["ping_cmd"]:
+                try:
                     res = subprocess.run(
                         cli["ping_cmd"], 
                         shell=True, 
