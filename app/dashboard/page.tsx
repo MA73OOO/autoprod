@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
 import ConversationSidebar from '@/components/dashboard/ConversationSidebar';
 import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
-import RightInspector from '@/components/dashboard/RightInspector';
+import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
@@ -377,6 +377,17 @@ export default function Dashboard() {
   };
 
   // ── Chat ──
+  const [isGeneratingGlobal, setIsGeneratingGlobal] = useState(false);
+  const [messageQueue, setMessageQueue] = useState<{text: string, conversationId: string}[]>([]);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const cancelGeneration = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  };
+
   const [inputPrompt, setInputPrompt] = useState('');
   const [checklist, setChecklist] = useState({ cta: true, timestamps: false, tags: true, saveThumbnail: true });
   const [seoOutput, setSeoOutput] = useState({
@@ -385,10 +396,25 @@ export default function Dashboard() {
     description: 'En este tutorial aprenderás a dominar Next.js 15 utilizando el App Router.\n\n⏱️ Marcas de tiempo:\n0:00 - Introducción\n2:15 - Configuración inicial\n5:40 - Rutas Dinámicas',
   });
 
-  const handleSendMessage = async () => {
-    if (!inputPrompt.trim() || !activeConversationId) return;
-    const text = inputPrompt;
-    setInputPrompt('');
+  const handleSendMessage = async (customText?: string, targetConversationId?: string) => {
+    const textToSend = customText ?? inputPrompt;
+    const conversationId = targetConversationId ?? activeConversationId;
+    
+    if (!textToSend.trim() || !conversationId) return;
+
+    if (!customText) {
+      setInputPrompt('');
+    }
+
+    if (isGeneratingGlobal) {
+      const tempMsg: Message = { sender: 'user', text: textToSend, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isTemp: true, isQueued: true };
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [...c.messages, tempMsg] } : c));
+      setMessageQueue(prev => [...prev, { text: textToSend, conversationId }]);
+      return;
+    }
+
+    setIsGeneratingGlobal(true);
+    const text = textToSend;
     const tempMsg: Message = { sender: 'user', text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isTemp: true };
     
     try {
@@ -417,10 +443,13 @@ export default function Dashboard() {
       const startTime = Date.now();
       const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '', modelName: friendlyModelName, isGenerating: true, isTemp: true };
       
-      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
 
       // 2. Mapear a comando CLI o llamar a API REST Cloud
       let aiResponseText = '';
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
       try {
         if (provider === 'imagen3') {
@@ -441,7 +470,8 @@ export default function Dashboard() {
               messages: [...chatHistory, { role: 'user', content: text }], 
               provider,
               model: actualModel
-            })
+            }),
+            signal: abortController.signal
           });
 
           if (!res.ok) {
@@ -455,7 +485,7 @@ export default function Dashboard() {
           if (reader) {
             // Limpiar "Pensando..."
             setConversations(prev => prev.map(c => {
-              if (c.id !== activeConversationId) return c;
+              if (c.id !== conversationId) return c;
               const newMsgs = [...c.messages];
               newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: '' };
               return { ...c, messages: newMsgs };
@@ -470,7 +500,7 @@ export default function Dashboard() {
               
               // Actualizar UI en tiempo real (streaming)
               setConversations(prev => prev.map(c => {
-                if (c.id !== activeConversationId) return c;
+                if (c.id !== conversationId) return c;
                 const newMsgs = [...c.messages];
                 newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText };
                 return { ...c, messages: newMsgs };
@@ -479,13 +509,17 @@ export default function Dashboard() {
           }
         }
       } catch (e: any) {
-        aiResponseText = `❌ Error de IA: ${e.message}. Verifica tus API Keys en Ajustes o si tu motor local está encendido.`;
+        if (e.name === 'AbortError') {
+          aiResponseText += `\n\n🛑 Proceso cancelado por el usuario.`;
+        } else {
+          aiResponseText = `❌ Error de IA: ${e.message}. Verifica tus API Keys en Ajustes o si tu motor local está encendido.`;
+        }
       }
 
       const generationTimeMs = Date.now() - startTime;
 
       // 4. Guardar en Base de Datos (Next.js)
-      const res = await fetch(`/api/conversations/${activeConversationId}/messages`, {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, checklist, aiResponseText }),
@@ -503,7 +537,7 @@ export default function Dashboard() {
           isGenerating: false
         };
         setConversations(prev => prev.map(c => {
-          if (c.id !== activeConversationId) return c;
+          if (c.id !== conversationId) return c;
           // Filtramos los temporales usando isTemp y ponemos los reales
           return { ...c, title: data.conversationTitle, messages: [...c.messages.filter(m => !m.isTemp), userMsg, geminiMsg] };
         }));
@@ -520,9 +554,28 @@ export default function Dashboard() {
     } catch { 
       toast.error('Error al enviar mensaje'); 
       // Revertir mensajes temporales en caso de error fatal
-      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
+    } finally {
+      setIsGeneratingGlobal(false);
     }
   };
+
+  useEffect(() => {
+    if (!isGeneratingGlobal && messageQueue.length > 0) {
+      const nextMsg = messageQueue[0];
+      setMessageQueue(prev => prev.slice(1));
+      
+      // Eliminar el mensaje en cola visualmente antes de enviarlo de verdad
+      setConversations(prev => prev.map(c => {
+        if (c.id === nextMsg.conversationId) {
+          return { ...c, messages: c.messages.filter(m => !(m.isTemp && m.isQueued && m.text === nextMsg.text)) };
+        }
+        return c;
+      }));
+      
+      handleSendMessage(nextMsg.text, nextMsg.conversationId);
+    }
+  }, [isGeneratingGlobal, messageQueue]);
 
   const handleAssociateChannel = async (channelId: string | null) => {
     try {
@@ -675,7 +728,7 @@ export default function Dashboard() {
             }}
             onOpenFile={(path) => {
               setActiveEditorPath(path);
-              setActiveView('editor');
+              // Do NOT change activeView, just set the path to open the right panel
             }}
           />
         </aside>
@@ -690,14 +743,6 @@ export default function Dashboard() {
         <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden">
           {activeView === 'home' ? (
             <Launchpad lang={lang} onSelect={handleNewConversationWithRole} />
-          ) : activeView === 'editor' && activeEditorPath ? (
-            <MarkdownEditor
-              filePath={activeEditorPath}
-              onClose={() => {
-                setActiveEditorPath(null);
-                setActiveView('home');
-              }}
-            />
           ) : (
             <ChatPanel
               lang={lang}
@@ -711,24 +756,23 @@ export default function Dashboard() {
               onSend={handleSendMessage}
               onChecklistChange={(key, val) => setChecklist(prev => ({ ...prev, [key]: val }))}
               onAssociateChannel={handleAssociateChannel}
+              isGenerating={isGeneratingGlobal}
+              onCancel={cancelGeneration}
             />
           )}
         </main>
 
-        {/* Resize handle right + Inspector — only in chat view */}
-        {activeView === 'chat' && (
+        {/* Resize handle right + Previewer — only when activeEditorPath is set */}
+        {activeEditorPath && (
           <>
             <div
-              onMouseDown={makeDragHandler(rightWidth, setRightWidth, 240, 500, true)}
+              onMouseDown={makeDragHandler(rightWidth, setRightWidth, 300, 800, true)}
               className="w-[3px] hover:w-[5px] hover:bg-purple-500/40 active:bg-purple-500 cursor-col-resize h-full transition-all shrink-0 bg-zinc-800/40 relative z-30"
             />
-            <aside style={{ width: `${rightWidth}px` }} className="bg-[#0f0f12] shrink-0 overflow-hidden">
-              <RightInspector
-                lang={lang}
-                seoOutput={seoOutput}
-                isRendering={isRendering}
-                renderProgress={renderProgress}
-                onStartRender={() => { setIsRendering(true); setRenderProgress(0); }}
+            <aside style={{ width: `${rightWidth}px` }} className="bg-[#0f0f12] shrink-0 overflow-hidden flex flex-col">
+              <FilePreviewer 
+                filePath={activeEditorPath} 
+                onClose={() => setActiveEditorPath(null)} 
               />
             </aside>
           </>

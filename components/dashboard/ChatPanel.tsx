@@ -24,6 +24,8 @@ interface Props {
   onSend: () => void;
   onChecklistChange: (key: keyof Checklist, val: boolean) => void;
   onAssociateChannel: (channelId: string | null) => void;
+  isGenerating?: boolean;
+  onCancel?: () => void;
 }
 
 export default function ChatPanel({
@@ -38,6 +40,8 @@ export default function ChatPanel({
   onSend,
   onChecklistChange,
   onAssociateChannel,
+  isGenerating,
+  onCancel,
 }: Props) {
   const t = translations[lang];
 
@@ -182,9 +186,19 @@ export default function ChatPanel({
               ? 'bg-purple-600/10 border border-purple-500/20 text-purple-100'
               : 'bg-[#18181b] border border-zinc-800 text-zinc-300'
               }`}>
-              <p className="whitespace-pre-line">{msg.text}</p>
+              {msg.text.includes('🛑 Proceso cancelado por el usuario.') ? (
+                <>
+                  <p className="whitespace-pre-line">{msg.text.replace('🛑 Proceso cancelado por el usuario.', '').trim()}</p>
+                  <div className="mt-3 flex items-center gap-2 text-sm font-medium text-red-400 bg-red-950/30 border border-red-900/50 rounded-md px-3 py-2 w-fit">
+                    <span className="text-base">🛑</span> {lang === 'es' ? 'Proceso cancelado por el usuario.' : 'Process canceled by user.'}
+                  </div>
+                </>
+              ) : (
+                <p className="whitespace-pre-line">{msg.text}</p>
+              )}
               <div className="flex justify-between items-center mt-2 gap-4">
                 <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-2">
+                  {msg.isQueued && <span className="text-amber-500 font-bold animate-pulse">⏳ {lang === 'es' ? 'En espera...' : 'Queued...'}</span>}
                   {msg.modelName && <span>🤖 {msg.modelName}</span>}
                   {msg.isGenerating && <span className="text-emerald-400 font-bold">⏳ {(elapsedMs / 1000).toFixed(1)}s</span>}
                   {!msg.isGenerating && msg.generationTimeMs && <span>⏱️ {(msg.generationTimeMs / 1000).toFixed(2)}s</span>}
@@ -277,7 +291,7 @@ export default function ChatPanel({
                 className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
               />
               <button
-                onClick={onSend}
+                onClick={() => onSend()}
                 className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
               >
                 {t.sendBtn}
@@ -285,6 +299,15 @@ export default function ChatPanel({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                 </svg>
               </button>
+              {isGenerating && (
+                <button
+                  onClick={onCancel}
+                  className="bg-red-900/40 hover:bg-red-800/50 text-red-400 border border-red-500/30 font-bold text-sm px-4 rounded-lg transition-colors flex items-center gap-2"
+                  title={lang === 'es' ? 'Cancelar generación' : 'Cancel generation'}
+                >
+                  🛑
+                </button>
+              )}
 
         </div>
       </div>

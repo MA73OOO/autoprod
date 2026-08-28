@@ -1,10 +1,9 @@
-import { createOpenAI } from '@ai-sdk/openai';
-import { generateText, tool, jsonSchema } from 'ai';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { generateText, tool } from 'ai';
+import { z } from 'zod';
 
-const p = createOpenAI({
-  baseURL: 'http://127.0.0.1:11434/v1',
-  apiKey: 'ollama',
-  compatibility: 'compatible',
+const googleProvider = createGoogleGenerativeAI({
+  apiKey: 'dummy',
   fetch: async (url, options) => { console.log(options.body); return fetch(url, options); }
 });
 
@@ -12,16 +11,12 @@ async function main() {
   console.log("Starting test...");
   try {
     const result = await generateText({
-      model: p('llama3.1:latest'),
+      model: googleProvider('gemini-1.5-pro'),
       messages: [{ role: 'user', content: 'List files in .' }],
       tools: {
         list_dir: tool({
           description: 'List files',
-          parameters: jsonSchema({
-            type: 'object',
-            properties: { dirPath: { type: 'string' } },
-            required: ['dirPath'],
-          }),
+          parameters: z.object({ dirPath: z.string() }),
           execute: async () => 'done'
         })
       },

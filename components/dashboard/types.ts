@@ -6,6 +6,7 @@ export interface Message {
   generationTimeMs?: number;
   isGenerating?: boolean;
   isTemp?: boolean;
+  isQueued?: boolean;
 }
 
 export interface Video {

@@ -62,3 +62,4 @@ venv/
 env/
 .env.motor
 /.autoprod/
+*.cjs
