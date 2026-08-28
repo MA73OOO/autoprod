@@ -184,3 +184,41 @@ model PromptTemplate {
   @@map("promptTemplate")
   @@schema("public")
 }
+
+model Agent {
+  id           String      @id @default(uuid())
+  slug         String      @unique // Ej: "channel_architect"
+  name         String
+  description  String?
+  systemPrompt String
+  steps        AgentStep[]
+  createdAt    DateTime    @default(now())
+
+  @@map("agent")
+  @@schema("public")
+}
+
+model AgentStep {
+  id                    String      @id @default(uuid())
+  agentId               String
+  agent                 Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  stepOrder             Int
+  stepName              String
+  apiEndpoint           String
+  method                String      @default("POST")
+  dynamicPromptTemplate String?
+  tools                 AgentTool[]
+
+  @@map("agentStep")
+  @@schema("public")
+}
+
+model AgentTool {
+  id         String    @id @default(uuid())
+  stepId     String
+  step       AgentStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  toolName   String
+
+  @@map("agentTool")
+  @@schema("public")
+}

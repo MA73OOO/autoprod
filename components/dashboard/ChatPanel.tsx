@@ -22,7 +22,7 @@ interface Props {
   inputPrompt: string;
   checklist: Checklist;
   onInputChange: (val: string) => void;
-  onSend: () => void;
+  onSend: (customText?: string, agentSlug?: string) => void;
   onChecklistChange: (key: keyof Checklist, val: boolean) => void;
   onAssociateChannel: (channelId: string | null) => void;
   isGenerating?: boolean;
@@ -242,9 +242,31 @@ export default function ChatPanel({
       )}
 
       {/* Bottom input panel */}
-      <div className="p-4 border-t border-zinc-800 bg-[#0f0f12]">
+      <div className="p-4 border-t border-zinc-800 bg-[#0f0f12] flex flex-col gap-3">
+        {/* Agent Triggers / Switches */}
+        <div className="flex flex-wrap gap-2">
+          <button 
+            onClick={() => onSend('¡Inicia tu trabajo Arquitecto!', 'channel_architect')}
+            className="text-xs bg-purple-900/30 hover:bg-purple-800/50 text-purple-300 border border-purple-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+          >
+            🏗️ {lang === 'es' ? 'Arquitecto de Canales' : 'Channel Architect'}
+          </button>
+          <button 
+            onClick={() => onSend('¡Redacta un guion Guionista!', 'script_writer')}
+            className="text-xs bg-indigo-900/30 hover:bg-indigo-800/50 text-indigo-300 border border-indigo-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+          >
+            ✍️ {lang === 'es' ? 'Guionista' : 'Script Writer'}
+          </button>
+          <button 
+            onClick={() => onSend('¡Edita este contenido Editor!', 'editor')}
+            className="text-xs bg-emerald-900/30 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+          >
+            ✂️ Editor
+          </button>
+        </div>
+
         {/* Interceptor checklist */}
-        <div className="mb-3 flex flex-wrap items-center gap-4 px-2 py-1.5 bg-[#18181b] border border-zinc-800 rounded-lg text-xs">
+        <div className="flex flex-wrap items-center gap-4 px-2 py-1.5 bg-[#18181b] border border-zinc-800 rounded-lg text-xs">
           <span className="text-purple-400 font-bold uppercase tracking-wider text-[10px] pr-2 border-r border-zinc-800">
             {t.interceptorTitle}
           </span>

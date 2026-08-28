@@ -273,6 +273,78 @@ export async function POST(req: Request) {
 
     const systemPrompt = 'You are a helpful AI assistant integrated into AutoProd, a video content production tool. Answer questions conversationally and concisely. You also have optional filesystem tools available — only use them when the user explicitly asks you to read files, list directories, or write to files. For general questions, just respond with text directly.';
 
+    const lastMessage = messages[messages.length - 1]?.content || '';
+    let activeAgentSlug = req.body && (await req.clone().json()).agentSlug; // Extraer si viene del UI
+
+    // --- FASE 1: ENRUTAMIENTO INTELIGENTE (Si no hay trigger manual) ---
+    if (!activeAgentSlug && provider === 'ollama') {
+      try {
+        const availableAgents = await prisma.agent.findMany({ select: { slug: true, description: true } });
+        if (availableAgents.length > 0) {
+          const routerPrompt = `
+Eres un clasificador de intenciones ultrarrápido. El usuario dice: "${lastMessage}".
+Selecciona el 'slug' del agente que mejor puede ayudar de esta lista:
+${availableAgents.map(a => `- ${a.slug}: ${a.description}`).join('\n')}
+Si no aplica ninguno, responde SOLO con: chat_general
+Tu respuesta debe ser EXACTAMENTE el slug, sin comillas, sin explicaciones.`;
+
+          const routerRes = await fetch('http://127.0.0.1:11434/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model || 'llama3.1:latest', prompt: routerPrompt, stream: false })
+          });
+          if (routerRes.ok) {
+            const rData = await routerRes.json();
+            const guess = rData.response?.trim();
+            if (availableAgents.some(a => a.slug === guess)) {
+              activeAgentSlug = guess;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Fallo al clasificar agente, cayendo a chat_general", e);
+      }
+    }
+
+    // --- FASE 2 y 3: CARGA DEL ARNÉS Y EJECUCIÓN (Llama) ---
+    if (activeAgentSlug && activeAgentSlug !== 'chat_general' && provider === 'ollama') {
+      const currentStepOrder = (await req.clone().json().catch(() => {}))?.currentStepOrder || 1;
+      
+      const agent = await prisma.agent.findUnique({
+        where: { slug: activeAgentSlug },
+        include: { steps: { where: { stepOrder: currentStepOrder } } }
+      });
+
+      if (agent && agent.steps.length > 0) {
+        const activeStep = agent.steps[0];
+        const dynamicContext = `ROL: ${agent.systemPrompt}\nTAREA ACTUAL: ${activeStep.stepName}\nINSTRUCCIONES: ${activeStep.dynamicPromptTemplate || ''}\n\nAnaliza la conversación y genera la estructura o respuesta requerida para este paso. No divagues.`;
+
+        // Generamos la respuesta con Ollama
+        const ollamaModel = model || 'llama3.1:latest';
+        const reasoningResult = await ollamaChatWithTools(
+          ollamaModel,
+          dynamicContext,
+          messages,
+          workspacePath || ''
+        );
+
+        // Si el paso tiene un Endpoint, pedimos Preview en la UI
+        if (activeStep.apiEndpoint) {
+          return NextResponse.json({ text: reasoningResult }, {
+            headers: {
+              'X-AutoProd-Agent': encodeURIComponent(agent.name),
+              'X-AutoProd-Step-Name': encodeURIComponent(activeStep.stepName),
+              'X-AutoProd-Action-Endpoint': encodeURIComponent(activeStep.apiEndpoint),
+              'X-AutoProd-Requires-Preview': 'true'
+            }
+          });
+        } else {
+          return NextResponse.json({ text: reasoningResult });
+        }
+      }
+    }
+
+    // --- FALLBACK A CHAT GENERAL ---
     if (provider === 'ollama') {
       const ollamaModel = model || 'llama3.1:latest';
       return NextResponse.json({ text: await ollamaChatWithTools(ollamaModel, systemPrompt, messages, workspacePath || '') });

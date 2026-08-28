@@ -378,8 +378,16 @@ export default function Dashboard() {
 
   // ── Chat ──
   const [isGeneratingGlobal, setIsGeneratingGlobal] = useState(false);
-  const [messageQueue, setMessageQueue] = useState<{text: string, conversationId: string}[]>([]);
+  const [messageQueue, setMessageQueue] = useState<{text: string, conversationId: string, agentSlug?: string}[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Estado para el Preview del Arnés
+  const [actionPreview, setActionPreview] = useState<{
+    endpoint: string;
+    content: string;
+    agent: string;
+    stepName: string;
+  } | null>(null);
 
   const cancelGeneration = () => {
     if (abortControllerRef.current) {
@@ -396,9 +404,9 @@ export default function Dashboard() {
     description: 'En este tutorial aprenderás a dominar Next.js 15 utilizando el App Router.\n\n⏱️ Marcas de tiempo:\n0:00 - Introducción\n2:15 - Configuración inicial\n5:40 - Rutas Dinámicas',
   });
 
-  const handleSendMessage = async (customText?: string, targetConversationId?: string) => {
+  const handleSendMessage = async (customText?: string, agentSlug?: string) => {
     const textToSend = customText ?? inputPrompt;
-    const conversationId = targetConversationId ?? activeConversationId;
+    const conversationId = activeConversationId;
     
     if (!textToSend.trim() || !conversationId) return;
 
@@ -409,7 +417,7 @@ export default function Dashboard() {
     if (isGeneratingGlobal) {
       const tempMsg: Message = { sender: 'user', text: textToSend, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isTemp: true, isQueued: true };
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [...c.messages, tempMsg] } : c));
-      setMessageQueue(prev => [...prev, { text: textToSend, conversationId }]);
+      setMessageQueue(prev => [...prev, { text: textToSend, conversationId, agentSlug }]);
       return;
     }
 
@@ -483,7 +491,8 @@ export default function Dashboard() {
               messages: [...chatHistory, { role: 'user', content: text }], 
               provider,
               model: actualModel,
-              workspacePath: workspacePath || ''
+              workspacePath: workspacePath || '',
+              agentSlug // Se inyecta el trigger aquí si fue seleccionado
             }),
             signal: abortController.signal
           });
@@ -493,10 +502,25 @@ export default function Dashboard() {
             throw new Error(errorData.error || 'Error conectando con la IA');
           }
 
+          // Leer headers para el Arnés
+          const reqPreview = res.headers.get('X-AutoProd-Requires-Preview') === 'true';
+          const agentNameHeader = decodeURIComponent(res.headers.get('X-AutoProd-Agent') || '');
+          const stepNameHeader = decodeURIComponent(res.headers.get('X-AutoProd-Step-Name') || '');
+          const endpointHeader = decodeURIComponent(res.headers.get('X-AutoProd-Action-Endpoint') || '');
+
           // Read the JSON response from the AI (non-streaming)
           const data = await res.json();
           aiResponseText = data.text || '';
           
+          if (reqPreview) {
+            setActionPreview({
+              content: aiResponseText,
+              agent: agentNameHeader,
+              stepName: stepNameHeader,
+              endpoint: endpointHeader
+            });
+          }
+
           // Update UI with AI response
           setConversations(prev => prev.map(c => {
             if (c.id !== conversationId) return c;
@@ -570,7 +594,7 @@ export default function Dashboard() {
         return c;
       }));
       
-      handleSendMessage(nextMsg.text, nextMsg.conversationId);
+      handleSendMessage(nextMsg.text, nextMsg.agentSlug);
     }
   }, [isGeneratingGlobal, messageQueue]);
 
@@ -621,6 +645,38 @@ export default function Dashboard() {
     const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+  };
+
+  const handleExecutePreview = async () => {
+    if (!actionPreview) return;
+    
+    // Convertir el Súper Prompt a los parámetros requeridos por la ruta simplificada
+    let channelName = "Nuevo_Canal";
+    const nameMatch = actionPreview.content.match(/Canal[:\-]\s*(.+)/i);
+    if (nameMatch && nameMatch[1]) channelName = nameMatch[1].trim().replace(/\s+/g, '_');
+    
+    toast.loading("Ejecutando switch en la nube...", { id: 'exec-switch' });
+    try {
+      const res = await fetch(actionPreview.endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspacePath,
+          channelName,
+          superPrompt: actionPreview.content
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success("¡Operación completada con éxito!", { id: 'exec-switch' });
+        setActionPreview(null);
+        if (workspacePath) loadWorkspaceTree(workspacePath);
+      } else {
+        throw new Error(data.error || "Error al ejecutar");
+      }
+    } catch (e: any) {
+      toast.error(e.message, { id: 'exec-switch' });
+    }
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────────
@@ -737,7 +793,7 @@ export default function Dashboard() {
         />
 
         {/* Center — Launchpad or Chat */}
-        <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden">
+        <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden relative">
           {activeView === 'home' ? (
             <Launchpad lang={lang} onSelect={handleNewConversationWithRole} />
           ) : (
@@ -762,6 +818,40 @@ export default function Dashboard() {
                 }
               }}
             />
+          )}
+
+          {/* Action Preview Floating Panel */}
+          {actionPreview && (
+            <div className="absolute top-4 right-4 w-96 bg-[#18181b] border border-purple-500/50 shadow-2xl rounded-xl flex flex-col overflow-hidden z-40 animate-in slide-in-from-right-8 fade-in">
+              <div className="bg-purple-900/30 border-b border-purple-800/40 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-sm text-purple-200">🔍 {actionPreview.agent}</h3>
+                  <p className="text-[10px] text-purple-400 font-mono uppercase mt-0.5">{actionPreview.stepName}</p>
+                </div>
+                <button onClick={() => setActionPreview(null)} className="text-zinc-500 hover:text-white transition-colors">
+                  ✕
+                </button>
+              </div>
+              
+              <div className="p-4 bg-black/40">
+                <p className="text-xs text-zinc-400 mb-2 font-semibold tracking-wide uppercase">Previsualización de Estructura:</p>
+                <div className="bg-[#0f0f12] border border-zinc-800 p-3 rounded-lg text-xs font-mono text-zinc-300 h-48 overflow-y-auto whitespace-pre-wrap">
+                  {actionPreview.content}
+                </div>
+              </div>
+              
+              <div className="p-4 border-t border-zinc-800 bg-[#18181b] flex flex-col gap-2">
+                <button 
+                  onClick={handleExecutePreview}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-lg shadow-lg flex justify-center items-center gap-2 transition-all"
+                >
+                  🚀 Aprobar y Ejecutar en la Nube
+                </button>
+                <p className="text-[9px] text-center text-zinc-500 leading-tight">
+                  Al ejecutar, el orquestador llamará a <strong>{actionPreview.endpoint}</strong> para construir el proyecto y consumirá tokens de Gemini.
+                </p>
+              </div>
+            </div>
           )}
         </main>
 
