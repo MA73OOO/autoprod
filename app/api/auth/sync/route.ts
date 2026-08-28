@@ -17,20 +17,22 @@ export async function POST() {
     }
 
     // Check if the user already exists in the Prisma PostgreSQL database
-    let user = await db.orm.public.User
-      .where({ email: supabaseUser.email! })
-      .first();
+    let user = await db.user.findUnique({
+      where: { email: supabaseUser.email! }
+    });
 
     if (!user) {
       // Determine user role (e.g. mateo@autoprod.io is ADMIN)
       const role = supabaseUser.email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
 
       // Sync/Create the user record in Prisma using Supabase User ID (UUID)
-      user = await db.orm.public.User.create({
-        id: supabaseUser.id,
-        email: supabaseUser.email!,
-        name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
-        role: role,
+      user = await db.user.create({
+        data: {
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
+          role: role,
+        }
       });
     }
 

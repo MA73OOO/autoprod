@@ -2,6 +2,10 @@ export interface Message {
   sender: 'user' | 'gemini';
   text: string;
   timestamp: string;
+  modelName?: string;
+  generationTimeMs?: number;
+  isGenerating?: boolean;
+  isTemp?: boolean;
 }
 
 export interface Video {

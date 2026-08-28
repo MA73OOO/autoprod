@@ -389,18 +389,15 @@ export default function Dashboard() {
     if (!inputPrompt.trim() || !activeConversationId) return;
     const text = inputPrompt;
     setInputPrompt('');
-    const tempMsg: Message = { sender: 'user', text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    const tempMsg: Message = { sender: 'user', text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isTemp: true };
     
-    // Añadimos mensaje del usuario y mensaje temporal de "Pensando..."
-    const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '' };
-    setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
-
     try {
       // 1. Obtener el modelo y deducir el proveedor seleccionado
       const model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default';
       
       let provider = 'gemini';
       let actualModel = model;
+      let friendlyModelName = 'AI Model';
       const firstColonIndex = model.indexOf(':');
       if (firstColonIndex !== -1) {
         provider = model.substring(0, firstColonIndex);
@@ -410,6 +407,17 @@ export default function Dashboard() {
         else if (model.includes('claude')) provider = 'anthropic';
         else if (model.includes('llama')) provider = 'ollama';
       }
+
+      if (provider === 'gemini') friendlyModelName = actualModel.includes('flash') ? 'Gemini 1.5 Flash' : 'Gemini 1.5 Pro';
+      if (provider === 'openai') friendlyModelName = actualModel.includes('mini') ? 'GPT-4o Mini' : 'GPT-4o';
+      if (provider === 'anthropic') friendlyModelName = 'Claude 3.5 Sonnet';
+      if (provider === 'ollama') friendlyModelName = `${actualModel} (Local)`;
+      if (provider === 'imagen3') friendlyModelName = 'Imagen 3';
+      
+      const startTime = Date.now();
+      const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '', modelName: friendlyModelName, isGenerating: true, isTemp: true };
+      
+      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
 
       // 2. Mapear a comando CLI o llamar a API REST Cloud
       let aiResponseText = '';
@@ -474,6 +482,8 @@ export default function Dashboard() {
         aiResponseText = `❌ Error de IA: ${e.message}. Verifica tus API Keys en Ajustes o si tu motor local está encendido.`;
       }
 
+      const generationTimeMs = Date.now() - startTime;
+
       // 4. Guardar en Base de Datos (Next.js)
       const res = await fetch(`/api/conversations/${activeConversationId}/messages`, {
         method: 'POST',
@@ -484,11 +494,18 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         const userMsg: Message = { sender: 'user', text: data.userMessage.text, timestamp: new Date(data.userMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-        const geminiMsg: Message = { sender: 'gemini', text: data.geminiMessage.text, timestamp: new Date(data.geminiMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+        const geminiMsg: Message = { 
+          sender: 'gemini', 
+          text: data.geminiMessage.text, 
+          timestamp: new Date(data.geminiMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          modelName: friendlyModelName,
+          generationTimeMs,
+          isGenerating: false
+        };
         setConversations(prev => prev.map(c => {
           if (c.id !== activeConversationId) return c;
-          // Filtramos los temporales y ponemos los reales
-          return { ...c, title: data.conversationTitle, messages: [...c.messages.filter(m => m !== tempMsg && m !== tempAiMsg), userMsg, geminiMsg] };
+          // Filtramos los temporales usando isTemp y ponemos los reales
+          return { ...c, title: data.conversationTitle, messages: [...c.messages.filter(m => !m.isTemp), userMsg, geminiMsg] };
         }));
         
         // Simular SEO Update si era chat de texto
@@ -503,7 +520,7 @@ export default function Dashboard() {
     } catch { 
       toast.error('Error al enviar mensaje'); 
       // Revertir mensajes temporales en caso de error fatal
-      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: c.messages.filter(m => m !== tempMsg && m !== tempAiMsg) } : c));
+      setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
     }
   };
 

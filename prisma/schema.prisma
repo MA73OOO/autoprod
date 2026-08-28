@@ -1,49 +1,96 @@
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
+  schemas  = ["public", "auth", "vault"]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
-// 1. Usuarios y Roles
+
+
 model User {
-  id           String            @id @default(uuid())
-  email        String            @unique
-  name         String?
-  role         Role              @default(USER)
-  geminiVaultId String?
-  openaiVaultId String?
+  id               String            @id @default(uuid())
+  email            String            @unique
+  name             String?
+  role             String            @default("USER")
+  geminiVaultId    String?
+  openaiVaultId    String?
   anthropicVaultId String?
-  subscription UserSubscription?
-  channels     Channel[]
-  createdAt    DateTime          @default(now())
+  subscription     UserSubscription?
+  settings         UserSettings?
+  apiKeys          ApiKey[]
+  channels         Channel[]
+  conversations    Conversation[]
+  createdAt        DateTime          @default(now())
+
+  @@map("user")
+  @@schema("public")
 }
 
-enum Role {
-  USER
-  ADMIN
+model Language {
+  code      String         @id
+  name      String
+  settings  UserSettings[]
+  createdAt DateTime       @default(now())
+
+  @@map("language")
+  @@schema("public")
 }
 
-// 2. Suscripciones y Planes Modulares (Feature Flags)
+model UserSettings {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  languageCode       String   @default("es")
+  language           Language @relation(fields: [languageCode], references: [code])
+  theme              String   @default("dark")
+  emailNotifications Boolean  @default(true)
+  defaultResolution  String   @default("1080p")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("userSettings")
+  @@schema("public")
+}
+
+model ApiKey {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider  String
+  key       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@map("apiKey")
+  @@schema("public")
+}
+
 model UserSubscription {
   id               String   @id @default(uuid())
   userId           String   @unique
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   planId           String
   plan             Plan     @relation(fields: [planId], references: [id])
-  status           String   @default("active") // "active", "canceled", "past_due"
+  status           String   @default("active")
   currentPeriodEnd DateTime @default(dbgenerated("NOW() + interval '1 year'"))
+
+  @@map("userSubscription")
+  @@schema("public")
 }
 
 model Plan {
   id            String             @id @default(uuid())
-  name          String             @unique // "FREE", "PRO", "ENTERPRISE", etc.
-  priceId       String? // Stripe Price ID
+  name          String             @unique
+  priceId       String?
   subscriptions UserSubscription[]
   limits        PlanLimit?
+
+  @@map("plan")
+  @@schema("public")
 }
 
 model PlanLimit {
@@ -51,31 +98,89 @@ model PlanLimit {
   planId                  String  @unique
   plan                    Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
   maxChannels             Int     @default(2)
-  maxProjectsPerChannel   Int     @default(10)
+  maxVideosPerChannel     Int     @default(10)
   canRenderInCloud        Boolean @default(false)
   maxMonthlyRenderMinutes Int     @default(0)
   hasAdvancedTemplates    Boolean @default(false)
+
+  @@map("planLimit")
+  @@schema("public")
 }
 
-// 3. Canales de Youtube
 model Channel {
-  id        String    @id @default(uuid())
-  name      String
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  projects  Project[]
-  createdAt DateTime  @default(now())
+  id               String         @id @default(uuid())
+  name             String
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videos           Video[]
+  conversations    Conversation[]
+  youtubeChannelId String?        @unique
+  accessToken      String?
+  refreshToken     String?
+  tokenExpiry      DateTime?
+  profilePicture   String?
+  createdAt        DateTime       @default(now())
+
+  @@map("channel")
+  @@schema("public")
 }
 
-// 4. Proyectos de Videos
-model Project {
-  id          String   @id @default(uuid())
-  name        String
-  channelId   String
-  channel     Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  title       String?
-  description String?
-  tags        String[]
-  status      String   @default("DRAFT")
-  createdAt   DateTime @default(now())
+model Video {
+  id             String         @id @default(uuid())
+  name           String
+  channelId      String
+  channel        Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  title          String?
+  description    String?
+  tags           String?
+  status         String         @default("DRAFT")
+  youtubeVideoId String?        @unique
+  conversations  Conversation[]
+  createdAt      DateTime       @default(now())
+
+  @@map("video")
+  @@schema("public")
+}
+
+model Conversation {
+  id           String    @id @default(uuid())
+  title        String    @default("Nueva conversación")
+  systemPrompt String?
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  channelId    String?
+  channel      Channel?  @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  videoId      String?
+  video        Video?    @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  messages     Message[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("conversation")
+  @@schema("public")
+}
+
+model Message {
+  id             String        @id @default(uuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         String
+  text           String
+  createdAt      DateTime      @default(now())
+
+  @@map("message")
+  @@schema("public")
+}
+
+model PromptTemplate {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  systemPrompt String
+  welcomeText  String?
+  description  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("promptTemplate")
+  @@schema("public")
 }

@@ -26,7 +26,7 @@ export default function RightInspector({
   const t = translations[lang];
 
   return (
-    <div className="flex flex-col gap-6 h-full overflow-y-auto p-4">
+    <div className="flex flex-col gap-6 h-full overflow-y-auto minimal-scrollbar p-4">
       {/* Thumbnail preview */}
       <div className="space-y-3">
         <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500">{t.thumbnailTitle}</h4>
@@ -62,7 +62,7 @@ export default function RightInspector({
           </div>
           <div>
             <label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">{t.descLabel}</label>
-            <div className="bg-[#18181b] border border-zinc-800 rounded p-2 text-xs text-zinc-300 h-44 overflow-y-auto whitespace-pre-line font-sans select-all leading-relaxed">
+            <div className="bg-[#18181b] border border-zinc-800 rounded p-2 text-xs text-zinc-300 h-44 overflow-y-auto minimal-scrollbar whitespace-pre-line font-sans select-all leading-relaxed">
               {seoOutput.description}
             </div>
           </div>

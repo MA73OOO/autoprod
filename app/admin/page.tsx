@@ -314,7 +314,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Main content grid */}
-      <main className="flex-1 overflow-y-auto p-6 bg-[#121214]">
+      <main className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214]">
         
         {/* Tab 1: Users & Subscriptions List */}
         {activeTab === 'users' && (

@@ -11,8 +11,7 @@ export async function GET() {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    // Fetch existing prompt templates
-    let templates = await db.orm.public.PromptTemplate.all();
+    let templates = await db.promptTemplate.findMany();
 
     // Auto-seed if the database table is empty
     if (templates.length === 0) {
@@ -40,11 +39,13 @@ export async function GET() {
       ];
 
       for (const item of defaultPrompts) {
-        await db.orm.public.PromptTemplate.create(item);
+        await db.promptTemplate.create({
+          data: item
+        });
       }
 
       // Re-fetch to return the seeded records
-      templates = await db.orm.public.PromptTemplate.all();
+      templates = await db.promptTemplate.findMany();
     }
 
     return NextResponse.json(templates);

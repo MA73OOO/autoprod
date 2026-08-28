@@ -17,14 +17,16 @@ export async function GET(request: Request) {
       const supabaseUser = data.user;
 
       // Sync the user to your Prisma PostgreSQL database
-      let user = await db.orm.public.User
-        .where({ email: supabaseUser.email! })
-        .first();
+      let user = await db.user.findUnique({
+        where: { email: supabaseUser.email! }
+      });
 
       if (!user) {
-        await db.orm.public.User.create({
-          email: supabaseUser.email!,
-          name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
+        await db.user.create({
+          data: {
+            email: supabaseUser.email!,
+            name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
+          }
         });
       }
 

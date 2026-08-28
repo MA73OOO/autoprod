@@ -9,10 +9,10 @@ export async function GET() {
     const { user } = auth;
 
     // Fetch conversations lightweight (no messages included)
-    const conversations = await db.orm.public.Conversation
-      .where({ userId: user.id })
-      .orderBy((c) => c.updatedAt.desc())
-      .all();
+    const conversations = await db.conversation.findMany({
+      where: { userId: user.id },
+      orderBy: { updatedAt: 'desc' }
+    });
 
     return NextResponse.json(conversations);
   } catch (err: any) {
@@ -31,19 +31,23 @@ export async function POST(request: Request) {
     const { title, channelId, videoId, systemPrompt, welcomeText } = body;
 
     // Create the conversation
-    const conversation = await db.orm.public.Conversation.create({
-      title: title || 'Nueva conversación',
-      userId: user.id,
-      systemPrompt: systemPrompt || null,
-      channelId: channelId || null,
-      videoId: videoId || null,
+    const conversation = await db.conversation.create({
+      data: {
+        title: title || 'Nueva conversación',
+        userId: user.id,
+        systemPrompt: systemPrompt || null,
+        channelId: channelId || null,
+        videoId: videoId || null,
+      }
     });
 
     // Create default welcome message from Gemini
-    const welcomeMessage = await db.orm.public.Message.create({
-      conversationId: conversation.id,
-      sender: 'GEMINI',
-      text: welcomeText || '¡Hola! Soy tu Co-Pilot de AutoProd. Selecciona un proyecto y configuramos el prompt SEO o preparemos el renderizado.',
+    const welcomeMessage = await db.message.create({
+      data: {
+        conversationId: conversation.id,
+        sender: 'GEMINI',
+        text: welcomeText || '¡Hola! Soy tu Co-Pilot de AutoProd. Selecciona un proyecto y configuramos el prompt SEO o preparemos el renderizado.',
+      }
     });
 
     // Structure conversation response with messages array

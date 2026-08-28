@@ -126,7 +126,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
         </div>
 
         {/* Modal Content Panel */}
-        <div className="flex-1 p-6 overflow-y-auto flex flex-col bg-[#121214]">
+        <div className="flex-1 p-6 overflow-y-auto minimal-scrollbar flex flex-col bg-[#121214]">
           {/* General Tab */}
           {activeSettingsTab === 'general' && (
             <div className="space-y-4">
@@ -168,7 +168,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
 
           {/* AI Settings Tab */}
           {activeSettingsTab === 'ai' && (
-            <div className="space-y-6 overflow-y-auto pr-2 max-h-[350px] custom-scrollbar">
+            <div className="space-y-6 overflow-y-auto pr-2 max-h-[350px] minimal-scrollbar">
               
               {/* Cloud Engines (API Keys) */}
               <div>

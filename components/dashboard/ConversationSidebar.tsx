@@ -73,7 +73,7 @@ export default function ConversationSidebar({
     <div className="flex flex-col h-full bg-zinc-950 border-r border-zinc-800">
       
       {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+      <div className="flex-1 overflow-y-auto minimal-scrollbar p-4 flex flex-col gap-6">
 
         {/* Motor Status Section */}
         <div className="flex items-center justify-between bg-zinc-900/50 rounded-lg p-3 border border-zinc-800/50">
@@ -157,7 +157,7 @@ export default function ConversationSidebar({
                 </div>
 
                 {/* The File Tree */}
-                <div className="overflow-x-auto pb-2">
+                <div className="overflow-x-auto overflow-y-auto max-h-[300px] pb-2 minimal-scrollbar pr-1">
                   {workspaceTree.map((node, i) => (
                     <FileTree key={i} node={node} onAddNode={onAddNode} onOpenFile={onOpenFile} />
                   ))}

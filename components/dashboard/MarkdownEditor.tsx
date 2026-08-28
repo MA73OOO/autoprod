@@ -149,7 +149,7 @@ export default function MarkdownEditor({ filePath, onClose }: Props) {
       </div>
 
       {/* Editor Body */}
-      <div className="flex-1 p-4 relative overflow-y-auto">
+      <div className="flex-1 p-4 relative overflow-y-auto minimal-scrollbar">
         {viewMode === 'edit' ? (
           <textarea
             value={content}
@@ -159,7 +159,7 @@ export default function MarkdownEditor({ filePath, onClose }: Props) {
             placeholder="Escribe aquí tu contenido markdown..."
           />
         ) : (
-          <div className="w-full h-full bg-[#18181b] p-6 rounded-lg border border-zinc-800 overflow-y-auto prose prose-invert prose-purple max-w-none">
+          <div className="w-full h-full bg-[#18181b] p-6 rounded-lg border border-zinc-800 overflow-y-auto minimal-scrollbar prose prose-invert prose-purple max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content || '*Sin contenido*'}
             </ReactMarkdown>

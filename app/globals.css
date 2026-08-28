@@ -25,3 +25,24 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Minimalist Scrollbar */
+.minimal-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.minimal-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.minimal-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46; /* zinc-700 */
+  border-radius: 10px;
+}
+.minimal-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #52525b; /* zinc-600 */
+}
+.minimal-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #3f3f46 transparent;
+}
+

@@ -17,7 +17,7 @@ interface FileTreeProps {
 }
 
 export default function FileTree({ node, level = 0, onAddNode, onOpenFile }: FileTreeProps) {
-  const [isOpen, setIsOpen] = useState(level < 1); // Auto-open root level
+  const [isOpen, setIsOpen] = useState(false); // All folders closed by default
   const isDir = node.type === 'directory';
   const isMarkdown = !isDir && (node.name.toLowerCase().endsWith('.md') || node.name.toLowerCase().endsWith('.txt'));
 

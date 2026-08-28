@@ -61,7 +61,7 @@ const ACTIVE_CARDS: Card[] = [
 
 export default function Launchpad({ lang, onSelect }: Props) {
   return (
-    <div className="h-full overflow-y-auto p-6 flex flex-col justify-center items-center w-full gap-6">
+    <div className="h-full overflow-y-auto minimal-scrollbar p-6 flex flex-col justify-center items-center w-full gap-6">
       {/* Header */}
       <div className="text-center space-y-2">
         <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">

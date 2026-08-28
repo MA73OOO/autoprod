@@ -14,13 +14,13 @@ export async function GET(
 
     // Execute conversation ownership check and messages fetch in parallel to reduce database roundtrip latency
     const [conversation, messages] = await Promise.all([
-      db.orm.public.Conversation
-        .where({ id: conversationId, userId: user.id })
-        .first(),
-      db.orm.public.Message
-        .where({ conversationId })
-        .orderBy((m) => m.createdAt.asc())
-        .all()
+      db.conversation.findFirst({
+        where: { id: conversationId, userId: user.id }
+      }),
+      db.message.findMany({
+        where: { conversationId },
+        orderBy: { createdAt: 'asc' }
+      })
     ]);
 
     if (!conversation) {
@@ -52,25 +52,27 @@ export async function POST(
     }
 
     // 1. Fetch conversation to verify ownership and check its current messages
-    const conversation = await db.orm.public.Conversation
-      .where({ id: conversationId, userId: user.id })
-      .first();
+    const conversation = await db.conversation.findFirst({
+      where: { id: conversationId, userId: user.id }
+    });
 
     if (!conversation) {
       return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 });
     }
 
     // Check count of messages to see if we should auto-update the title
-    const countResult = await db.orm.public.Message
-      .where({ conversationId })
-      .aggregate(a => ({ total: a.count() }));
-    const messageCount = countResult.total;
+    const messageCount = await db.message.count({
+      where: { conversationId }
+    });
+    // messageCount is already total
 
     // 2. Save User Message
-    const userMessage = await db.orm.public.Message.create({
-      conversationId,
-      sender: 'USER',
-      text: text.trim(),
+    const userMessage = await db.message.create({
+      data: {
+        conversationId,
+        sender: 'USER',
+        text: text.trim(),
+      }
     });
 
     // 3. Update conversation title if it was a default placeholder
@@ -85,21 +87,24 @@ export async function POST(
     }
 
     // Update conversation updatedAt timestamp and title if needed
-    await db.orm.public.Conversation
-      .where({ id: conversationId })
-      .update({ 
+    await db.conversation.update({
+      where: { id: conversationId },
+      data: { 
         title: updatedTitle,
         updatedAt: new Date().toISOString()
-      });
+      }
+    });
 
     // 4. Simulate or use provided AI Response
-    const responseText = body.aiResponseText || `Entendido. He optimizado el contenido para tu video utilizando la configuración enriquecida. He actualizado los resultados SEO del panel derecho con el título optimizado, etiquetas clave y descripción mejorada.`;
+    const responseText = body.aiResponseText || `[Respuesta Vacía del Modelo]`;
 
     // Save AI Response Message
-    const geminiMessage = await db.orm.public.Message.create({
-      conversationId,
-      sender: 'GEMINI',
-      text: responseText,
+    const geminiMessage = await db.message.create({
+      data: {
+        conversationId,
+        sender: 'GEMINI',
+        text: responseText,
+      }
     });
 
     return NextResponse.json({

@@ -11,9 +11,9 @@ export async function GET() {
       return NextResponse.json({ role: 'USER' }, { status: 401 });
     }
 
-    const dbUser = await db.orm.public.User
-      .where({ email: user.email! })
-      .first();
+    const dbUser = await db.user.findUnique({
+      where: { email: user.email! }
+    });
 
     return NextResponse.json({ role: dbUser?.role ?? 'USER' });
   } catch {

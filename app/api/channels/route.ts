@@ -8,11 +8,14 @@ export async function GET() {
     if (!auth.ok) return auth.response;
     const { user } = auth;
 
-    // Fetch channels and include videos
-    const channels = await db.orm.public.Channel
-      .where({ userId: user.id })
-      .include('videos', (v) => v.orderBy((video) => video.createdAt.desc()))
-      .all();
+    const channels = await db.channel.findMany({
+      where: { userId: user.id },
+      include: {
+        videos: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
 
     return NextResponse.json(channels);
   } catch (err: any) {

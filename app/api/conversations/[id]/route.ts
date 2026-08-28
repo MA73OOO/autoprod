@@ -19,9 +19,9 @@ export async function PATCH(
     const { title, channelId, videoId } = body;
 
     // Verify ownership
-    const conversation = await db.orm.public.Conversation
-      .where({ id: conversationId, userId: user.id })
-      .first();
+    const conversation = await db.conversation.findFirst({
+      where: { id: conversationId, userId: user.id }
+    });
 
     if (!conversation) {
       return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 });
@@ -36,9 +36,10 @@ export async function PATCH(
     if (videoId !== undefined) updateData.videoId = videoId || null;
 
     // Update
-    const updated = await db.orm.public.Conversation
-      .where({ id: conversationId })
-      .update(updateData);
+    const updated = await db.conversation.update({
+      where: { id: conversationId },
+      data: updateData
+    });
 
     return NextResponse.json({ success: true, conversation: updated });
   } catch (err: any) {
@@ -62,18 +63,18 @@ export async function DELETE(
     const { id: conversationId } = await params;
 
     // Verify ownership
-    const conversation = await db.orm.public.Conversation
-      .where({ id: conversationId, userId: user.id })
-      .first();
+    const conversation = await db.conversation.findFirst({
+      where: { id: conversationId, userId: user.id }
+    });
 
     if (!conversation) {
       return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 });
     }
 
     // Delete conversation (cascade will handle messages)
-    await db.orm.public.Conversation
-      .where({ id: conversationId })
-      .delete();
+    await db.conversation.delete({
+      where: { id: conversationId }
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
