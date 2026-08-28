@@ -434,7 +434,14 @@ export default function Dashboard() {
         else if (model.includes('llama')) provider = 'ollama';
       }
 
-      if (provider === 'gemini') friendlyModelName = actualModel.includes('flash') ? 'Gemini 1.5 Flash' : 'Gemini 1.5 Pro';
+      if (provider === 'gemini') {
+        const versionMatch = actualModel.match(/gemini-(\d+\.?\d*)/);
+        const version = versionMatch ? versionMatch[1] : '';
+        if (actualModel.includes('lite')) friendlyModelName = `Gemini ${version} Flash Lite`;
+        else if (actualModel.includes('flash')) friendlyModelName = `Gemini ${version} Flash`;
+        else if (actualModel.includes('pro')) friendlyModelName = `Gemini ${version} Pro`;
+        else friendlyModelName = `Gemini ${actualModel}`;
+      }
       if (provider === 'openai') friendlyModelName = actualModel.includes('mini') ? 'GPT-4o Mini' : 'GPT-4o';
       if (provider === 'anthropic') friendlyModelName = 'Claude 3.5 Sonnet';
       if (provider === 'ollama') friendlyModelName = `${actualModel} (Local)`;
@@ -458,10 +465,16 @@ export default function Dashboard() {
           aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
         } else {
           // Motor Texto (Nube o Ollama Local) usando Vercel AI SDK
-          const chatHistory = activeConversation?.messages.map(m => ({
+          // Build history, skipping the first assistant message which is a static UI greeting
+          // and should not be sent to the model as it incorrectly primes its behavior.
+          const allMessages = activeConversation?.messages || [];
+          const firstUserIndex = allMessages.findIndex(m => m.sender === 'user');
+          const messagesForApi = firstUserIndex >= 0 ? allMessages.slice(firstUserIndex) : allMessages;
+          
+          const chatHistory = messagesForApi.map(m => ({
              role: m.sender === 'user' ? 'user' : 'assistant',
              content: m.text
-          })) || [];
+          }));
 
           const res = await fetch('/api/chat', {
             method: 'POST',
@@ -479,34 +492,17 @@ export default function Dashboard() {
             throw new Error(errorData.error || 'Error conectando con la IA');
           }
 
-          const reader = res.body?.getReader();
-          const decoder = new TextDecoder();
+          // Read the JSON response from the AI (non-streaming)
+          const data = await res.json();
+          aiResponseText = data.text || '';
           
-          if (reader) {
-            // Limpiar "Pensando..."
-            setConversations(prev => prev.map(c => {
-              if (c.id !== conversationId) return c;
-              const newMsgs = [...c.messages];
-              newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: '' };
-              return { ...c, messages: newMsgs };
-            }));
-
-            while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = decoder.decode(value, { stream: true });
-              aiResponseText += chunk;
-              
-              // Actualizar UI en tiempo real (streaming)
-              setConversations(prev => prev.map(c => {
-                if (c.id !== conversationId) return c;
-                const newMsgs = [...c.messages];
-                newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText };
-                return { ...c, messages: newMsgs };
-              }));
-            }
-          }
+          // Update UI with AI response
+          setConversations(prev => prev.map(c => {
+            if (c.id !== conversationId) return c;
+            const newMsgs = [...c.messages];
+            newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText };
+            return { ...c, messages: newMsgs };
+          }));
         }
       } catch (e: any) {
         if (e.name === 'AbortError') {

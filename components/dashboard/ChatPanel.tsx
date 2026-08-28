@@ -253,7 +253,7 @@ export default function ChatPanel({
               <select
                 className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
                 id="modelSelector"
-                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default'}
+                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.6-flash' : 'gemini:gemini-3.6-flash'}
                 onChange={(e) => {
                   if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
                 }}
@@ -270,8 +270,19 @@ export default function ChatPanel({
                 )}
                 {readyClis.some(cli => cli.id === 'gemini') && (
                   <>
-                    <option value="models/gemini-1.5-pro">Gemini 1.5 Pro (Google)</option>
-                    <option value="models/gemini-1.5-flash">Gemini 1.5 Flash (Google)</option>
+                    <optgroup label="Gemini 3.x (Más nuevo)">
+                      <option value="gemini:gemini-3.7-flash">Gemini 3.7 Flash ✨</option>
+                      <option value="gemini:gemini-3.6-flash">Gemini 3.6 Flash</option>
+                      <option value="gemini:gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      <option value="gemini:gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+                      <option value="gemini:gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+                      <option value="gemini:gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                    </optgroup>
+                    <optgroup label="Gemini 2.5">
+                      <option value="gemini:gemini-2.5-pro">Gemini 2.5 Pro</option>
+                      <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
+                      <option value="gemini:gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                    </optgroup>
                   </>
                 )}
                 {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
