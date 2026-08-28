@@ -2,9 +2,11 @@
 
 **AutoProd** es una plataforma web progresiva (PWA) de nivel profesional diseñada para automatizar la producción de video, optimizar contenido SEO mediante IA (Google Gemini) y renderizar videos automáticamente para canales de YouTube. 
 
-El núcleo del proyecto está diseñado bajo una arquitectura híbrida que garantiza un **costo operativo de $0 USD** para el creador:
-1. **Frontend y APIs en la Nube**: Servidos de forma gratuita en Vercel, gestionando la base de datos y autenticación mediante Supabase.
-2. **Procesamiento de Video Local**: Un agente helper local (Python + FFmpeg) que aprovecha los recursos locales (CPU/GPU) del propio usuario para el renderizado pesado, eliminando la necesidad de costosos servidores de renderizado en la nube.
+El núcleo del proyecto está diseñado bajo una **Arquitectura Agéntica Híbrida Multi-Modelo** que garantiza máxima privacidad, eficiencia operativa y un **costo de orquestación de $0 USD**:
+1. **Frontend y APIs en la Nube**: Servidos de forma gratuita en Vercel, gestionando la base de datos (Supabase) y el consumo de créditos API.
+2. **Orquestador Local (Motor Python)**: Opera en la PC del creador. Se encarga de manipular el sistema de archivos (crear carpetas, guardar guiones) y proveer acceso seguro al almacenamiento.
+3. **Gestor de Contexto (Context Manager)**: Utilidad en Next.js que lee reglas maestras (ej. `PROMPT_OPTIMIZADOR_SEO.md`) y reglas específicas (`.autoprod_channel.md`) del sistema de archivos local para ensamblar los prompts.
+4. **Agentes Especialistas (Consolas)**: Interfaces modulares en la UI (ej. Arquitecto de Canales, Guionista SEO) conectadas a Endpoints aislados. Evitan la divagación delegando el "pensamiento" a APIs Cloud (Gemini/OpenAI) con un Súper-Prompt altamente empaquetado (One-Shot Generation).
 
 ---
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { generateText } from 'ai';
+import { generateText, tool, jsonSchema } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -75,44 +75,55 @@ const OLLAMA_TOOLS = [
 ];
 
 // ──────────────────────────────────────────────
-// Tool executor — runs the actual filesystem operation.
+// Tool executor — calls the Python Motor API
 // ──────────────────────────────────────────────
-async function executeTool(name: string, args: Record<string, unknown>): Promise<string> {
+async function callPythonMotor(method: string, endpoint: string, body?: any) {
+  const url = `http://localhost:8000/workspace${endpoint}`;
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `Motor error: ${res.status}`);
+  }
+  return res.json();
+}
+
+async function executeTool(name: string, args: Record<string, unknown>, workspacePath: string): Promise<string> {
+  if (!workspacePath) return JSON.stringify({ error: "No workspace selected in the UI." });
+  
   try {
     switch (name) {
       case 'list_directory': {
-        const dirPath = (args.dirPath as string) || '.';
-        const fullPath = path.join(process.cwd(), dirPath);
-        const items = await fsLib.readdir(fullPath, { withFileTypes: true });
-        return JSON.stringify(items.map(i => ({ name: i.name, isDirectory: i.isDirectory() })));
+        const base = path.join(workspacePath, (args.dirPath as string) || '.');
+        const res = await callPythonMotor('GET', `/?base_path=${encodeURIComponent(base)}`);
+        return JSON.stringify(res.tree || []);
       }
       case 'read_file': {
-        const filePath = args.filePath as string;
-        const fullPath = path.join(process.cwd(), filePath);
-        const content = await fsLib.readFile(fullPath, 'utf8');
+        const fullPath = path.join(workspacePath, args.filePath as string);
+        const res = await callPythonMotor('GET', `/file?path=${encodeURIComponent(fullPath)}`);
+        const content = res.content || '';
         // Truncate very large files to avoid blowing up context
         return content.length > 8000 ? content.slice(0, 8000) + '\n... [truncated]' : content;
       }
       case 'write_file': {
-        const filePath = args.filePath as string;
-        const content = args.content as string;
-        const fullPath = path.join(process.cwd(), filePath);
-        await fsLib.mkdir(path.dirname(fullPath), { recursive: true });
-        await fsLib.writeFile(fullPath, content, 'utf8');
-        return JSON.stringify({ success: true, message: `File ${filePath} written successfully.` });
+        const fullPath = path.join(workspacePath, args.filePath as string);
+        await callPythonMotor('POST', `/file`, { path: fullPath, content: args.content });
+        return JSON.stringify({ success: true, message: `File ${args.filePath} written successfully.` });
       }
       case 'delete_file': {
-        const filePath = args.filePath as string;
         const confirmed = args.confirmed as boolean;
         if (!confirmed) {
           return JSON.stringify({ error: 'Deletion aborted. You must ask the user for explicit confirmation before deleting.' });
         }
-        const fullPath = path.join(process.cwd(), filePath);
-        await fsLib.rm(fullPath, { recursive: true, force: true });
-        return JSON.stringify({ success: true, message: `Path ${filePath} deleted successfully.` });
+        const fullPath = path.join(workspacePath, args.filePath as string);
+        await callPythonMotor('DELETE', `/file?path=${encodeURIComponent(fullPath)}`);
+        return JSON.stringify({ success: true, message: `File deleted successfully.` });
       }
       default:
-        return JSON.stringify({ error: `Unknown tool: ${name}` });
+        return JSON.stringify({ error: 'Unknown tool' });
     }
   } catch (e: any) {
     return JSON.stringify({ error: e.message });
@@ -131,14 +142,23 @@ interface OllamaMessage {
   tool_calls?: Array<{ id: string; type: 'function'; function: { name: string; arguments: Record<string, unknown> } }>;
 }
 
-async function ollamaChatWithTools(
+export async function ollamaChatWithTools(
   modelName: string,
   systemPrompt: string,
-  userMessages: Array<{ role: string; content: string }>,
+  userMessages: any[],
+  workspacePath: string
 ): Promise<string> {
   const history: OllamaMessage[] = [
     { role: 'system', content: systemPrompt },
-    ...userMessages.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    ...userMessages.map(m => {
+      let textContent = '';
+      if (typeof m.content === 'string') {
+        textContent = m.content;
+      } else if (Array.isArray(m.content)) {
+        textContent = m.content.map((part: any) => part.text || '').join('\\n');
+      }
+      return { role: m.role as 'user' | 'assistant', content: textContent };
+    }),
   ];
 
   for (let step = 0; step < MAX_TOOL_STEPS; step++) {
@@ -176,10 +196,10 @@ async function ollamaChatWithTools(
           ? JSON.parse(tc.function.arguments)
           : tc.function.arguments;
 
-        const result = await executeTool(fnName, fnArgs);
+        const result = await executeTool(fnName, fnArgs, workspacePath);
         history.push({
           role: 'tool',
-          content: result,
+          content: `[TOOL RESULT FOR ${fnName}]:\n${result}`,
         });
       }
       continue;
@@ -195,7 +215,7 @@ async function ollamaChatWithTools(
 // ──────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { messages, provider, model } = await req.json();
+    const { messages, provider, model, workspacePath } = await req.json();
 
     if (!messages || !provider) {
       return NextResponse.json({ error: 'Messages and provider are required' }, { status: 400 });
@@ -255,8 +275,7 @@ export async function POST(req: Request) {
 
     if (provider === 'ollama') {
       const ollamaModel = model || 'llama3.1:latest';
-      const responseText = await ollamaChatWithTools(ollamaModel, systemPrompt, messages);
-      return NextResponse.json({ text: responseText || '[Sin respuesta del modelo]' });
+      return NextResponse.json({ text: await ollamaChatWithTools(ollamaModel, systemPrompt, messages, workspacePath || '') });
     }
 
     let aiModel;
@@ -279,27 +298,52 @@ export async function POST(req: Request) {
     const toolsDef = {
       list_directory: tool({
         description: 'List the contents of a directory. Only use when the user explicitly asks.',
-        parameters: z.object({
-          dirPath: z.string().describe('The relative path to the directory'),
+        parameters: jsonSchema({
+          type: 'object',
+          properties: {
+            dirPath: { type: 'string', description: 'The relative path to the directory' }
+          }
         }),
-        execute: async ({ dirPath }) => {
-          try {
-            const fullPath = path.join(process.cwd(), dirPath);
-            const items = await fs.readdir(fullPath, { withFileTypes: true });
-            return items.map(item => ({ name: item.name, isDirectory: item.isDirectory() }));
-          } catch (e: any) { return { error: e.message }; }
-        },
+        execute: async (args) => JSON.parse(await executeTool('list_directory', args, workspacePath || ''))
       }),
       read_file: tool({
-        description: 'Read the contents of a file. Only use when the user explicitly asks.',
-        parameters: z.object({ filePath: z.string() }),
-        execute: async ({ filePath }) => {
-          try {
-            const content = await fs.readFile(path.join(process.cwd(), filePath), 'utf8');
-            return { content };
-          } catch (e: any) { return { error: e.message }; }
-        },
+        description: 'Read the contents of a file',
+        parameters: jsonSchema({
+          type: 'object',
+          properties: {
+            filePath: { type: 'string', description: 'The relative path to the file' }
+          },
+          required: ['filePath']
+        }),
+        execute: async (args) => {
+          const res = await executeTool('read_file', args, workspacePath || '');
+          return { content: res };
+        }
       }),
+      write_file: tool({
+        description: 'Write content to a file',
+        parameters: jsonSchema({
+          type: 'object',
+          properties: {
+            filePath: { type: 'string', description: 'The relative path to the file' },
+            content: { type: 'string', description: 'The content to write' }
+          },
+          required: ['filePath', 'content']
+        }),
+        execute: async (args) => JSON.parse(await executeTool('write_file', args, workspacePath || ''))
+      }),
+      delete_file: tool({
+        description: 'Delete a file. Pass confirmed: true ONLY if the user explicitly confirmed.',
+        parameters: jsonSchema({
+          type: 'object',
+          properties: {
+            filePath: { type: 'string', description: 'The relative path to the file' },
+            confirmed: { type: 'boolean', description: 'Set to true ONLY if confirmed' }
+          },
+          required: ['filePath', 'confirmed']
+        }),
+        execute: async (args) => JSON.parse(await executeTool('delete_file', args, workspacePath || ''))
+      })
     };
 
     const result = await generateText({
@@ -313,6 +357,9 @@ export async function POST(req: Request) {
     const responseText = result.text || result.steps?.map((s: any) => s.text).filter(Boolean).join('\n') || '[Sin respuesta del modelo]';
     return NextResponse.json({ text: responseText });
   } catch (error: any) {
+    console.error('Chat API Error:', error);
+    if (error.cause) console.error('Cause:', error.cause);
+    if (error.stack) console.error('Stack:', error.stack);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

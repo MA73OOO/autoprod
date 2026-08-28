@@ -124,10 +124,11 @@ def read_file(path: str):
 
 @router.post("/file")
 def save_file(req: SaveFileRequest):
-    """Guarda el contenido de un archivo."""
+    """Guarda el contenido de un archivo, creándolo si no existe."""
     file_path = Path(req.path)
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(status_code=404, detail="El archivo no existe.")
+    
+    # Nos aseguramos de que el directorio exista
+    file_path.parent.mkdir(parents=True, exist_ok=True)
         
     if file_path.suffix.lower() not in ['.md', '.txt']:
         raise HTTPException(status_code=400, detail="Solo se permite editar archivos .md o .txt por seguridad.")
@@ -138,3 +139,20 @@ def save_file(req: SaveFileRequest):
         return {"status": "success", "message": "Archivo guardado exitosamente"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error guardando el archivo: {str(e)}")
+
+@router.delete("/file")
+def delete_file(path: str):
+    """Elimina un archivo del workspace."""
+    file_path = Path(path)
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="El archivo no existe.")
+        
+    if file_path.suffix.lower() not in ['.md', '.txt']:
+        raise HTTPException(status_code=400, detail="Solo se permite eliminar archivos .md o .txt por seguridad.")
+        
+    try:
+        file_path.unlink()
+        return {"status": "success", "message": "Archivo eliminado exitosamente"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error eliminando el archivo: {str(e)}")
+

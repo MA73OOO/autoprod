@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
 import { getControladorUrl } from '@/lib/controlador-client';
+import ChannelCreatorConsole from '@/components/agents/ChannelCreatorConsole';
 
 interface Checklist {
   cta: boolean;
@@ -26,6 +27,8 @@ interface Props {
   onAssociateChannel: (channelId: string | null) => void;
   isGenerating?: boolean;
   onCancel?: () => void;
+  workspacePath?: string | null;
+  onSuccess?: () => void;
 }
 
 export default function ChatPanel({
@@ -42,6 +45,8 @@ export default function ChatPanel({
   onAssociateChannel,
   isGenerating,
   onCancel,
+  workspacePath,
+  onSuccess,
 }: Props) {
   const t = translations[lang];
 
@@ -137,8 +142,22 @@ export default function ChatPanel({
     });
   }, []);
 
+  // Determinar si debemos renderizar una consola de agente especial
+  if (activeConversation?.title.includes('Crear Canal')) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center relative p-6 h-full">
+        <ChannelCreatorConsole 
+          workspacePath={workspacePath || ''} 
+          onSuccess={() => {
+            if (onSuccess) onSuccess();
+          }} 
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full relative">
+    <div className="flex-1 flex flex-col relative h-full">
       {/* Channel Association Banner - only shown on first message */}
       {activeConversation && activeConversation.messages.length <= 1 && (
         <div className="p-4 bg-zinc-950/40 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">

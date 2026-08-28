@@ -482,7 +482,8 @@ export default function Dashboard() {
             body: JSON.stringify({ 
               messages: [...chatHistory, { role: 'user', content: text }], 
               provider,
-              model: actualModel
+              model: actualModel,
+              workspacePath: workspacePath || ''
             }),
             signal: abortController.signal
           });
@@ -754,6 +755,12 @@ export default function Dashboard() {
               onAssociateChannel={handleAssociateChannel}
               isGenerating={isGeneratingGlobal}
               onCancel={cancelGeneration}
+              workspacePath={workspacePath}
+              onSuccess={() => {
+                if (workspacePath) {
+                  loadWorkspaceTree(workspacePath);
+                }
+              }}
             />
           )}
         </main>
