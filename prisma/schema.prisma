@@ -23,6 +23,7 @@ model User {
   apiKeys          ApiKey[]
   channels         Channel[]
   conversations    Conversation[]
+  tokenUsages      TokenUsage[]
   createdAt        DateTime          @default(now())
 
   @@map("user")
@@ -153,6 +154,7 @@ model Conversation {
   videoId      String?
   video        Video?    @relation(fields: [videoId], references: [id], onDelete: SetNull)
   messages     Message[]
+  tokenUsages  TokenUsage[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
@@ -220,5 +222,22 @@ model AgentTool {
   toolName   String
 
   @@map("agentTool")
+  @@schema("public")
+}
+
+model TokenUsage {
+  id               String        @id @default(uuid())
+  userId           String
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversationId   String?
+  conversation     Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  provider         String
+  modelName        String
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  createdAt        DateTime      @default(now())
+
+  @@map("tokenUsage")
   @@schema("public")
 }

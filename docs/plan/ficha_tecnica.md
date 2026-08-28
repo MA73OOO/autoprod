@@ -6,9 +6,9 @@ Este documento detalla las especificaciones técnicas, arquitectura del sistema 
 
 ## 1. Información General del Producto
 * **Nombre del Producto:** AutoProd Console (YouTube Co-Pilot & Production Automation Suite)
-* **Descripción:** Plataforma de escritorio y consola web para creadores de YouTube que integra inteligencia artificial para planificar canales, redactar guiones estructurados, configurar metadatos SEO de subida, interactuar con el sistema de archivos local (`E:\Youtube`) y automatizar la edición y renderizado de videos mediante Python.
+* **Descripción:** Plataforma agéntica para creadores de YouTube que automatiza la producción y gestión. Integra una arquitectura híbrida donde Llama actúa como Orquestador Local, un Motor en Python ejecuta el trabajo pesado en el sistema de archivos (puerto 8000), y APIs Premium (Gemini) se usan on-demand vía Switches.
 * **Versión de Software:** 0.1.0-alpha
-* **Arquitectura:** Cliente-Servidor (Next.js App Router + Servidor Node.js Local con acceso al disco duro).
+* **Arquitectura:** Arquitectura Agéntica Híbrida Multi-Modelo (Orquestador Llama + Motor Python Local + Especialistas Cloud).
 
 ---
 
@@ -20,15 +20,19 @@ Este documento detalla las especificaciones técnicas, arquitectura del sistema 
 * **Estilos:** TailwindCSS v4 (diseño responsivo con estética premium oscura y paneles interactivos resizables).
 * **Feedback de Interfaz:** Sonner (mensajes toast flotantes para notificaciones instantáneas).
 
-### Base de Datos y Capa de Datos
-* **Motor de Base de Datos:** PostgreSQL (alojado en la nube en Supabase).
-* **Capa de Abstracción de Datos:** Prisma 8 / Prisma Next (Contract-first ORM con tipado nativo a través de `db.orm` y `db.sql`).
-* **Control de Autenticación:** Supabase Auth (Sincronizado perezosamente en caliente a nivel de API con la base de datos).
+### Base de Datos y Capa de Datos (Catálogo de Agentes)
+* **Motor de Base de Datos:** PostgreSQL (alojado en Supabase).
+* **Capa de Abstracción:** Prisma 8 / Prisma Next.
+* **Catálogo Dinámico:** La tabla `Agent` define los "Switches" disponibles, eliminando hardcoding y permitiendo a Llama descubrir nuevas capacidades en tiempo real.
 
-### Integraciones y APIs Externas
-* **Motor de IA Co-Pilot:** API de Google Gemini (integrada en el chat principal del Dashboard).
-* **API de Publicación:** YouTube Data API v3 (para automatizar subidas de videos y sincronización de estadísticas de canales).
+### Motor Operativo (Heavy Lifter Local)
+* **Lenguaje:** Python (FastAPI / Uvicorn).
+* **Rol:** Se ejecuta en el puerto 8000 del PC del creador. Maneja *todo* el trabajo pesado operativo: manipulación segura de archivos `.md`/`.txt`, creación de árboles de directorios (estructuras de videos), y automatización de renderizado (FFmpeg).
 
+### Inteligencia Artificial Híbrida (El Cerebro)
+* **Orquestador Local (Ollama/Llama 3 8B):** Gestiona el flujo paso a paso de forma gratuita, interceptando solicitudes mediante el protocolo `[LLAMAR_API: slug]`.
+* **Agentes Especialistas Cloud (Gemini 1.5):** Llamados exclusivamente a través de los Switches (ej. `/api/agents/movement/route.ts`) cuando se requiere redacción creativa, optimización SEO de alto nivel o razonamiento complejo, minimizando costos.
+* **Integración Adicional:** YouTube Data API v3 para automatización de publicación.
 ---
 
 ## 3. Especificación de Base de Datos (Esquema Relacional)

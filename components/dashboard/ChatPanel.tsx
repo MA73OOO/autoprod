@@ -146,11 +146,11 @@ export default function ChatPanel({
   if (activeConversation?.title.includes('Crear Canal')) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center relative p-6 h-full">
-        <ChannelCreatorConsole 
-          workspacePath={workspacePath || ''} 
+        <ChannelCreatorConsole
+          workspacePath={workspacePath || ''}
           onSuccess={() => {
             if (onSuccess) onSuccess();
-          }} 
+          }}
         />
       </div>
     );
@@ -185,7 +185,7 @@ export default function ChatPanel({
       )}
 
       {/* Messages log */}
-      <div 
+      <div
         className="flex-1 overflow-y-auto minimal-scrollbar p-6 space-y-4"
         ref={chatContainerRef}
         onScroll={handleScroll}
@@ -232,7 +232,7 @@ export default function ChatPanel({
       {/* Scroll to bottom button */}
       {hasNewMessage && isScrolledUp && (
         <div className="absolute bottom-[100px] left-1/2 -translate-x-1/2 z-50">
-          <button 
+          <button
             onClick={scrollToBottom}
             className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-bounce border border-purple-400/30"
           >
@@ -245,19 +245,19 @@ export default function ChatPanel({
       <div className="p-4 border-t border-zinc-800 bg-[#0f0f12] flex flex-col gap-3">
         {/* Agent Triggers / Switches */}
         <div className="flex flex-wrap gap-2">
-          <button 
+          <button
             onClick={() => onSend('¡Inicia tu trabajo Arquitecto!', 'channel_architect')}
             className="text-xs bg-purple-900/30 hover:bg-purple-800/50 text-purple-300 border border-purple-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
           >
             🏗️ {lang === 'es' ? 'Arquitecto de Canales' : 'Channel Architect'}
           </button>
-          <button 
+          <button
             onClick={() => onSend('¡Redacta un guion Guionista!', 'script_writer')}
             className="text-xs bg-indigo-900/30 hover:bg-indigo-800/50 text-indigo-300 border border-indigo-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
           >
             ✍️ {lang === 'es' ? 'Guionista' : 'Script Writer'}
           </button>
-          <button 
+          <button
             onClick={() => onSend('¡Edita este contenido Editor!', 'editor')}
             className="text-xs bg-emerald-900/30 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
           >
@@ -265,101 +265,79 @@ export default function ChatPanel({
           </button>
         </div>
 
-        {/* Interceptor checklist */}
-        <div className="flex flex-wrap items-center gap-4 px-2 py-1.5 bg-[#18181b] border border-zinc-800 rounded-lg text-xs">
-          <span className="text-purple-400 font-bold uppercase tracking-wider text-[10px] pr-2 border-r border-zinc-800">
-            {t.interceptorTitle}
-          </span>
-          {([
-            { key: 'cta', label: t.chkCta },
-            { key: 'timestamps', label: t.chkTimestamps },
-            { key: 'tags', label: t.chkTags },
-            { key: 'saveThumbnail', label: t.chkThumbnail },
-          ] as { key: keyof Checklist; label: string }[]).map(({ key, label }) => (
-            <label key={key} className="flex items-center gap-1.5 cursor-pointer text-zinc-400 hover:text-white">
-              <input
-                type="checkbox"
-                checked={checklist[key]}
-                onChange={(e) => onChecklistChange(key, e.target.checked)}
-                className="accent-purple-600"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
 
         {/* Input bar */}
         <div className="flex gap-2">
 
-              <select
-                className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
-                id="modelSelector"
-                defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.6-flash' : 'gemini:gemini-3.6-flash'}
-                onChange={(e) => {
-                  if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
-                }}
-              >
-                <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
-                {readyClis.some(cli => cli.id === 'openai') && (
-                  <>
-                    <option value="gpt-4o">GPT-4o (OpenAI)</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
-                  </>
-                )}
-                {readyClis.some(cli => cli.id === 'anthropic') && (
-                  <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
-                )}
-                {readyClis.some(cli => cli.id === 'gemini') && (
-                  <>
-                    <optgroup label="Gemini 3.x (Más nuevo)">
-                      <option value="gemini:gemini-3.7-flash">Gemini 3.7 Flash ✨</option>
-                      <option value="gemini:gemini-3.6-flash">Gemini 3.6 Flash</option>
-                      <option value="gemini:gemini-3.5-flash">Gemini 3.5 Flash</option>
-                      <option value="gemini:gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
-                      <option value="gemini:gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-                      <option value="gemini:gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                    </optgroup>
-                    <optgroup label="Gemini 2.5">
-                      <option value="gemini:gemini-2.5-pro">Gemini 2.5 Pro</option>
-                      <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
-                      <option value="gemini:gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                    </optgroup>
-                  </>
-                )}
-                {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
-                  ollamaModels.map(model => (
-                    <option key={model.name} value={`ollama:${model.name}`}>{model.name} (Ollama Local)</option>
-                  ))
-                ) : readyClis.some(cli => cli.id === 'ollama') ? (
-                  <option value="ollama:llama3.1">Llama 3.1 (Ollama Local)</option>
-                ) : null}
-              </select>
-              <input
-                type="text"
-                placeholder={t.promptPlaceholder}
-                value={inputPrompt}
-                onChange={(e) => onInputChange(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && onSend()}
-                className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
-              />
-              <button
-                onClick={() => onSend()}
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
-              >
-                {t.sendBtn}
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-              {isGenerating && (
-                <button
-                  onClick={onCancel}
-                  className="bg-red-900/40 hover:bg-red-800/50 text-red-400 border border-red-500/30 font-bold text-sm px-4 rounded-lg transition-colors flex items-center gap-2"
-                  title={lang === 'es' ? 'Cancelar generación' : 'Cancel generation'}
-                >
-                  🛑
-                </button>
-              )}
+          <select
+            className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
+            id="modelSelector"
+            defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.6-flash' : 'gemini:gemini-3.6-flash'}
+            onChange={(e) => {
+              if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
+            }}
+          >
+            <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
+            {readyClis.some(cli => cli.id === 'openai') && (
+              <>
+                <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
+              </>
+            )}
+            {readyClis.some(cli => cli.id === 'anthropic') && (
+              <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
+            )}
+            {readyClis.some(cli => cli.id === 'gemini') && (
+              <>
+                <optgroup label="Gemini 3.x (Más nuevo)">
+                  <option value="gemini:gemini-3.7-flash">Gemini 3.7 Flash ✨</option>
+                  <option value="gemini:gemini-3.6-flash">Gemini 3.6 Flash</option>
+                  <option value="gemini:gemini-3.5-flash">Gemini 3.5 Flash</option>
+                  <option value="gemini:gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+                  <option value="gemini:gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+                  <option value="gemini:gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+                </optgroup>
+                <optgroup label="Gemini 2.5">
+                  <option value="gemini:gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini:gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                </optgroup>
+              </>
+            )}
+            {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
+              ollamaModels.map(model => (
+                <option key={model.name} value={`ollama:${model.name}`}>{model.name} (Ollama Local)</option>
+              ))
+            ) : readyClis.some(cli => cli.id === 'ollama') ? (
+              <option value="ollama:llama3.1">Llama 3.1 (Ollama Local)</option>
+            ) : null}
+          </select>
+          <input
+            type="text"
+            placeholder={t.promptPlaceholder}
+            value={inputPrompt}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onSend()}
+            className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+          />
+          <button
+            onClick={() => onSend()}
+            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
+          >
+            {t.sendBtn}
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+            </svg>
+          </button>
+          {isGenerating && (
+            <button
+              onClick={onCancel}
+              className="bg-red-900/40 hover:bg-red-800/50 text-red-400 border border-red-500/30 font-bold text-sm px-4 rounded-lg transition-colors flex items-center gap-2"
+              title={lang === 'es' ? 'Cancelar generación' : 'Cancel generation'}
+            >
+              🛑
+            </button>
+          )}
 
         </div>
       </div>
