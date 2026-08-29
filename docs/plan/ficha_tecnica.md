@@ -6,9 +6,9 @@ Este documento detalla las especificaciones técnicas, arquitectura del sistema 
 
 ## 1. Información General del Producto
 * **Nombre del Producto:** AutoProd Console (YouTube Co-Pilot & Production Automation Suite)
-* **Descripción:** Plataforma agéntica para creadores de YouTube que automatiza la producción y gestión. Integra una arquitectura híbrida donde Llama actúa como Orquestador Local, un Motor en Python ejecuta el trabajo pesado en el sistema de archivos (puerto 8000), y APIs Premium (Gemini) se usan on-demand vía Switches.
+* **Descripción:** Plataforma agéntica para creadores de YouTube que automatiza la producción y gestión. Integra una arquitectura híbrida donde Llama actúa como Orquestador Local, un Motor en Python ejecuta el trabajo pesado en el sistema de archivos (puerto 8000), y APIs Premium multi-provider se usan on-demand vía Switches.
 * **Versión de Software:** 0.1.0-alpha
-* **Arquitectura:** Arquitectura Agéntica Híbrida Multi-Modelo (Orquestador Llama + Motor Python Local + Especialistas Cloud).
+* **Arquitectura:** Arquitectura Agéntica Híbrida Multi-Modelo (Orquestador Llama + Motor Python Local + Especialistas Cloud Multi-Provider).
 
 ---
 
@@ -17,64 +17,107 @@ Este documento detalla las especificaciones técnicas, arquitectura del sistema 
 ### Frontend
 * **Framework:** Next.js 16.3.3 (compilado dinámicamente con Turbopack).
 * **Librería de Componentes:** React 19.2.8.
-* **Estilos:** TailwindCSS v4 (diseño responsivo con estética premium oscura y paneles interactivos resizables).
-* **Feedback de Interfaz:** Sonner (mensajes toast flotantes para notificaciones instantáneas).
+* **Estilos:** TailwindCSS v4 + plugin Typography (diseño responsivo con estética premium oscura y paneles interactivos redimensionables).
+* **Feedback de Interfaz:** Sonner 2.0.8 (mensajes toast flotantes para notificaciones instantáneas).
+* **Markdown:** react-markdown 10.1.0 + remark-gfm 4.0.1 (renderizado de respuestas del chat y archivos).
+* **Validación:** Zod 4.4.3 (validación de esquemas en runtime).
 
 ### Base de Datos y Capa de Datos (Catálogo de Agentes)
-* **Motor de Base de Datos:** PostgreSQL (alojado en Supabase).
-* **Capa de Abstracción:** Prisma 8 / Prisma Next.
-* **Catálogo Dinámico:** La tabla `Agent` define los "Switches" disponibles, eliminando hardcoding y permitiendo a Llama descubrir nuevas capacidades en tiempo real.
+* **Motor de Base de Datos:** PostgreSQL (alojado en Supabase). Multi-schema: `public`, `auth`, `vault`.
+* **Capa de Abstracción:** Prisma 7.10.0 con `@prisma/adapter-pg` (pool de conexiones via `pg`). Preview feature: `multiSchema`.
+* **Catálogo Dinámico:** Las tablas `Agent`, `AgentStep` y `AgentTool` definen los "Switches" disponibles, eliminando hardcoding y permitiendo a Llama descubrir nuevas capacidades en tiempo real.
+* **Vault:** Supabase Vault para almacenamiento encriptado de API Keys. Desencriptación en runtime via `supabase.rpc('get_decrypted_secret')`.
 
 ### Motor Operativo (Heavy Lifter Local)
 * **Lenguaje:** Python (FastAPI / Uvicorn).
-* **Rol:** Se ejecuta en el puerto 8000 del PC del creador. Maneja *todo* el trabajo pesado operativo: manipulación segura de archivos `.md`/`.txt`, creación de árboles de directorios (estructuras de videos), y automatización de renderizado (FFmpeg).
+* **Rol:** Se ejecuta en el puerto 8000 del PC del creador. Maneja *todo* el trabajo pesado operativo: manipulación segura de archivos `.md`/`.txt`, creación de árboles de directorios, selector de workspace nativo (PowerShell/osascript), gestión de Ollama.
+* **Routers:** `workspace.py` (CRUD FS), `chat.py` (chat local), `ollama_manager.py` (instalación multiplataforma).
 
-### Inteligencia Artificial Híbrida (El Cerebro)
-* **Orquestador Local (Ollama/Llama 3 8B):** Gestiona el flujo paso a paso de forma gratuita, interceptando solicitudes mediante el protocolo `[LLAMAR_API: slug]`.
-* **Agentes Especialistas Cloud (Gemini 1.5):** Llamados exclusivamente a través de los Switches (ej. `/api/agents/movement/route.ts`) cuando se requiere redacción creativa, optimización SEO de alto nivel o razonamiento complejo, minimizando costos.
-* **Integración Adicional:** YouTube Data API v3 para automatización de publicación.
+### Inteligencia Artificial Híbrida Multi-Provider (El Cerebro)
+
+#### Orquestador Local (Ollama/Llama)
+* Gestiona el flujo paso a paso de forma gratuita.
+* Protocolo de interceptación: `[LLAMAR_API: slug | arg1: valor1]` — el backend detecta este patrón en la respuesta y ejecuta la herramienta.
+* API directa a Ollama: `http://127.0.0.1:11434/api/chat` (modo no-streaming).
+* Modelo por defecto: `llama3.1:latest`.
+
+#### Agentes Especialistas Cloud (Switches)
+Llamados exclusivamente a través de los Switches cuando se requiere trabajo avanzado:
+
+| Provider | Paquete | Modelo por Defecto | Uso |
+|---|---|---|---|
+| **Gemini** | `@ai-sdk/google` v4.0.56 | `gemini-3.6-flash` | Switches de agentes (Movement, Channel Creator), chat premium |
+| **OpenAI** | `@ai-sdk/openai` v4.0.50 | `gpt-4o` | Chat premium alternativo |
+| **Anthropic** | `@ai-sdk/anthropic` v4.0.44 | `claude-3-5-sonnet-20240620` | Chat premium alternativo |
+| **Ollama** | `ollama-ai-provider` v1.2.0 / `ollama-ai-provider-v2` v4.0.1 | `llama3.1:latest` | Orquestación local gratuita |
+
+* **Motor de IA:** Vercel AI SDK v7.0.83 (`ai` package). Función central: `generateText()` con soporte multi-provider.
+* **Integración Adicional planeada:** YouTube Data API v3 para automatización de publicación.
+
 ---
 
 ## 3. Especificación de Base de Datos (Esquema Relacional)
 
-Las tablas principales creadas en el esquema `public` de PostgreSQL son:
+Las tablas creadas en el esquema `public` de PostgreSQL son:
 
-| Tabla | Propósito | Llave Primaria | Llaves Foráneas / Relaciones |
+| Tabla | Propósito | Llave Primaria | Relaciones Clave |
 | :--- | :--- | :--- | :--- |
-| **`User`** | Registro de creadores y roles en el sistema (USER/ADMIN). | `id` (UUID) | Relación 1-1 con `UserSettings` y `UserSubscription`. |
-| **`UserSettings`** | Preferencias de tema, resoluciones de renders e idioma relacional. | `id` (UUID) | `userId` $\rightarrow$ `User.id` (Cascade), `languageCode` $\rightarrow$ `Language.code`. |
-| **`Language`** | Tabla maestra que provee los códigos de idioma disponibles (ej: "es"). | `code` (String) | Relacionada con `UserSettings`. |
-| **`ApiKey`** | Almacenamiento cifrado de API Keys de IA de los usuarios (Google, Anthropic). | `id` (UUID) | `userId` $\rightarrow$ `User.id` (Cascade). |
-| **`Channel`** | Registro de canales de YouTube del usuario con tokens OAuth (Refresh/Access). | `id` (UUID) | `userId` $\rightarrow$ `User.id` (Cascade). |
-| **`Video`** | Videos creados por canal, su estado de renderizado (DRAFT, COMPLETED) y metadata. | `id` (UUID) | `channelId` $\rightarrow$ `Channel.id` (Cascade). |
-| **`Conversation`** | Hilos de chat individuales. Almacena el `systemPrompt` (Prompt Maestro). | `id` (UUID) | `userId` $\rightarrow$ `User.id`, `channelId` $\rightarrow$ `Channel.id`, `videoId` $\rightarrow$ `Video.id`. |
-| **`Message`** | Historial de mensajes dentro de una conversación (mensajes de USER o GEMINI). | `id` (UUID) | `conversationId` $\rightarrow$ `Conversation.id` (Cascade). |
-| **`PromptTemplate`**| Plantillas maestras de prompts de sistema para inicializar herramientas de IA. | `id` (UUID) | Unicidad por columna `name` (ej: `crear_canal`). |
+| **`User`** | Creadores y roles (USER/ADMIN). Campos Vault ID por provider. | `id` (UUID) | 1-1 con `UserSettings`, `UserSubscription`. 1-N con `ApiKey`, `Channel`, `Conversation`, `TokenUsage`. |
+| **`UserSettings`** | Tema, resolución, idioma relacional, notificaciones. | `id` (UUID) | `userId` → `User.id`, `languageCode` → `Language.code` |
+| **`Language`** | Catálogo de idiomas disponibles. | `code` (String) | Referenciada por `UserSettings` |
+| **`ApiKey`** | API Keys por provider. Constraint: `unique([userId, provider])`. | `id` (UUID) | `userId` → `User.id` |
+| **`UserSubscription`** | Plan activo con fecha de vencimiento. | `id` (UUID) | `userId` → `User.id`, `planId` → `Plan.id` |
+| **`Plan`** | Planes de suscripción (FREE, PRO, ENTERPRISE). | `id` (UUID) | 1-1 con `PlanLimit` |
+| **`PlanLimit`** | Límites operativos por plan. | `id` (UUID) | `planId` → `Plan.id` |
+| **`Channel`** | Canal de YouTube con tokens OAuth. | `id` (UUID) | `userId` → `User.id`. 1-N con `Video`, `Conversation` |
+| **`Video`** | Videos con estado y metadata. | `id` (UUID) | `channelId` → `Channel.id` |
+| **`Conversation`** | Hilos de chat con `systemPrompt` maestro. | `id` (UUID) | `userId` → `User.id`, `channelId` → `Channel.id`, `videoId` → `Video.id` |
+| **`Message`** | Mensajes dentro de una conversación. | `id` (UUID) | `conversationId` → `Conversation.id` |
+| **`PromptTemplate`** | Plantillas de prompts del sistema. Unique por `name`. | `id` (UUID) | — |
+| **`Agent`** | Agentes del catálogo dinámico. `slug` único. | `id` (UUID) | 1-N con `AgentStep` |
+| **`AgentStep`** | Pasos de ejecución: `apiEndpoint`, `method`, `dynamicPromptTemplate`. | `id` (UUID) | `agentId` → `Agent.id`. 1-N con `AgentTool` |
+| **`AgentTool`** | Herramienta vinculada a un paso de agente. | `id` (UUID) | `stepId` → `AgentStep.id` |
+| **`TokenUsage`** | Registro de consumo: provider, modelo, tokens (prompt/completion/total). | `id` (UUID) | `userId` → `User.id`, `conversationId` → `Conversation.id` |
 
 ---
 
 ## 4. Integraciones y Automatizaciones Locales (Workspace)
 
-* **Directorio de Workspace Local:** Carpeta raíz física en el computador del usuario (`E:\Youtube`).
+* **Directorio de Workspace Local:** Carpeta raíz seleccionada dinámicamente por el usuario (explorador nativo via Motor Python).
 * **Estructura Dinámica de Proyectos:**
-  * Carpeta de Canales (Ej: `E:\Youtube\PawsAndPillows`).
-  * Carpetas de Proyectos de Videos (Ej: `E:\Youtube\PawsAndPillows\PerritoDormilon`).
+  * Carpeta de Canales (Ej: `Workspace/PawsAndPillows`).
+  * Carpetas de Proyectos de Videos (Ej: `Workspace/PawsAndPillows/PerritoDormilon`).
   * Estructura interna de activos: `Videos/`, `Musica/`, `Ambiente/`, `miniature/`, `Resultado/`, y los archivos descriptivos editables de metadata `config_subida.md` y `comentario_fijado.md`.
-* **Motor de Edición Automática (Python):** Script en segundo plano que procesa los archivos locales de música y videos usando bibliotecas de procesamiento de medios (ej: FFMPEG, MoviePy), automatizando las operaciones de compilación directamente desde la consola web de AutoProd.
+* **Motor de Edición Automática (Python):** Planeado para fases futuras — procesamiento de archivos locales usando FFmpeg/MoviePy desde la consola web de AutoProd.
 
 ---
 
-## 5. Módulo de Configuración de IA y Detección de Suscripción
+## 5. Módulo de Configuración de IA y Multi-Provider
 
-### Proveedores de IA Soportados (`provider` en `ApiKey`)
-- **`GEMINI_API_KEY` (BYOK):** API Key de Google AI Studio configurada manualmente por el usuario. Permite usar el tier gratuito de $0 USD o pay-as-you-go.
-- **`GOOGLE_OAUTH_PRO` (OAuth):** Token de sesión enlazado de Google One AI Premium para consumir la cuota de suscripción activa de usuario.
+### Proveedores de IA Soportados
+| Provider | Método de Auth | Almacenamiento |
+|---|---|---|
+| **Gemini** (BYOK) | API Key de Google AI Studio | Supabase Vault (`geminiVaultId`) |
+| **OpenAI** (BYOK) | API Key de OpenAI | Supabase Vault (`openaiVaultId`) |
+| **Anthropic** (BYOK) | API Key de Anthropic | Supabase Vault (`anthropicVaultId`) |
+| **Ollama** (Local) | Sin auth (localhost:11434) | N/A |
 
-### Persistencia y Consumo de Claves
-1. **Lado Cliente (`localStorage`):** Almacena el `providerType` activo (`byok` o `oauth`), la API Key local temporal (cifrada en memoria) y la selección del modelo por defecto.
-2. **Lado Servidor (`ApiKey`):** Sincroniza la clave cifrada en PostgreSQL para que las llamadas de backend puedan ejecutarse de forma segura sin requerir que el cliente envíe la API Key en cada petición HTTP.
+### Flujo de Persistencia de Claves
+1. El usuario ingresa su API Key en `UserSettingsModal`.
+2. La clave se envía al endpoint `/api/settings/keys`.
+3. El backend encripta la clave en Supabase Vault y guarda el `secretId` resultante en el campo correspondiente del modelo `User` (`geminiVaultId`, `openaiVaultId`, `anthropicVaultId`).
+4. En cada llamada al chat, el backend desencripta la clave via `supabase.rpc('get_decrypted_secret')`.
 
-### Modelos de IA Disponibles
-- **`gemini-2.5-flash`:** Modelo rápido y ligero por defecto para optimizaciones y categorizaciones rápidas.
-- **`gemini-2.5-pro`:** Modelo de alto razonamiento sugerido para la generación de guiones extensos.
-- **`imagen-3.0-generate-002`:** Generador de imágenes de alta fidelidad para bocetos de miniaturas y recursos gráficos.
+### Modelos de IA Disponibles en el Código
+| Modelo | Provider | Uso por defecto |
+|---|---|---|
+| `gemini-3.6-flash` | Gemini | Modelo por defecto cuando `provider=gemini` y no se especifica modelo |
+| `gpt-4o` | OpenAI | Modelo fijo para `provider=openai`/`chatgpt` |
+| `claude-3-5-sonnet-20240620` | Anthropic | Modelo por defecto para `provider=anthropic` |
+| `llama3.1:latest` | Ollama | Modelo por defecto para `provider=ollama` |
+
+### Tracking de Consumo (TokenUsage)
+- Cada llamada a un provider cloud (Gemini, OpenAI, Anthropic) registra el consumo en la tabla `TokenUsage`.
+- Campos: `provider`, `modelName`, `promptTokens`, `completionTokens`, `totalTokens`.
+- El registro es asíncrono (fire-and-forget) para no bloquear la respuesta al usuario.
+- Se vincula al `userId` y opcionalmente al `conversationId` activo.

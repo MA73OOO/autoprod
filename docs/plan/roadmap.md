@@ -2,6 +2,37 @@
 
 Hoja de ruta completa del sistema. Cada fase es un bloque deployable de funcionalidad que amplía el control de AutoProd sobre el flujo de producción de YouTube.
 
+> **Última actualización:** 2026-08-28 — Commit `d1e5891`
+
+---
+
+## 📊 Estado de Fases
+
+| Fase | Nombre | Estado |
+|---|---|---|
+| -2 | Monetización (Lemon Squeezy) | 🔲 Pendiente |
+| -1 | `autoprod-setup` (Dependencias del Sistema) | 🔲 Pendiente (parcial: instalación de Ollama implementada) |
+| 0 | Wizard Modals de Configuración Rápida | 🔲 Pendiente |
+| 0.5 | Configuración de IA y BYOK | ✅ **Completada** — Multi-provider (Gemini, OpenAI, Anthropic, Ollama), Supabase Vault, TokenUsage |
+| 1 | API de Workspace Local | ✅ **Completada** — Motor Python puerto 8000, CRUD completo, explorador nativo |
+| 2 | Parseador de `config_subida.md` | 🔲 Pendiente |
+| 3 | Copilot + Edición Automática (Python) | 🔲 Pendiente |
+| 3.5 | Integración YouTube (OAuth + Upload + Stats) | 🔲 Pendiente |
+| 3.6 | Subtitulado Automático (Whisper) | 🔲 Pendiente |
+| 4 | Calendario de Publicación | 🔲 Pendiente |
+
+### Lo que se construyó más allá del roadmap original
+
+Las siguientes funcionalidades fueron implementadas sin estar explícitamente planificadas en las fases originales:
+
+- **Arquitectura Agéntica Completa**: Tablas `Agent`, `AgentStep`, `AgentTool` con catálogo dinámico de herramientas.
+- **Chat Universal Multi-Provider**: `universalChatWithTools()` con tool loop de 5 iteraciones y protocolo de interceptación `[LLAMAR_API: slug]`.
+- **Switches Cloud**: Endpoints de agentes especializados (`channel-creator`, `movement`) con AI SDK tools nativos.
+- **Token Usage Tracking**: Tabla `TokenUsage` para monitorear consumo por provider/modelo/usuario.
+- **Auth Guard Optimizado**: Doble verificación JWT local + fallback Supabase.
+- **ContextManager**: Inyección de reglas globales y de canal al System Prompt.
+- **11 Componentes de Dashboard**: ChatPanel, ConversationSidebar, Launchpad, FilePreviewer, FileTree, MarkdownEditor, etc.
+
 ---
 
 ## 📅 Fases de Implementación
@@ -67,21 +98,25 @@ Hoja de ruta completa del sistema. Cada fase es un bloque deployable de funciona
 
 ---
 
-### Fase 0.5: Configuración de IA y BYOK (Hybrid OAuth & API Key)
+### ✅ Fase 0.5: Configuración de IA y BYOK — COMPLETADA
 - **Objetivo:** $0 USD en costos de servidor — cada usuario usa su propia cuota de IA.
-- **Flujos:**
-  - **Opción A (Google One AI Premium):** Botón `Conectar con Google`. Consume la cuota Pro del usuario.
-  - **Opción B (API Key manual):** Input para `AIza...`. Persiste en `localStorage` y tabla `ApiKey` en Supabase.
-- **Selector de modelo:** `gemini-2.5-flash`, `gemini-2.5-pro`, `imagen-3.0-generate-002`.
+- **Implementado:**
+  - **Multi-Provider BYOK:** Soporte para Gemini (`@ai-sdk/google`), OpenAI (`@ai-sdk/openai`), Anthropic (`@ai-sdk/anthropic`), y Ollama (local, gratuito).
+  - **Supabase Vault:** API Keys encriptadas en Vault con desencriptación en runtime via RPC. Campos: `geminiVaultId`, `openaiVaultId`, `anthropicVaultId` en modelo `User`.
+  - **UI de Configuración:** `UserSettingsModal` con detección de CLI local, gestión de keys por provider.
+  - **Modelos por defecto:** `gemini-3.6-flash`, `gpt-4o`, `claude-3-5-sonnet-20240620`, `llama3.1:latest`.
+  - **Token Usage Tracking:** Tabla `TokenUsage` registra consumo por provider/modelo/usuario.
 
 ---
 
-### Fase 1: API de Workspace Local (`E:\Youtube`)
+### ✅ Fase 1: API de Workspace Local — COMPLETADA
 - **Objetivo:** AutoProd lee y escribe directamente en el sistema de archivos local.
-- **Estructura personalizable:** Carpetas configurables (`Musica/`, `Ambiente/`, `miniature/`, `Videos/`, `Resultado/`).
-- **Endpoints:**
-  - `GET /api/workspace` — Lista canales y videos leyendo subcarpetas del FS local.
-  - `POST /api/workspace/init` — Inicializa estructura de carpetas para un nuevo proyecto.
+- **Implementado:**
+  - **Motor Python (FastAPI)** corriendo en `localhost:8000` con 3 routers: `workspace.py`, `chat.py`, `ollama_manager.py`.
+  - **Selector de workspace nativo:** Abre explorador de archivos del SO (PowerShell/osascript) via `GET /workspace/pick`.
+  - **CRUD completo:** Listar (`GET /workspace/`), crear carpetas (`POST /workspace/create`), leer archivos (`GET /workspace/file`), escribir (`POST /workspace/file`), eliminar (`DELETE /workspace/file`).
+  - **Seguridad:** Solo archivos `.md` y `.txt` permitidos.
+  - **Límite de profundidad:** Árbol recursivo hasta 4 niveles.
 
 ---
 

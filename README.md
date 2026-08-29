@@ -7,23 +7,31 @@ El núcleo del proyecto está diseñado bajo una **Arquitectura Agéntica Híbri
 ### 1. El Orquestador Local (Llama / Ollama) 🧠
 - Actúa como el "Director de Orquesta" y opera localmente de forma **gratuita**.
 - Lee un catálogo dinámico de APIs (Switches) directamente desde la base de datos, conociendo en tiempo real qué herramientas tiene a su disposición.
-- **Protocolo de Intercepción**: En lugar de requerir que el modelo genere JSON estructurado (lo cual suele fallar en modelos pequeños como Llama 8B), utiliza un protocolo estricto de strings `[LLAMAR_API: slug | arg1: valor]`. Nuestro backend intercepta esto en el stream y ejecuta las acciones silenciosamente.
+- **Protocolo de Interceptación**: Utiliza un protocolo estricto de strings `[LLAMAR_API: slug | arg1: valor]`. El backend intercepta esto en la respuesta y ejecuta las acciones silenciosamente.
 - Su único trabajo es *decidir qué herramienta usar* basándose en el contexto del chat. No hace trabajo pesado.
 
 ### 2. El Motor Local (Python en Puerto 8000) ⚙️
 - Este es el **trabajador pesado (Heavy Lifter)** de la arquitectura.
 - Opera directamente en la máquina del usuario (PC) por razones de seguridad y acceso.
-- Se encarga de explorar el disco duro (`workspace_list`), leer archivos (`workspace_read`), crear árboles enteros de directorios para nuevos canales (`/workspace/create`), y guardar los guiones o resultados (`write_file`).
+- Se encarga de explorar el disco duro (`workspace_list`), leer archivos (`workspace_read`), crear árboles enteros de directorios (`workspace_create`), escribir resultados (`workspace_write`) y eliminar archivos (`workspace_delete`).
 - La seguridad es estricta: solo permite operar sobre archivos `.md` y `.txt`, protegiendo el entorno de ejecución de inyecciones de código.
+- **Routers**: `workspace.py` (CRUD de archivos), `chat.py` (chat local), `ollama_manager.py` (instalación de Ollama).
 
-### 3. Los Agentes Especialistas (Switches Cloud - ej. Gemini) ⚡
-- Modelos avanzados y de pago (como **Gemini 1.5 Flash**) que se invocan *únicamente* cuando la tarea requiere alta inteligencia o redacción creativa extensa.
-- **Flujo**: Llama orquesta -> Inicia el Switch -> Se arma un "Súper Prompt" -> Gemini ejecuta la redacción o el diseño conceptual -> Se envía el resultado al Motor Python para que lo guarde.
+### 3. Los Agentes Especialistas (Switches Cloud) ⚡
+- Modelos avanzados y de pago que se invocan *únicamente* cuando la tarea requiere alta inteligencia o redacción creativa extensa.
+- **Multi-Provider**: Soporta **Gemini** (`@ai-sdk/google`), **OpenAI/GPT-4o** (`@ai-sdk/openai`), y **Anthropic/Claude** (`@ai-sdk/anthropic`) via AI SDK v7.
+- **Flujo**: Llama orquesta → Inicia el Switch → Se arma un "Súper Prompt" → El modelo cloud ejecuta la tarea → Se envía el resultado al Motor Python para que lo guarde.
 - Esto asegura que **solo gastas dinero/créditos cuando realmente necesitas un modelo premium**, mientras que toda la planeación previa la hizo Llama gratis.
 
 ### 4. Catálogo Dinámico en Base de Datos (Prisma/Supabase) 🗄️
-- Cero *hardcoding*. Las funciones a las que Llama puede acceder se almacenan en la tabla `Agent` de la base de datos.
+- Cero *hardcoding*. Las funciones a las que Llama puede acceder se almacenan en las tablas `Agent`, `AgentStep` y `AgentTool` de la base de datos.
 - Si se añade un nuevo agente (ej. "Gestor Movement", "Arquitecto de Canales"), este queda automáticamente disponible en el Súper Prompt del sistema para que Llama empiece a usarlo.
+- Las API Keys de los providers se almacenan cifradas en **Supabase Vault** y se desencriptan en runtime via RPC.
+
+### 5. Tracking de Consumo de Tokens 📊
+- La tabla `TokenUsage` registra cada llamada a un modelo cloud: provider, modelo, promptTokens, completionTokens, totalTokens.
+- Asociado al usuario y opcionalmente a la conversación.
+- Permite monitorear costos y establecer límites por plan.
 
 ---
 
@@ -31,22 +39,78 @@ El núcleo del proyecto está diseñado bajo una **Arquitectura Agéntica Híbri
 
 ```text
 AutoProd/
-├── app/                  <-- Código de la aplicación Next.js 15 (App Router)
-├── docs/                 <-- Módulos de documentación (Ficha Técnica, Reglas)
-├── controlador/          <-- Motor Python Local (FastAPI, Puerto 8000)
-├── prisma/               <-- Esquema Prisma (Base de Datos)
-├── README.md             <-- Este archivo
-└── seed_agents.cjs       <-- Script para poblar la Base de Datos con los Agentes
+├── app/                          <-- Aplicación Next.js 16 (App Router)
+│   ├── api/                      <-- API Routes (Cloud Backend)
+│   │   ├── agents/               <-- Endpoints de Agentes Especialistas
+│   │   │   ├── channel-creator/  <-- Switch: Arquitecto de Canales
+│   │   │   └── movement/         <-- Switch: Gestor Movement (Gemini + Tools)
+│   │   ├── auth/                 <-- Autenticación (sync, callback, me-role)
+│   │   ├── channels/             <-- CRUD de Canales de YouTube
+│   │   ├── chat/                 <-- Chat Universal Multi-Provider + Tool Loop
+│   │   ├── conversations/        <-- CRUD de Conversaciones y Mensajes
+│   │   ├── prompts/              <-- Plantillas de Prompts (auto-seed)
+│   │   ├── settings/keys/        <-- Gestión de API Keys (Supabase Vault)
+│   │   └── setup/                <-- Instalación y shutdown del motor local
+│   ├── dashboard/                <-- Dashboard principal (paneles IDE)
+│   ├── login/                    <-- Autenticación Google OAuth
+│   └── page.tsx                  <-- Landing Page bilingüe (ES/EN)
+├── components/                   <-- Componentes React reutilizables
+│   ├── agents/                   <-- ChannelCreatorConsole
+│   ├── auth/                     <-- GoogleLoginButton
+│   └── dashboard/                <-- 11 componentes del dashboard
+│       ├── ChatPanel.tsx         <-- Panel de chat multi-provider
+│       ├── ConversationSidebar.tsx
+│       ├── FilePreviewer.tsx     <-- Vista previa de archivos
+│       ├── FileTree.tsx          <-- Árbol de archivos del workspace
+│       ├── Launchpad.tsx         <-- Tarjetas de inicio rápido
+│       ├── MarkdownEditor.tsx    <-- Editor de Markdown
+│       ├── RightInspector.tsx    <-- Panel inspector derecho
+│       ├── UserSettingsModal.tsx <-- Modal de configuración de IA
+│       └── WorkspaceModal.tsx    <-- Selector de workspace
+├── controlador/                  <-- Motor Python Local (FastAPI, Puerto 8000)
+│   ├── main.py                   <-- Servidor FastAPI con CORS
+│   └── routers/
+│       ├── workspace.py          <-- CRUD de archivos y carpetas
+│       ├── chat.py               <-- Chat local
+│       └── ollama_manager.py     <-- Instalación automática de Ollama
+├── lib/                          <-- Utilidades compartidas del backend
+│   ├── agents/
+│   │   └── context-manager.ts   <-- Inyección de reglas globales y de canal
+│   ├── auth.ts                   <-- Auth guard (JWT + Supabase fallback)
+│   ├── controlador-client.ts    <-- Cliente HTTP para el Motor Python
+│   └── supabase/                 <-- Clientes Supabase (server/client)
+├── src/prisma/
+│   └── db.ts                     <-- Cliente Prisma singleton (adapter-pg)
+├── prisma/
+│   └── schema.prisma             <-- Esquema de BD (14 modelos, multi-schema)
+├── docs/                         <-- Documentación técnica
+├── seed_agents.cjs               <-- Script para poblar Agentes y Prompts
+├── migration_token_usage.sql     <-- Migración SQL para tabla TokenUsage
+└── COMPATIBILITY_AND_SECURITY_GUIDELINES.md
 ```
 
 ---
 
 ## 🛠️ Tecnologías Principales
 
-*   **Front-End**: Next.js 15 (App Router), React 19, Tailwind CSS, Shadcn UI, AI SDK (Vercel).
-*   **Backend Cloud**: Next.js API Routes (TypeScript), Prisma 8 ORM, Supabase (PostgreSQL).
-*   **Motor Local**: Python (FastAPI / Uvicorn).
-*   **Modelos de IA**: Ollama (Llama 3 8B), Google Gemini 1.5 Flash (via `@ai-sdk/google`).
+| Capa | Tecnología | Versión |
+|---|---|---|
+| **Framework** | Next.js (App Router, Turbopack) | 16.3.3 |
+| **UI** | React | 19.2.8 |
+| **Estilos** | TailwindCSS + Typography plugin | v4 |
+| **Notificaciones** | Sonner (toast flotantes) | 2.0.8 |
+| **Markdown** | react-markdown + remark-gfm | 10.1.0 |
+| **ORM** | Prisma Client + adapter-pg | 7.10.0 |
+| **Base de Datos** | PostgreSQL (Supabase, multi-schema) | — |
+| **Auth** | Supabase Auth + Google OAuth | — |
+| **Vault** | Supabase Vault (encriptación de API keys) | — |
+| **AI SDK** | Vercel AI SDK | 7.0.83 |
+| **Gemini** | `@ai-sdk/google` | 4.0.56 |
+| **OpenAI** | `@ai-sdk/openai` | 4.0.50 |
+| **Anthropic** | `@ai-sdk/anthropic` | 4.0.44 |
+| **Ollama** | `ollama-ai-provider` + `ollama-ai-provider-v2` | 1.2.0 / 4.0.1 |
+| **Motor Local** | Python (FastAPI / Uvicorn) | 3.10+ |
+| **Validación** | Zod | 4.4.3 |
 
 ---
 
@@ -62,6 +126,14 @@ pnpm install
 Copia el archivo `.env.example` a `.env` y rellena las variables de Supabase, Prisma y Google AI:
 ```bash
 cp .env.example .env
+```
+
+Variables requeridas:
+```env
+DATABASE_URL="postgresql://..."
+NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJ..."
+SUPABASE_SERVICE_ROLE_KEY="eyJ..."
 ```
 
 ### 3. Población de Base de Datos (Agentes)

@@ -1,28 +1,118 @@
-# ⚙️ Documentación Backend: TypeScript & Local Helper Python
+# ⚙️ Documentación Backend: API Routes (Next.js) + Motor Local (Python)
 
 ## 📌 Resumen General
 El backend está dividido en dos capas optimizadas para mantener el costo operativo en **$0 USD**:
 
-1. **Cloud Backend (TypeScript - Next.js API Routes / Vercel)**:
-   * Gestiona autenticación de usuarios (Supabase Auth).
-   * Maneja el CRUD de Canales y Proyectos mediante **Prisma ORM**.
-   * Entrega actualizaciones de scripts de Python en caliente (`Hot-Reloading`).
+1. **Cloud Backend (TypeScript — Next.js 16.3.3 API Routes / Vercel)**:
+   * Gestiona autenticación de usuarios (Supabase Auth + Google OAuth).
+   * Maneja el CRUD de Canales, Videos, Conversaciones y Mensajes mediante **Prisma 7.10** con `@prisma/adapter-pg`.
+   * Implementa el **Chat Universal Multi-Provider** (`universalChatWithTools`) con soporte para Ollama, Gemini, OpenAI y Anthropic.
+   * Orquesta los **Switches Cloud** (agentes especializados) que ejecutan tareas avanzadas con Gemini.
+   * Gestiona API Keys cifradas en Supabase Vault.
+   * Registra el consumo de tokens en la tabla `TokenUsage`.
 
-2. **Agente Helper Local (Python - `localhost:4812`)**:
-   * Ejecutable liviano que corre silenciosamente en la computadora del cliente.
-   * Ejecuta `generador_videos.py` y FFmpeg utilizando la CPU/GPU del cliente.
-   * Descarga automáticamente actualizaciones de scripts desde Vercel sin molestar al usuario.
+2. **Motor Local (Python FastAPI — `localhost:8000`)**:
+   * Controlador local que corre en la máquina del usuario.
+   * Ejecuta operaciones CRUD en el sistema de archivos: leer, escribir, eliminar archivos `.md`/`.txt`, crear carpetas, listar workspace.
+   * Abre el explorador de archivos nativo del SO (PowerShell en Windows, osascript en macOS) para selección de workspace.
+   * Gestiona la instalación de Ollama según el SO.
+   * CORS configurado para `localhost:3000`, `autoprod.com` y `autoprod.vercel.app`.
 
 ---
 
-## 🔌 API Endpoints (Cloud & Local)
+## 🔌 API Endpoints Cloud (Next.js API Routes)
 
-### Endpoints Cloud (Vercel)
-* `POST /api/auth`: Inicio de sesión y token JWT con Supabase.
-* `GET /api/projects`: Listado de canales y proyectos del usuario.
-* `GET /api/scripts/latest`: Devuelve la versión más reciente de `generador_videos.py`.
+### Autenticación (`/api/auth/`)
 
-### Endpoints Local Helper (`http://localhost:4812`)
-* `GET /status`: Verifica que el Helper está activo en la máquina del cliente.
-* `POST /render`: Inicia el renderizado de video en el disco local usando FFmpeg.
-* `POST /update-scripts`: Descarga silenciosa del script de Python en caliente.
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/auth/sync` | POST | Sincroniza el usuario de Supabase Auth con la tabla `User` de PostgreSQL |
+| `/api/auth/callback` | GET | Callback de Google OAuth |
+| `/api/auth/me-role` | GET | Obtiene el rol del usuario autenticado |
+
+### Chat Universal (`/api/chat`)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/chat` | POST | Chat multi-provider con tool loop. Parámetros: `messages`, `provider`, `model`, `workspacePath` |
+
+**Patrón `universalChatWithTools()`:**
+1. Construye System Prompt dinámico = `orchestrator_base` + catálogo de APIs de la BD.
+2. Selecciona provider (Ollama directo o AI SDK para Gemini/OpenAI/Anthropic).
+3. Loop de hasta 5 iteraciones interceptando `[LLAMAR_API: slug | args]`:
+   - Primitivas `LOCAL:*` → ejecución interna + re-inyección de resultado.
+   - Switches Cloud → retorno con headers `X-AutoProd-*` para preview en frontend.
+4. Registro asíncrono de `TokenUsage`.
+
+### Agentes Especialistas (`/api/agents/`)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/agents/channel-creator` | POST | Crea estructura de carpetas de un canal + genera contenido con Gemini. Parámetros: `workspacePath`, `channelName`, `superPrompt` |
+| `/api/agents/movement` | POST | Ejecuta Súper Prompt con Gemini + AI SDK tools nativos (`read_file`, `write_file`, `create_folder`). Parámetros: `superPrompt`, `workspacePath` |
+
+### CRUD de Datos
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/conversations` | GET | Lista conversaciones del usuario |
+| `/api/conversations` | POST | Crea conversación con systemPrompt + mensaje de bienvenida automático |
+| `/api/conversations/[id]/messages` | GET/POST | CRUD de mensajes de una conversación |
+| `/api/channels` | GET | Lista canales del usuario con sus videos |
+| `/api/prompts` | GET | Lista prompt templates (auto-seed si tabla vacía) |
+
+### Configuración
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/settings/keys` | * | Gestión de API Keys: encriptación en Supabase Vault, persistencia de secretId en tabla `User` |
+| `/api/setup/install` | POST | Instalación del motor local Python |
+| `/api/setup/shutdown` | POST | Apagado remoto del motor local |
+
+---
+
+## 🔌 API Endpoints Motor Local (Python FastAPI — Puerto 8000)
+
+### Workspace (`/workspace/`)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/workspace/` | GET | Lista recursiva del workspace (árbol hasta 4 niveles). Query param: `base_path` |
+| `/workspace/pick` | GET | Abre explorador de archivos nativo del SO para seleccionar carpeta |
+| `/workspace/create` | POST | Crea carpeta + subcarpetas. Body: `target_path`, `folder_name`, `subfolders[]` |
+| `/workspace/file` | GET | Lee contenido de archivo `.md`/`.txt`. Query param: `path` |
+| `/workspace/file` | POST | Guarda/sobrescribe archivo `.md`/`.txt`. Body: `path`, `content` |
+| `/workspace/file` | DELETE | Elimina archivo `.md`/`.txt`. Query param: `path` |
+
+### Ollama (`/ollama/`)
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/ollama/install` | POST | Instala Ollama según SO: Windows (descarga .exe), macOS/Linux (curl script) |
+
+### Sistema
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/status` | GET | Health check del motor local |
+| `/shutdown` | POST | Apaga el servidor matando el proceso |
+
+---
+
+## 🔐 Auth Guard — `lib/auth.ts`
+
+Patrón de doble verificación para mínima latencia:
+1. **Fast path (0ms):** Parsea las cookies SSR de Supabase, concatena chunks, decodifica base64/JWT y extrae `sub` + `email` del payload.
+2. **Fallback seguro:** Si falla el fast path, llama a `supabase.auth.getUser()` por red.
+
+---
+
+## 📊 Token Usage Tracking
+
+Cada respuesta del chat cloud registra:
+- `provider` (gemini, openai, anthropic)
+- `modelName` (ej: gemini-3.6-flash, gpt-4o)
+- `promptTokens`, `completionTokens`, `totalTokens`
+- `userId`, `conversationId` (opcional)
+
+El registro es fire-and-forget (`.catch()` silencioso) para no bloquear la respuesta HTTP.

@@ -1,115 +1,176 @@
 # Estado del Proyecto - AutoProd Console
 
-Último commit: `92c5aac` — rama `master` sincronizada con `origin/master`, working tree limpio.
+Último commit: `d1e5891` — `refactor: migrate to agent-based architecture with Prisma schema, modular API routes, and local controller integration`  
+Fecha: 2026-08-28  
+Rama: `master`
 
 ---
 
-## 1. Base de Datos (PostgreSQL + Prisma 8 / Prisma Next)
+## 1. Base de Datos (PostgreSQL + Prisma 7.10 + adapter-pg)
 
-El contrato [`contract.prisma`](file:///e:/autoprod/src/prisma/contract.prisma) está completamente definido y sincronizado en **Supabase**. Todos los modelos, enums y restricciones se encuentran aplicados en PostgreSQL.
+El esquema está definido en [`prisma/schema.prisma`](file:///e:/AutoProd/prisma/schema.prisma) con soporte **multi-schema** (`public`, `auth`, `vault`). El cliente Prisma se inicializa en [`src/prisma/db.ts`](file:///e:/AutoProd/src/prisma/db.ts) usando `@prisma/adapter-pg` con un pool de conexiones `pg`.
 
-### Enums globales
+### Modelos en el namespace `public` (14 modelos)
 
-| Enum | Valores | Tipo PG |
+| Modelo             | Descripción | Tabla SQL |
+| ---                | ---         | ---       |
+| `User`             | Usuario base con UUID compatible con Supabase Auth. Campos de Vault ID por provider (geminiVaultId, openaiVaultId, anthropicVaultId). Relación con suscripción, settings, API keys, canales, conversaciones y token usage. | `user` |
+| `Language`         | Catálogo de idiomas (`es`, `en`, `pt`, `fr`). Llave primaria: `code`. | `language` |
+| `UserSettings`     | Idioma relacional, tema (`dark`/`light`), notificaciones, resolución por defecto. Relación 1-1 con `User`. | `userSettings` |
+| `ApiKey`           | API Keys por provider (Google, OpenAI, Anthropic). Unique constraint: `[userId, provider]`. | `apiKey` |
+| `UserSubscription` | Suscripción activa del usuario vinculada a un `Plan`. Fecha de expiración con DB-generated default. | `userSubscription` |
+| `Plan`             | Planes (FREE, PRO, ENTERPRISE) con Stripe/Lemon Squeezy Price ID. | `plan` |
+| `PlanLimit`        | Límites por plan: maxChannels, maxVideosPerChannel, canRenderInCloud, maxMonthlyRenderMinutes, hasAdvancedTemplates. | `planLimit` |
+| `Channel`          | Canal de YouTube. Soporta OAuth: `youtubeChannelId`, `accessToken`, `refreshToken`, `tokenExpiry`, `profilePicture`. | `channel` |
+| `Video`            | Video dentro de un canal. Status: `DRAFT`. Campos para YouTube: `youtubeVideoId`. | `video` |
+| `Conversation`     | Hilo de chat vinculable a Channel y/o Video. Incluye `systemPrompt` maestro. Relación con mensajes y token usage. | `conversation` |
+| `Message`          | Mensaje dentro de una conversación. Campo `sender` (string, ej: `USER`, `GEMINI`). | `message` |
+| `PromptTemplate`   | Plantillas maestras: `orchestrator_base`, `tool_injection`, `crear_canal`, `crear_video`, `crear_guion`. Unique por `name`. | `promptTemplate` |
+| `Agent`            | Agente del catálogo dinámico. `slug` único (ej: `channel_architect`, `workspace_list`). Incluye `systemPrompt` y relación con `AgentStep`. | `agent` |
+| `AgentStep`        | Paso de ejecución de un agente. Define `apiEndpoint` (ej: `/api/agents/movement` o `LOCAL:workspace_list`), `method`, y `dynamicPromptTemplate`. | `agentStep` |
+| `AgentTool`        | Herramienta asociada a un paso de agente. Campo `toolName`. | `agentTool` |
+| `TokenUsage`       | Registro de consumo de tokens por llamada. Campos: `provider`, `modelName`, `promptTokens`, `completionTokens`, `totalTokens`. Vinculado a usuario y opcionalmente a conversación. | `tokenUsage` |
+
+### Catálogo de Agentes (Seed)
+
+Los agentes se poblican mediante [`seed_agents.cjs`](file:///e:/AutoProd/seed_agents.cjs):
+
+**Primitivas Locales** (ejecutadas internamente, endpoint `LOCAL:*`):
+
+| Slug | Nombre | Descripción |
 |---|---|---|
-| `Role` | `USER`, `ADMIN` | `pg/text@1` |
-| `MessageSender` | `USER`, `GEMINI` | `pg/text@1` |
+| `workspace_list` | Listar Workspace | Lista carpetas y archivos del proyecto seleccionado |
+| `workspace_read` | Leer Archivo | Lee contenido de un archivo `.md` o `.txt` |
+| `workspace_write` | Escribir Archivo | Guarda o sobrescribe un archivo `.md` o `.txt` |
+| `workspace_delete` | Eliminar Archivo | Elimina un archivo del proyecto |
 
-### Modelos en el namespace `public` (11 modelos)
+**Switches Cloud** (endpoints API que usan modelos premium):
 
-| Modelo             | Descripción                                                                                      |
-| --------------------| --------------------------------------------------------------------------------------------------|
-| `User`             | Usuario base con UUID compatible con Supabase Auth. Lleva rol, suscripción, settings y API Keys. |
-| `Language`         | Catálogo dinámico de idiomas (`es`, `en`, `pt`, `fr`).                                           |
-| `UserSettings`     | Idioma (relacional), tema (`dark`/`light`), notificaciones, resolución de render por defecto.    |
-| `ApiKey`           | Llaves de IA por proveedor (`GOOGLE`, `OPENAI`, `ANTHROPIC`). Unique por `[userId, provider]`.   |
-| `UserSubscription` | Plan activo del usuario con fecha de vencimiento.                                                |
-| `Plan`             | Planes (`FREE`, `PRO`, `ENTERPRISE`) con Stripe Price ID.                                        |
-| `PlanLimit`        | Límites por plan: canales, videos, render en la nube, minutos mensuales, templates avanzados.    |
-| `Channel`          | Canal de YouTube. Soporta integración OAuth (`youtubeChannelId`, `accessToken`, `refreshToken`). |
-| `Video`            | Video dentro de un canal. Status: `DRAFT`, `RENDERING`, `COMPLETED`, `UPLOADED`.                 |
-| `Conversation`     | Chat vinculable opcionalmente a un `Channel` o `Video`. Incluye `systemPrompt` maestro.          |
-| `Message`          | Mensaje dentro de una conversación. Sender: `USER` o `GEMINI`.                                   |
-| `PromptTemplate`   | Plantillas maestras para los asistentes (`crear_canal`, `crear_video`, `crear_guion`).           |
+| Slug | Nombre | Endpoint | Modelo |
+|---|---|---|---|
+| `channel_architect` | Arquitecto de Canales | `/api/agents/channel-creator` | Gemini 1.5 Flash |
+| `gestor_movement` | Gestor Movement | `/api/agents/movement` | Gemini 1.5 Flash (con AI SDK tools) |
+
+**Prompt Templates del Orquestador**:
+
+| Name | Propósito |
+|---|---|
+| `orchestrator_base` | SOP del orquestador. Reglas absolutas de exploración-primero |
+| `tool_injection` | Instrucción inyectada tras el resultado de una API |
 
 ---
 
 ## 2. Capa de Servidor (API Routes — Next.js App Router)
 
-Todas las rutas en [`app/api/`](file:///e:/autoprod/app/api) están protegidas con verificación de sesión via Supabase SSR (`@/lib/supabase/server`).
+Todas las rutas en [`app/api/`](file:///e:/AutoProd/app/api) están protegidas con verificación de sesión.
 
-| Endpoint | Método | Descripción |
+El auth guard se implementa en [`lib/auth.ts`](file:///e:/AutoProd/lib/auth.ts) con un patrón de doble verificación:
+1. **Fast path (0ms)**: Decodifica el JWT de la cookie SSR de Supabase síncronamente.
+2. **Fallback**: Si falla, llama a `supabase.auth.getUser()` por red.
+
+### Endpoints Cloud (Next.js API Routes)
+
+| Endpoint | Método | Archivo | Descripción |
+|---|---|---|---|
+| `/api/auth/sync` | POST | `auth/sync/route.ts` | Sincroniza usuario Supabase Auth → tabla `User` |
+| `/api/auth/callback` | GET | `auth/callback/route.ts` | Callback de Google OAuth |
+| `/api/auth/me-role` | GET | `auth/me-role/route.ts` | Obtiene el rol del usuario actual |
+| `/api/chat` | POST | `chat/route.ts` | **Chat Universal Multi-Provider** con tool loop. Soporta Ollama, Gemini, OpenAI, Anthropic. Protocolo de interceptación `[LLAMAR_API: slug]` |
+| `/api/agents/channel-creator` | POST | `agents/channel-creator/route.ts` | Switch: Crea estructura de carpetas de canal + contenido con Gemini |
+| `/api/agents/movement` | POST | `agents/movement/route.ts` | Switch: Ejecuta Súper Prompt con Gemini + AI SDK tools (`read_file`, `write_file`, `create_folder`) |
+| `/api/conversations` | GET | `conversations/route.ts` | Lista conversaciones del usuario (ordenadas por `updatedAt` desc) |
+| `/api/conversations` | POST | `conversations/route.ts` | Crea conversación con `systemPrompt`, `welcomeText`, y mensaje de bienvenida automático |
+| `/api/conversations/[id]/messages` | GET/POST | `conversations/[id]/messages/route.ts` | CRUD de mensajes dentro de una conversación |
+| `/api/channels` | GET | `channels/route.ts` | Lista canales del usuario con sus videos |
+| `/api/prompts` | GET | `prompts/route.ts` | Lista plantillas de prompt. **Auto-seeding**: si la tabla está vacía, inserta 3 prompts por defecto |
+| `/api/settings/keys` | * | `settings/keys/route.ts` | Gestión de API Keys (encriptación/desencriptación via Supabase Vault RPC) |
+| `/api/setup/install` | POST | `setup/install/route.ts` | Instalación del motor local |
+| `/api/setup/shutdown` | POST | `setup/shutdown/route.ts` | Apagado del motor local |
+
+### Patrón `universalChatWithTools` — Chat Multi-Provider con Tool Loop
+
+Implementado en [`app/api/chat/route.ts`](file:///e:/AutoProd/app/api/chat/route.ts), este es el corazón del backend:
+
+1. Construye un **System Prompt dinámico** concatenando el template `orchestrator_base` + el catálogo de APIs (primitivas + switches) leído de la BD.
+2. Selecciona el provider de IA según el parámetro `provider`:
+   - `ollama` → API directa a `http://127.0.0.1:11434/api/chat`
+   - `gemini` → `createGoogleGenerativeAI({ apiKey })(modelName)` via AI SDK
+   - `openai`/`chatgpt` → `openai('gpt-4o', { apiKey })` via AI SDK
+   - `anthropic` → `anthropic(modelName, { apiKey })` via AI SDK
+3. Ejecuta un **tool loop** de hasta 5 iteraciones que intercepta `[LLAMAR_API: slug | args]` en la respuesta:
+   - Si el slug es una **primitiva local** (`LOCAL:*`): ejecuta `executeTool()` internamente y re-inyecta el resultado en el historial.
+   - Si es un **switch cloud**: retorna al frontend con headers `X-AutoProd-*` para confirmación humana (preview).
+4. Registra el consumo de tokens en la tabla `TokenUsage` de forma asíncrona (fire-and-forget).
+
+### Endpoints Motor Local (Python FastAPI — Puerto 8000)
+
+Implementado en [`controlador/main.py`](file:///e:/AutoProd/controlador/main.py) con 3 routers:
+
+| Router | Prefix | Endpoints |
 |---|---|---|
-| `/api/auth/sync` | `POST` | Sincroniza el usuario de Supabase Auth con la tabla `User` de PostgreSQL. |
-| `/api/prompts` | `GET` | Lista plantillas de prompt. **Auto-seeding:** si la tabla está vacía, inserta los 3 prompts por defecto en caliente. |
-| `/api/conversations` | `GET` | Lista conversaciones del usuario ordenadas por `updatedAt` desc, incluyendo sus mensajes. |
-| `/api/conversations` | `POST` | Crea conversación con `title`, `systemPrompt`, `welcomeText`, `channelId?`, `videoId?`. Crea automáticamente el mensaje de bienvenida de `GEMINI`. |
-| `/api/channels` | `GET` | Lista canales del usuario incluyendo sus videos (`include('videos')`). |
-
-> **Patrón Lazy Sync de Usuario:** Las rutas `/api/conversations` y `/api/channels` verifican si el `User` existe en PostgreSQL antes de operar. Si fue eliminado (p.ej., al limpiar el esquema), lo re-crea automáticamente desde la sesión de Supabase Auth.
+| `workspace.py` | `/workspace` | `GET /` (listar), `GET /pick` (explorador nativo), `GET /file` (leer), `POST /file` (escribir), `DELETE /file` (eliminar), `POST /create` (crear carpetas) |
+| `chat.py` | — | Chat local directo |
+| `ollama_manager.py` | `/ollama` | `POST /install` (instala Ollama automáticamente según SO) |
+| — | — | `GET /status` (health check), `POST /shutdown` (apagar motor) |
 
 ---
 
 ## 3. Frontend
 
-### Landing Page — [`app/page.tsx`](file:///e:/autoprod/app/page.tsx)
-- Página pública de marketing con diseño oscuro (gradientes púrpura/índigo).
-- Secciones: Hero, Features Grid (3 tarjetas), How It Works (3 pasos), Footer.
-- **Bilingüe ES/EN** con selector persistido en `localStorage` via [`app/translations.ts`](file:///e:/autoprod/app/translations.ts).
+### Landing Page — [`app/page.tsx`](file:///e:/AutoProd/app/page.tsx)
+- Página pública con diseño oscuro (gradientes púrpura/índigo).
+- Secciones: Hero, Features Grid, How It Works, Footer.
+- **Bilingüe ES/EN** con selector persistido en `localStorage` via [`app/translations.ts`](file:///e:/AutoProd/app/translations.ts).
 - CTA principal redirige a `/login`.
 
-### Dashboard — [`app/dashboard/page.tsx`](file:///e:/autoprod/app/dashboard/page.tsx)
-Componente `'use client'` de ~1000 líneas. Capacidades implementadas:
+### Dashboard — [`app/dashboard/page.tsx`](file:///e:/AutoProd/app/dashboard/page.tsx)
+Layout estilo IDE de 3 paneles redimensionables. Componentes modulares en [`components/dashboard/`](file:///e:/AutoProd/components/dashboard):
 
-- **Autenticación:** Carga sesión en mount, ejecuta `POST /api/auth/sync`, muestra perfil. Logout con toast de `sonner`.
-- **Paneles redimensionables:** Panel izquierdo (256px default, rango 180–450px) y panel derecho (320px default, rango 240–500px) con drag handlers nativos.
-- **Vistas:** Alterna entre `'home'` (Launchpad) y `'chat'` (interfaz de chat).
-- **Carga de datos en mount:** Fetcha prompts, canales+videos y conversaciones. Si no hay conversaciones, auto-crea una inicial.
-- **Launchpad dinámico:** Botones "Crear Canal 📺", "Crear Video 🎬" y "Crear Guion 📄" buscan la `PromptTemplate` en BD y crean la conversación con `systemPrompt` y `welcomeText` personalizados.
-- **Modal de Settings:** Componente `UserSettingsModal` (`@/components/dashboard/UserSettingsModal`).
-- **Render Simulator:** Estado local de progreso de render (`isRendering`, `renderProgress`).
-- **Checklist de prompt interceptor:** Estado para `cta`, `timestamps`, `tags`, `saveThumbnail`.
-- **Bilingüe:** Mismo sistema de `translations.ts` que la landing.
+| Componente | Archivo | Propósito |
+|---|---|---|
+| ChatPanel | `ChatPanel.tsx` | Panel de chat multi-provider con selección de modelo, workspace y envío de mensajes |
+| ConversationSidebar | `ConversationSidebar.tsx` | Sidebar izquierdo con lista de conversaciones, búsqueda y acciones |
+| Launchpad | `Launchpad.tsx` | Tarjetas de inicio rápido (Crear Canal, Video, Guion) con PromptTemplates |
+| FilePreviewer | `FilePreviewer.tsx` | Vista previa de archivos del workspace |
+| FileTree | `FileTree.tsx` | Árbol de archivos (conectado al Motor Python) |
+| MarkdownEditor | `MarkdownEditor.tsx` | Editor de archivos Markdown |
+| RightInspector | `RightInspector.tsx` | Panel inspector derecho |
+| UserSettingsModal | `UserSettingsModal.tsx` | Configuración de providers de IA, API keys, detección de CLI local |
+| WorkspaceModal | `WorkspaceModal.tsx` | Selector de workspace (abre explorador nativo via Motor Python) |
+| ConfirmDeleteModal | `ConfirmDeleteModal.tsx` | Modal de confirmación para eliminaciones |
 
-### Login — [`app/login/`](file:///e:/autoprod/app/login)
+Otros componentes:
+- [`components/agents/ChannelCreatorConsole.tsx`](file:///e:/AutoProd/components/agents/ChannelCreatorConsole.tsx) — Consola de creación de canales
+- [`components/auth/GoogleLoginButton.tsx`](file:///e:/AutoProd/components/auth/GoogleLoginButton.tsx) — Botón de login Google OAuth
+
+### Login — [`app/login/`](file:///e:/AutoProd/app/login)
 Autenticación Google OAuth via Supabase Auth.
 
 ---
 
-## 4. Infraestructura
+## 4. Utilidades y Librerías Internas
 
-| Capa | Tecnología |
+| Archivo | Propósito |
 |---|---|
-| Framework | Next.js (App Router) |
-| Auth | Supabase Auth + Google OAuth |
-| Base de datos | PostgreSQL via Supabase |
-| ORM | Prisma 8 (Prisma Next) — `db.orm.public.*` |
-| Despliegue | Vercel |
-| Notificaciones UI | `sonner` |
+| [`lib/auth.ts`](file:///e:/AutoProd/lib/auth.ts) | Auth guard con JWT decode + fallback a Supabase |
+| [`lib/agents/context-manager.ts`](file:///e:/AutoProd/lib/agents/context-manager.ts) | `ContextManager`: lee reglas globales (`PROMPT_OPTIMIZADOR_SEO.md`, `PLANTILLA_DESCRIPCIONES.md`) y reglas de canal (`.autoprod_channel.md`) via Motor Python |
+| [`lib/controlador-client.ts`](file:///e:/AutoProd/lib/controlador-client.ts) | Cliente HTTP para comunicarse con el Motor Python local |
+| [`lib/supabase/`](file:///e:/AutoProd/lib/supabase) | Clientes Supabase para server y client |
+| [`src/prisma/db.ts`](file:///e:/AutoProd/src/prisma/db.ts) | Singleton de PrismaClient con adapter-pg y pool de conexiones |
 
 ---
 
-## 5. Roadmap — Próximas Fases
+## 5. Infraestructura
 
-### 🔲 Fase 0 — Wizard Modals de Configuración Rápida ← **SIGUIENTE**
-Al pulsar las tarjetas del Launchpad, abrir un modal de asistente paso a paso en lugar de ir directo al chat libre:
-- **Crear Canal Wizard:** Temática, público objetivo, nombres propuestos.
-- **Crear Video Wizard:** Selección de canal existente (desde BD), título, enfoque, referencias.
-- **Crear Guion Wizard:** Temática, tono del narrador, duración estimada.
-- Las respuestas se concatenan al `systemPrompt` maestro antes de crear la conversación.
-
-### 🔲 Fase 0.5 — Configuración de IA y BYOK
-- Flujo híbrido: Google One AI Premium (OAuth) o API Key manual (Google AI Studio).
-- Persistencia en `localStorage` y tabla `ApiKey` en Supabase.
-- Selector de modelo: `gemini-2.5-flash`, `gemini-2.5-pro`, `imagen-3.0-generate-002`.
-
-### 🔲 Fase 1 — API de Workspace Local (`E:\Youtube`)
-- `GET /api/workspace`: lista canales/videos leyendo el sistema de archivos local.
-- `POST /api/workspace/init`: inicializa estructura de carpetas para un nuevo video/canal.
-
-### 🔲 Fase 2 — Parseador de `config_subida.md`
-- Leer, renderizar en el panel derecho del dashboard y reescribir el archivo de metadatos de subida a YouTube.
-
-### 🔲 Fase 3 — Copilot Integrado + Estadísticas + Edición Automática (Python)
-- YouTube Data API para métricas de canal.
-- Scripts Python locales para compilación de audio/video y miniaturas.
+| Capa | Tecnología |
+|---|---|
+| Framework | Next.js 16.3.3 (App Router, Turbopack) |
+| Auth | Supabase Auth + Google OAuth |
+| Base de datos | PostgreSQL via Supabase (multi-schema: public, auth, vault) |
+| ORM | Prisma 7.10.0 (adapter-pg) |
+| Vault | Supabase Vault (encriptación/desencriptación de API keys via RPC) |
+| AI Providers | Ollama (local), Gemini, OpenAI, Anthropic (AI SDK v7) |
+| Motor Local | Python FastAPI + Uvicorn (puerto 8000) |
+| Despliegue | Vercel |
+| Notificaciones UI | Sonner |
+| Package Manager | pnpm 10.29.3 |
