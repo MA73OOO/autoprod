@@ -1,0 +1,56 @@
+{
+  "dependencies": [
+    {
+      "id": "python",
+      "name": "Python 3.10",
+      "type": "binary",
+      "min_version": "3.10.0",
+      "windows_url": "https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe",
+      "mac_url": "https://www.python.org/ftp/python/3.10.11/python-3.10.11-macos11.pkg",
+      "install_command_win": "python-installer.exe /quiet InstallAllUsers=1 PrependPath=1",
+      "check_command": "python --version"
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "type": "binary",
+      "min_version": "6.0",
+      "windows_url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
+      "mac_url": "https://evermeet.cx/ffmpeg/ffmpeg-6.0.zip",
+      "check_command": "ffmpeg -version"
+    },
+    {
+      "id": "yt-dlp",
+      "name": "yt-dlp",
+      "type": "binary",
+      "min_version": "2023",
+      "windows_url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
+      "mac_url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos",
+      "check_command": "yt-dlp --version"
+    },
+    {
+      "id": "openai-whisper",
+      "name": "Whisper (OpenAI)",
+      "type": "pip",
+      "min_version": "2023",
+      "pip_package": "openai-whisper",
+      "check_command": "whisper --help"
+    },
+    {
+      "id": "pillow",
+      "name": "Pillow",
+      "type": "pip",
+      "min_version": "10.0.0",
+      "pip_package": "Pillow",
+      "check_command": "python -c \"import PIL; print(PIL.__version__)\""
+    },
+    {
+      "id": "moviepy",
+      "name": "moviepy",
+      "type": "pip",
+      "min_version": "1.0.3",
+      "pip_package": "moviepy",
+      "check_command": "python -c \"import moviepy; print(moviepy.__version__)\""
+    }
+  ]
+}

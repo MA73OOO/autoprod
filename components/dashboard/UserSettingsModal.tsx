@@ -13,10 +13,34 @@ interface UserSettingsModalProps {
 }
 
 export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserSettingsModalProps) {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'commands' | 'profile' | 'billing' | 'password'>('general');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>('general');
   const t = translations[lang];
   const [detectedClis, setDetectedClis] = useState<any[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
+
+  const [systemDeps, setSystemDeps] = useState<any[]>([]);
+  const [isSystemDetecting, setIsSystemDetecting] = useState(false);
+  const [installLogs, setInstallLogs] = useState<string[]>([]);
+  const [isInstalling, setIsInstalling] = useState(false);
+
+  const checkSystemStatus = async () => {
+    setIsSystemDetecting(true);
+    try {
+      const res = await fetch('/api/setup/status');
+      const data = await res.json();
+      setSystemDeps(data.dependencies || []);
+    } catch(err) {
+      console.error(err);
+    } finally {
+      setIsSystemDetecting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSettingsTab === 'system') {
+      checkSystemStatus();
+    }
+  }, [activeSettingsTab]);
 
   const detectEngines = () => {
     setIsDetecting(true);
@@ -79,6 +103,15 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
               }`}
           >
             🧠 {lang === 'es' ? 'Inteligencia Artificial' : 'Artificial Intelligence'}
+          </button>
+          <button
+            onClick={() => setActiveSettingsTab('system')}
+            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'system'
+              ? 'bg-purple-500/10 text-purple-400 font-semibold'
+              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+              }`}
+          >
+            ⚡ {lang === 'es' ? 'Sistema / Setup' : 'System / Setup'}
           </button>
           <button
             onClick={() => setActiveSettingsTab('commands')}
@@ -355,6 +388,87 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                   })()}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* System Tab */}
+          {activeSettingsTab === 'system' && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
+                {lang === 'es' ? 'Estado del Sistema' : 'System Status'}
+              </h4>
+              <p className="text-xs text-zinc-400">
+                {lang === 'es' 
+                  ? 'Gestiona las dependencias locales necesarias (Python, FFmpeg, Whisper, yt-dlp).' 
+                  : 'Manage local dependencies needed (Python, FFmpeg, Whisper, yt-dlp).'}
+              </p>
+              
+              <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-4 space-y-3">
+                <div className="flex justify-between items-center mb-2">
+                  <h5 className="text-xs font-bold text-zinc-200">Dependencias</h5>
+                  <button 
+                    onClick={checkSystemStatus}
+                    className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded transition-colors"
+                  >
+                    {isSystemDetecting ? '↻...' : '↻ Refrescar'}
+                  </button>
+                </div>
+
+                {systemDeps.map(dep => (
+                  <div key={dep.id} className="flex items-center justify-between py-1.5 border-t border-zinc-800/50">
+                    <span className="text-xs text-zinc-300">{dep.name}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${dep.status === 'installed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                      {dep.status === 'installed' ? '🟢 Instalado' : '🔴 Faltante'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  disabled={isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))}
+                  onClick={async () => {
+                    setIsInstalling(true);
+                    setInstallLogs([]);
+                    try {
+                      await fetch('/api/setup/install', { method: 'POST' });
+                      const eventSource = new EventSource('/api/setup/stream');
+                      
+                      eventSource.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        if (data.log) {
+                          setInstallLogs(prev => [...prev, data.log]);
+                        }
+                        if (data.status === 'complete' || data.error) {
+                          eventSource.close();
+                          setIsInstalling(false);
+                          checkSystemStatus();
+                        }
+                      };
+                    } catch (err) {
+                      toast.error('Error iniciando setup');
+                      setIsInstalling(false);
+                    }
+                  }}
+                  className={`w-full py-2 rounded text-xs font-bold transition-colors ${
+                    isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
+                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                      : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
+                  }`}
+                >
+                  {isInstalling 
+                    ? (lang === 'es' ? 'Instalando...' : 'Installing...')
+                    : (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
+                      ? (lang === 'es' ? 'Todo Instalado' : 'All Installed')
+                      : (lang === 'es' ? 'Instalar Faltantes' : 'Install Missing')}
+                </button>
+              </div>
+
+              {installLogs.length > 0 && (
+                <div className="bg-black border border-zinc-800 rounded p-2 mt-4 max-h-32 overflow-y-auto font-mono text-[10px] text-zinc-400 minimal-scrollbar flex flex-col-reverse">
+                  {installLogs.slice().reverse().map((log, i) => <div key={i}>{log}</div>)}
+                </div>
+              )}
             </div>
           )}
 
