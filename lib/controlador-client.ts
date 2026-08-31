@@ -102,6 +102,22 @@ export class ControladorClient {
   }
 
   /**
+   * Obtiene la ruta por defecto del workspace de AutoProd
+   */
+  static async getDefaultWorkspace(): Promise<{ path: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/default`);
+      if (!response.ok) {
+        throw new Error('No se pudo obtener la ruta por defecto');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: getDefaultWorkspace failed', error);
+      throw error;
+    }
+  }
+
+  /**
    * Lista el contenido del workspace.
    */
   static async getWorkspace(basePath: string) {

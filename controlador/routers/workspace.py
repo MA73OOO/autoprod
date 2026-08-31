@@ -13,6 +13,12 @@ router = APIRouter(
 
 
 
+@router.get("/default")
+def default_workspace():
+    """Retorna la ruta por defecto donde se ubican los canales."""
+    default_path = Path.home() / "AutoProd" / "youtube"
+    return {"path": str(default_path.resolve())}
+
 @router.get("/pick")
 def pick_workspace():
     """Abre el explorador de archivos nativo del SO para elegir una carpeta."""

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setupEmitter } from '../stream/route';
-import { detectDependencies } from '@/harness/setup/detector';
+import { detectDependencies, getWorkspacePath, getLocalBinPath } from '@/harness/setup/detector';
 import { downloadFile } from '@/harness/setup/downloader';
 import { installBinary, installPipPackage } from '@/harness/setup/installer';
 import path from 'path';
@@ -16,11 +16,7 @@ export async function POST(req: NextRequest) {
     const dependencies = await detectDependencies();
     const toInstall = dependencies.filter(dep => dep.status !== 'installed');
 
-    if (toInstall.length === 0) {
-      return NextResponse.json({ success: true, message: 'Todas las dependencias ya están instaladas.' });
-    }
-
-    // Ejecutar instalación en background para no bloquear el request
+    // Ejecutar instalación y configuración en background
     runSetupTask(toInstall, manifest).catch(err => {
       console.error('Setup task failed:', err);
       setupEmitter.emit('error', err.message);
@@ -33,7 +29,28 @@ export async function POST(req: NextRequest) {
 }
 
 async function runSetupTask(toInstall: any[], manifest: any) {
-  setupEmitter.emit('log', 'Iniciando proceso de instalación de dependencias...');
+  setupEmitter.emit('log', 'Iniciando proceso de instalación y configuración de AutoProd...');
+
+  try {
+    // 1. Crear estructura de carpetas base
+    const workspacePath = getWorkspacePath();
+    const binPath = getLocalBinPath();
+    
+    setupEmitter.emit('log', `Creando carpeta de proyecto principal en: ${path.dirname(workspacePath)}`);
+    await fs.mkdir(workspacePath, { recursive: true });
+    await fs.mkdir(binPath, { recursive: true });
+    setupEmitter.emit('log', 'Estructura de carpetas lista (bin, youtube).');
+  } catch (err: any) {
+    setupEmitter.emit('log', `❌ Error creando carpetas base: ${err.message}`);
+    // No detenemos la instalación si falló crear las carpetas, installer.ts también crea bin si es necesario
+  }
+
+  if (toInstall.length === 0) {
+    setupEmitter.emit('progress', 100);
+    setupEmitter.emit('log', '✅ Todas las dependencias ya estaban instaladas. Workspace configurado.');
+    setupEmitter.emit('complete');
+    return;
+  }
 
   for (let i = 0; i < toInstall.length; i++) {
     const depStatus = toInstall[i];

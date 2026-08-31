@@ -51,7 +51,7 @@ export default function Dashboard() {
   const t = translations[lang];
 
   // ── Auth & profile ──
-  const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string; maxChannels: number } | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
@@ -82,7 +82,17 @@ export default function Dashboard() {
       if (isOnline) {
         // Only load tree if we haven't loaded it yet since coming online
         if (!treeLoaded) {
-          const savedPath = localStorage.getItem('autoprod_workspace_path');
+          let savedPath = localStorage.getItem('autoprod_workspace_path');
+          if (!savedPath) {
+            try {
+              const defaultWs = await ControladorClient.getDefaultWorkspace();
+              savedPath = defaultWs.path;
+              localStorage.setItem('autoprod_workspace_path', savedPath);
+              setWorkspacePath(savedPath);
+            } catch (e) {
+              console.warn("Could not get default workspace path");
+            }
+          }
           if (savedPath) {
             loadWorkspaceTree(savedPath);
             treeLoaded = true;
@@ -114,9 +124,6 @@ export default function Dashboard() {
 
   const handleCreateNode = async (parentPath: string, folderName: string, subfolders: string[]) => {
     try {
-      // In the backend, we will update init_workspace to just accept a folderName and subfolders
-      // But for now, using the old schema: if channel, video_name="", folders=[]. If video, channel_name="", video_name=folderName.
-      // Wait, let's assume we update the backend.
       await ControladorClient.createFolder(parentPath, folderName, subfolders);
       if (workspacePath) {
         loadWorkspaceTree(workspacePath);
@@ -129,9 +136,6 @@ export default function Dashboard() {
   const handleCreateChannel = async (basePath: string, channelName: string, folders: string[]) => {
     const toastId = toast.loading('Creando estructura...');
     try {
-      // In this specific UI flow, the target is basePath (the folder where + was clicked)
-      // so we use basePath as the root, the channel name as the directory, and no video_name for now.
-      // Or we can adapt initVideoWorkspace. Since we are creating a channel/video hybrid:
       await ControladorClient.initVideoWorkspace(basePath, channelName, "Estructura_Base", folders);
       toast.success('Estructura de canal creada correctamente', { id: toastId });
       if (workspacePath) loadWorkspaceTree(workspacePath);
@@ -146,15 +150,21 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !active) return;
       let role = 'USER';
+      let maxChannels = 1;
       try {
         const res = await fetch('/api/auth/sync', { method: 'POST' });
-        if (res.ok && active) role = (await res.json())?.role ?? 'USER';
+        if (res.ok && active) {
+          const syncData = await res.json();
+          role = syncData?.role ?? 'USER';
+          maxChannels = syncData?.user?.maxChannels ?? 1;
+        }
       } catch { /* non-fatal */ }
       if (active) {
         setUserProfile({
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
           email: user.email || '',
           role,
+          maxChannels,
         });
       }
     };
@@ -769,10 +779,11 @@ export default function Dashboard() {
               setIsWorkspaceModalOpen(true);
             }}
             onAddNode={(parentPath, type) => {
-              if (type === 'channel' && userProfile?.role !== 'ADMIN' && workspaceTree.length >= 1) {
+              const maxChannels = userProfile?.maxChannels ?? 1;
+              if (type === 'channel' && userProfile?.role !== 'ADMIN' && workspaceTree.length >= maxChannels) {
                 toast.error(lang === 'es'
-                  ? 'Límite alcanzado. Tu plan solo permite 1 canal. Actualiza a Pro para más.'
-                  : 'Limit reached. Your plan only allows 1 channel. Upgrade to Pro for more.');
+                  ? `Límite alcanzado. Tu plan permite un máximo de ${maxChannels} canal(es).`
+                  : `Limit reached. Your plan allows a maximum of ${maxChannels} channel(s).`);
                 return;
               }
               setModalParentPath(parentPath);

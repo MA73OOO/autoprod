@@ -7,8 +7,11 @@
       "min_version": "3.10.0",
       "windows_url": "https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe",
       "mac_url": "https://www.python.org/ftp/python/3.10.11/python-3.10.11-macos11.pkg",
-      "install_command_win": "python-installer.exe /quiet InstallAllUsers=1 PrependPath=1",
-      "check_command": "python --version"
+      "install_command_win": "/quiet InstallAllUsers=0 PrependPath=0 Include_test=0 Include_pip=1",
+      "install_command_mac": "installer -pkg {FILE} -target CurrentUserHomeDirectory",
+      "check_command": "python --version",
+      "local_path_win": "python",
+      "local_path_mac": "python3"
     },
     {
       "id": "ffmpeg",
@@ -17,7 +20,9 @@
       "min_version": "6.0",
       "windows_url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip",
       "mac_url": "https://evermeet.cx/ffmpeg/ffmpeg-6.0.zip",
-      "check_command": "ffmpeg -version"
+      "check_command": "ffmpeg -version",
+      "local_path_win": "ffmpeg.exe",
+      "local_path_mac": "ffmpeg"
     },
     {
       "id": "yt-dlp",
@@ -26,7 +31,9 @@
       "min_version": "2023",
       "windows_url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
       "mac_url": "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos",
-      "check_command": "yt-dlp --version"
+      "check_command": "yt-dlp --version",
+      "local_path_win": "yt-dlp.exe",
+      "local_path_mac": "yt-dlp"
     },
     {
       "id": "openai-whisper",

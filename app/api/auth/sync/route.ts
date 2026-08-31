@@ -18,7 +18,18 @@ export async function POST() {
 
     // Check if the user already exists in the Prisma PostgreSQL database
     let user = await db.user.findUnique({
-      where: { email: supabaseUser.email! }
+      where: { email: supabaseUser.email! },
+      include: {
+        subscription: {
+          include: {
+            plan: {
+              include: {
+                limits: true
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!user) {
@@ -32,9 +43,17 @@ export async function POST() {
           email: supabaseUser.email!,
           name: supabaseUser.user_metadata.full_name || supabaseUser.email!.split('@')[0],
           role: role,
+        },
+        include: {
+          subscription: {
+            include: { plan: { include: { limits: true } } }
+          }
         }
       });
     }
+
+    // Calcular límites (fallback a 1 canal si no tiene plan limits configurado)
+    const maxChannels = user.subscription?.plan?.limits?.maxChannels ?? 1;
 
     return NextResponse.json({
       success: true,
@@ -44,6 +63,7 @@ export async function POST() {
         email: user.email,
         name: user.name,
         role: user.role,
+        maxChannels: maxChannels
       }
     });
   } catch (err: any) {
