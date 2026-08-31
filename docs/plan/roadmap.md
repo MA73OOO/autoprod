@@ -26,7 +26,7 @@ Hoja de ruta completa del sistema. Cada fase es un bloque deployable de funciona
 Las siguientes funcionalidades fueron implementadas sin estar explícitamente planificadas en las fases originales:
 
 - **Arquitectura Agéntica Completa**: Tablas `Agent`, `AgentStep`, `AgentTool` con catálogo dinámico de herramientas.
-- **Chat Universal Multi-Provider**: `universalChatWithTools()` con tool loop de 5 iteraciones y protocolo de interceptación `[LLAMAR_API: slug]`.
+- **Chat Universal Multi-Provider**: `universalChatWithTools()` con soporte para Function Calling nativo de Vercel AI SDK, usando las herramientas inyectadas desde Prisma (`jsonSchema`).
 - **Switches Cloud**: Endpoints de agentes especializados (`channel-creator`, `movement`) con AI SDK tools nativos.
 - **Token Usage Tracking**: Tabla `TokenUsage` para monitorear consumo por provider/modelo/usuario.
 - **Auth Guard Optimizado**: Doble verificación JWT local + fallback Supabase.

@@ -34,15 +34,14 @@ El backend está dividido en dos capas optimizadas para mantener el costo operat
 
 | Endpoint | Método | Descripción |
 |---|---|---|
-| `/api/chat` | POST | Chat multi-provider con tool loop. Parámetros: `messages`, `provider`, `model`, `workspacePath` |
+| `/api/chat` | POST | Chat multi-provider con tool loop nativo de Vercel AI SDK. Parámetros: `messages`, `provider`, `model`, `workspacePath`, `channelId` |
 
-**Patrón `universalChatWithTools()`:**
-1. Construye System Prompt dinámico = `orchestrator_base` + catálogo de APIs de la BD.
-2. Selecciona provider (Ollama directo o AI SDK para Gemini/OpenAI/Anthropic).
-3. Loop de hasta 5 iteraciones interceptando `[LLAMAR_API: slug | args]`:
-   - Primitivas `LOCAL:*` → ejecución interna + re-inyección de resultado.
-   - Switches Cloud → retorno con headers `X-AutoProd-*` para preview en frontend.
-4. Registro asíncrono de `TokenUsage`.
+**Patrón Agentic Orchestrator:**
+1. Construye el System Prompt base. Si se envía un `channelId`, extrae de Prisma e inyecta dinámicamente las `contextRules` del canal.
+2. Consulta en Prisma el Agente `isOrchestrator = true` y carga sus `tools` asociadas.
+3. Convierte dinámicamente los JSON Schemas de la BD a Zod usando `jsonSchema` de `ai-core`.
+4. Utiliza **Function Calling Nativo** (`generateText` con `maxSteps: 5`) para que Gemini/OpenAI/Anthropic interactúe con el Motor de Python, delegando exploración y edición del Workspace de manera autónoma.
+5. Registro asíncrono de `TokenUsage` en la BD.
 
 ### Agentes Especialistas (`/api/agents/`)
 

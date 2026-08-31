@@ -6,57 +6,47 @@ AutoProd opera con una **Arquitectura Agéntica Híbrida Multi-Modelo** donde la
 
 ---
 
-## 1. 🧠 Protocolo de Interceptación de APIs
+## 1. 🧠 Protocolo Agentic Orchestrator (Function Calling)
 
-El Orquestador Local (Llama via Ollama) comunica sus decisiones al backend mediante un protocolo de strings estructurados en lugar de JSON:
-
-```
-[LLAMAR_API: slug_api | arg1: valor1 | arg2: valor2]
-```
+El Orquestador se comunica con el backend mediante la funcionalidad nativa de **Function Calling** (proveída por el Vercel AI SDK), reemplazando el antiguo modelo basado en Expresiones Regulares.
 
 **Flujo completo:**
 1. El usuario envía un mensaje al chat.
-2. El backend construye un System Prompt dinámico con el template `orchestrator_base` + catálogo de APIs de la BD.
-3. Llama genera una respuesta que puede contener `[LLAMAR_API: ...]`.
-4. El backend intercepta el patrón con regex: `/\[LLAMAR_API:\s*([^\]]+)\]/g`.
-5. Extrae el `slug` y los argumentos.
-6. Busca el slug en la tabla `Agent` de la BD.
-7. Si es una **primitiva local** (`apiEndpoint` empieza con `LOCAL:`): ejecuta internamente y re-inyecta el resultado.
-8. Si es un **switch cloud**: retorna al frontend para confirmación humana (preview).
+2. El backend (`app/api/chat/route.ts`) consulta en Prisma el Agente `Orchestrator` (`isOrchestrator: true`) y carga sus herramientas (`Tools`) asociadas.
+3. Se construye un System Prompt dinámico inyectando automáticamente las reglas del canal (`contextRules`) si se provee un `channelId`.
+4. El backend convierte el JSON Schema de cada herramienta al formato Zod nativo utilizando `jsonSchema` de `ai-core`.
+5. El LLM (Gemini, OpenAI, Anthropic) evalúa si necesita llamar a una herramienta. Si decide usarla, el SDK Vercel AI interrumpe, ejecuta el bloque `execute` asociado (haciendo fetch al Motor Python) y devuelve la respuesta al LLM.
+6. El LLM genera una respuesta final informada con el resultado del sistema de archivos. Todo ocurre fluidamente usando `generateText` con `maxSteps: 5`.
 
 ---
 
-## 2. 🔧 Herramientas Primitivas (Ejecución Local Silenciosa)
+## 2. 🔧 Herramientas Primitivas (Ejecución Vía Motor Local)
 
-Estas herramientas se ejecutan internamente en el backend sin costo de IA, comunicándose con el Motor Python en puerto 8000:
+Estas herramientas se ejecutan delegando la petición al Motor Python en puerto 8000, lo que permite la manipulación física del sistema de archivos:
 
 ### `workspace_list` — Listar Workspace
-- **Formato:** `[LLAMAR_API: workspace_list]`
 - **Función:** Lista recursiva del árbol de archivos y carpetas del proyecto seleccionado (hasta 4 niveles).
 - **Endpoint interno:** `GET http://localhost:8000/workspace/?base_path={path}`
 - **Respuesta formateada:** Árbol con formato `├──` / `└──` para presentar al modelo.
 
 ### `workspace_read` — Leer Archivo
-- **Formato:** `[LLAMAR_API: workspace_read | archivo: ruta/relativa.md]`
-- **Función:** Lee el contenido de un archivo `.md` o `.txt`. Trunca a 8000 caracteres.
+- **Función:** Lee el contenido de un archivo. Trunca a 8000 caracteres.
 - **Endpoint interno:** `GET http://localhost:8000/workspace/file?path={fullPath}`
-- **Seguridad:** Solo permite extensiones `.md` y `.txt`.
+- **Argumentos:** `file` (Ruta relativa).
 
 ### `workspace_write` — Escribir Archivo
-- **Formato:** `[LLAMAR_API: workspace_write | archivo: ruta/relativa.md | contenido: texto]`
 - **Función:** Guarda o sobrescribe un archivo. Crea el directorio si no existe.
 - **Endpoint interno:** `POST http://localhost:8000/workspace/file` con body `{ path, content }`
-- **Seguridad:** Solo permite extensiones `.md` y `.txt`.
+- **Argumentos:** `file` (Ruta), `content` (Texto).
 
 ### `workspace_delete` — Eliminar Archivo
-- **Formato:** `[LLAMAR_API: workspace_delete | archivo: ruta/relativa.md]`
 - **Función:** Elimina un archivo del proyecto.
 - **Endpoint interno:** `DELETE http://localhost:8000/workspace/file?path={fullPath}`
-- **Seguridad:** Solo permite extensiones `.md` y `.txt`.
+- **Argumentos:** `file` (Ruta).
 
 ---
 
-## 3. ⚡ Switches Cloud (Agentes Especialistas)
+## 3. ⚡ Sub-Agentes (Agentes Especialistas)
 
 Estos agentes usan modelos cloud premium (Gemini, OpenAI, Anthropic) y se activan por delegación del Orquestador:
 
