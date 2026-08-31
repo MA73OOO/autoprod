@@ -63,3 +63,4 @@ env/
 .env.motor
 /.autoprod/
 *.cjs
+scripts/seed-orchestrator.ts
