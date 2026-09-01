@@ -816,3 +816,13 @@ enum one_time_token_type {
 
   @@schema("auth")
 }
+
+model SystemSettings {
+  id               String  @id @default("global")
+  geminiVaultId    String?
+  openaiVaultId    String?
+  anthropicVaultId String?
+
+  @@map("systemSettings")
+  @@schema("public")
+}

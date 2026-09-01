@@ -29,7 +29,7 @@ async function callPythonMotor(method: string, endpoint: string, body?: any) {
 // ──────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { messages, provider, model, workspacePath, channelId } = await req.json();
+    const { messages, provider, model, workspacePath, channelId, confirmCreditUsage } = await req.json();
 
     if (!messages || !provider) {
       return NextResponse.json({ error: 'Messages and provider are required' }, { status: 400 });
@@ -47,44 +47,65 @@ export async function POST(req: Request) {
     const userId = userData?.user?.id;
 
     let userRecord = null;
-    let userError = null;
 
-    try {
-      if (userId && provider !== 'ollama') {
+    if (userId) {
+      try {
         userRecord = await prisma.user.findUnique({
           where: { id: userId },
           select: { openaiVaultId: true, geminiVaultId: true, anthropicVaultId: true }
         });
+      } catch (e: any) {
+        console.warn('Failed to retrieve user settings', e);
       }
-    } catch (e: any) {
-      userError = e;
-    }
-
-    if (userError && provider !== 'ollama') {
-      return NextResponse.json({ error: 'Failed to retrieve user settings' }, { status: 500 });
     }
 
     let apiKey = '';
-    if (provider !== 'ollama') {
-      let secretId = null;
-      if (provider === 'openai' || provider === 'chatgpt') secretId = userRecord?.openaiVaultId;
-      if (provider === 'gemini') secretId = userRecord?.geminiVaultId;
-      if (provider === 'anthropic') secretId = userRecord?.anthropicVaultId;
+    let secretId = null;
 
-      if (!secretId) {
-        return NextResponse.json({ error: `No API key configured for ${provider}. Verifica tus API Keys en Ajustes.` }, { status: 400 });
+    if (provider === 'openai' || provider === 'chatgpt') secretId = userRecord?.openaiVaultId;
+    if (provider === 'gemini') secretId = userRecord?.geminiVaultId;
+    if (provider === 'anthropic') secretId = userRecord?.anthropicVaultId;
+
+    if (secretId) {
+      // 1. EL USUARIO TIENE BYOK ACTIVO: Usamos su llave incondicionalmente
+      const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: secretId });
+      if (secretData) {
+        apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+      }
+    } 
+    
+    if (!apiKey) {
+      // 2. EL USUARIO NO TIENE BYOK: Pasamos directo a las Llaves Maestras del Sistema (Admin)
+      if (!confirmCreditUsage) {
+        // Detenemos la ejecución y le avisamos al frontend que pregunte al usuario
+        return NextResponse.json({ 
+          requiresConfirmation: true, 
+          message: "Esta acción consumirá créditos de AutoProd. ¿Deseas continuar?"
+        }, { status: 402 }); // 402 Payment Required
       }
 
-      const { data: secretData, error: secretError } = await supabase
-        .rpc('get_decrypted_secret', { p_secret_id: secretId });
+      // Si ya confirmó, buscamos la llave en SystemSettings -> Vault
+      try {
+        const systemSettings = await prisma.systemSettings.findUnique({ where: { id: "global" }});
+        let systemSecretId = null;
+        if (provider === 'openai' || provider === 'chatgpt') systemSecretId = systemSettings?.openaiVaultId;
+        if (provider === 'gemini') systemSecretId = systemSettings?.geminiVaultId;
+        if (provider === 'anthropic') systemSecretId = systemSettings?.anthropicVaultId;
 
-      if (secretError || !secretData) {
-        return NextResponse.json({ error: 'Failed to decrypt API key' }, { status: 500 });
+        if (systemSecretId) {
+          const { data: sysSecretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: systemSecretId });
+          if (sysSecretData) {
+             apiKey = typeof sysSecretData === 'string' ? sysSecretData : sysSecretData.get_decrypted_secret || sysSecretData;
+          }
+        }
+      } catch(e) {
+        console.warn('Error reading system settings from vault', e);
       }
-
-      apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
     }
 
+    if (!apiKey) {
+      return NextResponse.json({ error: `No API key configured in Vault for ${provider}. Verifica tus API Keys en Ajustes.` }, { status: 400 });
+    }
     // ──────────────────────────────────────────────
     // 1. Cargar Orquestador y Herramientas (Agentic Pattern)
     // ──────────────────────────────────────────────
@@ -182,10 +203,6 @@ export async function POST(req: Request) {
     } else if (provider === 'gemini') {
       const cleanModel = (model || 'gemini-3.6-flash').replace(/^models\//, '');
       aiModel = createGoogleGenerativeAI({ apiKey })(cleanModel);
-    } else if (provider === 'ollama') {
-      const { createOllama } = require('ollama-ai-provider');
-      const ollama = createOllama({ baseURL: 'http://127.0.0.1:11434/api' });
-      aiModel = ollama(model || 'llama3.1:latest');
     } else {
       throw new Error('Invalid provider');
     }

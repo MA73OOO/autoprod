@@ -406,6 +406,12 @@ export default function Dashboard() {
     }
   };
 
+  // ── Credit Confirmation State ──
+  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
+  const [pendingChatMessage, setPendingChatMessage] = useState<{ customText?: string, agentSlug?: string } | null>(null);
+  const [dontAskCreditAgain, setDontAskCreditAgain] = useState(false);
+
+
   const [inputPrompt, setInputPrompt] = useState('');
   const [checklist, setChecklist] = useState({ cta: true, timestamps: false, tags: true, saveThumbnail: true });
   const [seoOutput, setSeoOutput] = useState({
@@ -502,10 +508,19 @@ export default function Dashboard() {
               provider,
               model: actualModel,
               workspacePath: workspacePath || '',
-              agentSlug // Se inyecta el trigger aquí si fue seleccionado
+              agentSlug,
+              confirmCreditUsage: typeof window !== 'undefined' ? localStorage.getItem('autoprod_always_confirm_credits') === 'true' : false
             }),
             signal: abortController.signal
           });
+
+          if (res.status === 402) {
+            setIsGeneratingGlobal(false);
+            setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
+            setPendingChatMessage({ customText: textToSend, agentSlug });
+            setIsCreditModalOpen(true);
+            return;
+          }
 
           if (!res.ok) {
             const errorData = await res.json().catch(() => ({}));
@@ -588,6 +603,17 @@ export default function Dashboard() {
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
     } finally {
       setIsGeneratingGlobal(false);
+    }
+  };
+
+  const handleConfirmCreditUsage = () => {
+    if (dontAskCreditAgain) {
+      localStorage.setItem('autoprod_always_confirm_credits', 'true');
+    }
+    setIsCreditModalOpen(false);
+    if (pendingChatMessage) {
+      handleSendMessage(pendingChatMessage.customText, pendingChatMessage.agentSlug);
+      setPendingChatMessage(null);
     }
   };
 
@@ -882,6 +908,53 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Credit Confirmation Modal */}
+      {isCreditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#18181b] border border-purple-500/30 w-[400px] rounded-xl shadow-2xl p-6 relative flex flex-col items-center text-center">
+            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center mb-4">
+              <span className="text-2xl">🪙</span>
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">
+              {lang === 'es' ? 'Consumo de Créditos AutoProd' : 'AutoProd Credits Usage'}
+            </h2>
+            <p className="text-sm text-zinc-400 mb-6 leading-relaxed">
+              {lang === 'es' 
+                ? 'No tienes una API Key personal configurada (BYOK). Esta acción consumirá créditos de la plataforma AutoProd. ¿Deseas continuar?' 
+                : "You don't have a personal API Key (BYOK) configured. This action will consume AutoProd platform credits. Do you want to continue?"}
+            </p>
+            
+            <label className="flex items-center gap-2 mb-6 text-sm text-zinc-300 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={dontAskCreditAgain} 
+                onChange={(e) => setDontAskCreditAgain(e.target.checked)}
+                className="w-4 h-4 rounded border-zinc-700 bg-black text-purple-500 focus:ring-purple-500 focus:ring-offset-black"
+              />
+              {lang === 'es' ? 'No volver a preguntar' : "Don't ask again"}
+            </label>
+
+            <div className="flex w-full gap-3">
+              <button 
+                onClick={() => {
+                  setIsCreditModalOpen(false);
+                  setPendingChatMessage(null);
+                }}
+                className="flex-1 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white font-medium transition-colors"
+              >
+                {lang === 'es' ? 'Cancelar' : 'Cancel'}
+              </button>
+              <button 
+                onClick={handleConfirmCreditUsage}
+                className="flex-1 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium transition-colors shadow-lg shadow-purple-500/20"
+              >
+                {lang === 'es' ? 'Aceptar' : 'Accept'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings modal */}
       <UserSettingsModal
