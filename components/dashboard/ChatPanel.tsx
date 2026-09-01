@@ -272,7 +272,7 @@ export default function ChatPanel({
           <select
             className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
             id="modelSelector"
-            defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.6-flash' : 'gemini:gemini-3.6-flash'}
+            defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.5-flash' : 'gemini:gemini-3.5-flash'}
             onChange={(e) => {
               if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
             }}
@@ -287,8 +287,6 @@ export default function ChatPanel({
             {readyClis.some(cli => cli.id === 'anthropic') && (
               <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
             )}
-            {readyClis.some(cli => cli.id === 'gemini') && (
-              <>
                 <optgroup label="Gemini 3.x (Más nuevo)">
                   <option value="gemini:gemini-3.7-flash">Gemini 3.7 Flash ✨</option>
                   <option value="gemini:gemini-3.6-flash">Gemini 3.6 Flash</option>
@@ -302,8 +300,6 @@ export default function ChatPanel({
                   <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
                   <option value="gemini:gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                 </optgroup>
-              </>
-            )}
             {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
               ollamaModels.map(model => (
                 <option key={model.name} value={`ollama:${model.name}`}>{model.name} (Ollama Local)</option>

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { generateText, tool as aiTool, jsonSchema } from 'ai';
 import { openai } from '@ai-sdk/openai';
@@ -157,10 +158,10 @@ export async function POST(req: Request) {
     try {
       // Obtener el agente orquestador desde la BD
       const orchestrator = await prisma.agent.findFirst({
-        where: { isOrchestrator: true },
+        where: { slug: 'orchestrator' },
         include: {
-          tools: {
-            include: { tool: true }
+          steps: {
+            include: { agentTool: true }
           }
         }
       });
@@ -169,8 +170,9 @@ export async function POST(req: Request) {
         systemPrompt = orchestrator.systemPrompt;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
-        for (const at of orchestrator.tools) {
-          const dbTool = at.tool;
+        for (const step of orchestrator.steps) {
+          if (!step.agentTool) continue;
+          const dbTool = step.agentTool;
           
           aiTools[dbTool.name] = aiTool({
             description: dbTool.description || '',
@@ -238,12 +240,14 @@ export async function POST(req: Request) {
     // 2. Configurar Modelo
     // ──────────────────────────────────────────────
     let aiModel;
+    let cleanModel = '';
     if (provider === 'openai' || provider === 'chatgpt') {
       aiModel = openai('gpt-4o', { apiKey });
     } else if (provider === 'anthropic') {
       aiModel = anthropic(model || 'claude-3-5-sonnet-20240620', { apiKey });
     } else if (provider === 'gemini') {
-      const cleanModel = (model || 'gemini-3.6-flash').replace(/^models\//, '');
+      const rawModel = model || 'gemini-3.5-flash';
+      cleanModel = rawModel.replace(/^models\//, '').trim();
       aiModel = createGoogleGenerativeAI({ apiKey })(cleanModel);
     } else {
       throw new Error('Invalid provider');
@@ -263,10 +267,11 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 3. Generar Texto (Function Calling Nativo)
     // ──────────────────────────────────────────────
+    const finalSystemPrompt = systemPrompt + "\n\nREGLA CRÍTICA: Si usas una herramienta, DEBES escribir un mensaje de texto explicando el resultado al usuario. NUNCA respondas solo con la llamada a la herramienta.";
     const result = await generateText({
       model: aiModel,
       messages: history.filter((h: any) => h.role !== 'system'),
-      system: systemPrompt,
+      system: finalSystemPrompt,
       tools: Object.keys(aiTools).length > 0 ? aiTools : undefined,
       maxSteps: 5 // Permite al LLM iterar, llamar herramientas y luego responder
     });
@@ -314,7 +319,26 @@ export async function POST(req: Request) {
       }
     }
     
-    return NextResponse.json({ text: result.text });
+    let finalOutput = result.text;
+    
+    // Si el LLM decidió no escribir texto final pero sí ejecutó herramientas (Falla común en Gemini 3.5 con Vercel AI SDK)
+    // En lugar de pasar el texto crudo (perdiendo la lógica del orquestador), obligamos al modelo a hacer una segunda pasada para sintetizar.
+    if (!finalOutput && result.toolResults && result.toolResults.length > 0) {
+      const toolSummaryPrompt = `Acabas de ejecutar una o más herramientas. Los resultados fueron:\n\n${JSON.stringify(result.toolResults, null, 2)}\n\nSintetiza estos resultados y dale una respuesta natural al usuario basándote en ellos.`;
+      
+      const synthesisResult = await generateText({
+        model: aiModel,
+        messages: [
+           ...history.filter((h: any) => h.role !== 'system'),
+           { role: 'user', content: toolSummaryPrompt }
+        ],
+        system: systemPrompt,
+      });
+      
+      finalOutput = synthesisResult.text;
+    }
+
+    return NextResponse.json({ text: finalOutput, modelName: cleanModel || model });
   } catch (error: any) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

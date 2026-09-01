@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { createClient } from '@/lib/supabase/client';
 
 export default function CreditCounter() {
   const [balance, setBalance] = useState<number | null>(null);
 
   useEffect(() => {
+    // 1. Initial fetch via REST to get the starting balance
     const fetchBalance = async () => {
       try {
         const res = await fetch('/api/user/wallet');
@@ -18,12 +19,41 @@ export default function CreditCounter() {
         console.warn('Failed to fetch wallet balance', e);
       }
     };
-
     fetchBalance();
+
+    // 2. Realtime WebSocket subscription instead of polling
+    const supabase = createClient();
+    let channel: ReturnType<typeof supabase.channel>;
+
+    const subscribeToWallet = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Evitar colisiones en React Strict Mode (doble useEffect) haciendo el nombre del canal único
+      const channelName = `wallet-updates-${user.id}-${Date.now()}`;
+      channel = supabase.channel(channelName)
+        .on('postgres_changes', { 
+            event: 'UPDATE', 
+            schema: 'public', 
+            table: 'wallet' 
+          }, 
+          (payload: any) => {
+            // Check if the updated wallet belongs to the current user
+            if (payload.new && payload.new.userId === user.id && typeof payload.new.balance === 'number') {
+              setBalance(payload.new.balance);
+            }
+          }
+        )
+        .subscribe();
+    };
     
-    // Auto refresh balance every 15s to keep it accurate after generations
-    const interval = setInterval(fetchBalance, 15000);
-    return () => clearInterval(interval);
+    subscribeToWallet();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, []);
 
   if (balance === null) return null;

@@ -444,7 +444,8 @@ export default function Dashboard() {
     
     try {
       // 1. Obtener el modelo y deducir el proveedor seleccionado
-      const model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'default' : 'default';
+      let model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.5-flash' : 'gemini:gemini-3.5-flash';
+      if (model === 'default') model = 'gemini:gemini-3.5-flash';
       
       let provider = 'gemini';
       let actualModel = model;
@@ -551,7 +552,7 @@ export default function Dashboard() {
           setConversations(prev => prev.map(c => {
             if (c.id !== conversationId) return c;
             const newMsgs = [...c.messages];
-            newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText };
+            newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText, modelName: data.modelName || friendlyModelName };
             return { ...c, messages: newMsgs };
           }));
         }
@@ -565,11 +566,10 @@ export default function Dashboard() {
 
       const generationTimeMs = Date.now() - startTime;
 
-      // 4. Guardar en Base de Datos (Next.js)
       const res = await fetch(`/api/conversations/${conversationId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, checklist, aiResponseText }),
+        body: JSON.stringify({ text, checklist, aiResponseText, modelName: actionPreview?.agent || friendlyModelName }),
       });
       
       if (res.ok) {
@@ -579,7 +579,7 @@ export default function Dashboard() {
           sender: 'gemini', 
           text: data.geminiMessage.text, 
           timestamp: new Date(data.geminiMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          modelName: friendlyModelName,
+          modelName: data.modelName || friendlyModelName,
           generationTimeMs,
           isGenerating: false
         };
