@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Language } from "../translations";
+import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
+import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
 
 interface UserAdmin {
   id: string;
@@ -161,6 +163,23 @@ export default function AdminDashboard() {
   // New user form state
   const [newUserForm, setNewUserForm] = useState({ name: '', email: '', plan: 'FREE' as 'FREE'|'PRO'|'ENTERPRISE', role: 'USER' as 'USER'|'ADMIN' });
 
+  // Settings Modal State
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [geminiKey, setGeminiKey] = useState('');
+
+  // Simulated User Profile for Admin Panel
+  const userProfile = { name: 'Mateo', email: 'mateo@autoprod.io', role: 'ADMIN' };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('gemini_api_key');
+    if (saved) { setGeminiKey(saved); }
+  }, []);
+
+  const handleSaveApiKey = (key: string) => {
+    localStorage.setItem('gemini_api_key', key);
+    setGeminiKey(key);
+  };
+
   // Simulate progress updates for renders
   useEffect(() => {
     const interval = setInterval(() => {
@@ -255,39 +274,19 @@ export default function AdminDashboard() {
           >
             {lang === 'es' ? '🇺🇸 EN' : '🇪🇸 ES'}
           </button>
-          <span className="text-zinc-500 text-xs">mateo@autoprod.io</span>
-          <Link href="/dashboard" className="text-xs font-semibold px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded transition-colors text-zinc-300">
-            {lang === 'es' ? 'Volver a Consola' : 'Back to Console'}
-          </Link>
+          
+          <div className="flex items-center gap-3 text-xs relative">
+            <span className="text-zinc-500">{userProfile.email}</span>
+            <ProfileDropdown 
+              userProfile={userProfile}
+              lang={lang}
+              onOpenSettings={() => setIsSettingsModalOpen(true)}
+              isAdminPage={true}
+            />
+          </div>
         </div>
       </header>
 
-      {/* Main Stats Banner */}
-      <section className="bg-[#0c0c0e] border-b border-zinc-900 px-8 py-6 grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
-        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsUsers}</p>
-            <p className="text-2xl font-bold text-white mt-1">{users.length}</p>
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-xl">👤</div>
-        </div>
-
-        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsSubs}</p>
-            <p className="text-2xl font-bold text-white mt-1">{users.filter(u => u.plan !== 'FREE').length}</p>
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xl">💳</div>
-        </div>
-
-        <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsRenders}</p>
-            <p className="text-2xl font-bold text-white mt-1">{renders.filter(r => r.status === 'RENDERING').length}</p>
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-xl">🎬</div>
-        </div>
-      </section>
 
       {/* Navigation tabs */}
       <div className="flex bg-[#0f0f12] border-b border-zinc-900 px-6 shrink-0">
@@ -338,6 +337,34 @@ export default function AdminDashboard() {
         
         {/* Tab 1: Users & Subscriptions List */}
         {activeTab === 'users' && (
+          <div className="flex flex-col gap-6">
+            {/* Main Stats Banner */}
+            <section className="bg-[#0c0c0e] border border-zinc-900 rounded-xl px-8 py-6 grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0 shadow-xl">
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsUsers}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{users.length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center font-bold text-xl">👤</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsSubs}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{users.filter(u => u.plan !== 'FREE').length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-xl">💳</div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/40 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">{t.statsRenders}</p>
+                  <p className="text-2xl font-bold text-white mt-1">{renders.filter(r => r.status === 'RENDERING').length}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold text-xl">🎬</div>
+              </div>
+            </section>
+
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
             <div className="p-4 border-b border-zinc-900 flex justify-between items-center">
               <h3 className="text-sm font-bold text-white">{t.tabUsers}</h3>
@@ -413,6 +440,7 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
           </div>
         )}
 
@@ -693,6 +721,14 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Modal 3: Settings */}
+      <UserSettingsModal
+        isOpen={isSettingsModalOpen}
+        lang={lang}
+        user={{ name: userProfile.name, email: userProfile.email }}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
 
     </div>
   );

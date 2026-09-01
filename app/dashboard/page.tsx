@@ -18,6 +18,7 @@ import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
 import CreditCounter from '@/components/dashboard/CreditCounter';
+import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
 
 import { Conversation, Message } from '@/components/dashboard/types';
 import { FileNode } from '@/components/dashboard/FileTree';
@@ -53,7 +54,6 @@ export default function Dashboard() {
 
   // ── Auth & profile ──
   const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string; maxChannels: number } | null>(null);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // ── Workspace State ──
@@ -742,44 +742,11 @@ export default function Dashboard() {
             <CreditCounter />
             <span className="text-zinc-400 border-l border-zinc-700 pl-3">{userProfile?.email || 'demo@autoprod.io'}</span>
 
-            <div className="relative">
-              <button
-                onClick={() => setIsProfileOpen(o => !o)}
-                className="h-8 w-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-white shadow-md cursor-pointer hover:ring-2 hover:ring-purple-500/50 transition-all"
-              >
-                {userProfile ? userProfile.name.charAt(0).toUpperCase() : 'U'}
-              </button>
-              {userProfile?.role === 'ADMIN' && (
-                <span className="absolute -top-1.5 -right-1.5 text-[10px] leading-none" title="Admin">👑</span>
-              )}
-            </div>
-
-            {isProfileOpen && (
-              <div className="absolute right-0 top-10 w-52 rounded-lg bg-[#18181b] border border-zinc-800 p-2 shadow-2xl z-50 text-xs">
-                <div className="px-3 py-2 border-b border-zinc-800 mb-1">
-                  <div className="flex items-center justify-between">
-                    <p className="font-bold text-white">{t.myAccount}</p>
-                    {userProfile?.role === 'ADMIN' && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold uppercase tracking-wider">👑 Admin</span>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">{userProfile?.email}</p>
-                </div>
-                {userProfile?.role === 'ADMIN' && (
-                  <Link href="/admin" onClick={() => setIsProfileOpen(false)} className="w-full text-left px-3 py-2 hover:bg-amber-500/10 rounded transition-colors text-amber-400 flex items-center gap-2">
-                    🛡️ Panel de Admin
-                  </Link>
-                )}
-                <button onClick={() => { setIsSettingsModalOpen(true); setIsProfileOpen(false); }} className="w-full text-left px-3 py-2 hover:bg-zinc-800 rounded transition-colors text-zinc-300 hover:text-white flex items-center gap-2">
-                  ⚙️ {t.configGeneral}
-                </button>
-                <div className="border-t border-zinc-800 mt-1 pt-1">
-                  <button onClick={handleLogout} className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 hover:text-red-300 rounded transition-colors">
-                    🚪 {t.logout}
-                  </button>
-                </div>
-              </div>
-            )}
+            <ProfileDropdown 
+              userProfile={userProfile} 
+              lang={lang} 
+              onOpenSettings={() => setIsSettingsModalOpen(true)} 
+            />
           </div>
         </div>
       </header>
@@ -958,15 +925,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Settings modal */}
+      {/* Settings Modal */}
       <UserSettingsModal
         isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
         lang={lang}
-        user={userProfile}
+        user={userProfile ? { name: userProfile.name, email: userProfile.email } : null}
+        onClose={() => setIsSettingsModalOpen(false)}
       />
 
-      {/* Workspace Modal */}
+      {/* Profile/Workspace Setup Modals */}
       <WorkspaceModal
         isOpen={isWorkspaceModalOpen}
         onClose={() => setIsWorkspaceModalOpen(false)}
