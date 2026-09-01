@@ -10,10 +10,11 @@ interface UserSettingsModalProps {
   onClose: () => void;
   lang: Language;
   user: { name: string; email: string } | null;
+  isAdminMode?: boolean;
 }
 
-export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserSettingsModalProps) {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>('general');
+export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdminMode = false }: UserSettingsModalProps) {
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>(isAdminMode ? 'ai' : 'general');
   const t = translations[lang];
   const [detectedClis, setDetectedClis] = useState<any[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -86,69 +87,83 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
             <p className="text-[10px] text-zinc-500">{user?.email || 'demo@autoprod.io'}</p>
           </div>
 
-          <button
-            onClick={() => setActiveSettingsTab('general')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'general'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            {lang === 'es' ? 'General' : 'General'}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('ai')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'ai'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            🧠 {lang === 'es' ? 'Inteligencia Artificial' : 'Artificial Intelligence'}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('system')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'system'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            ⚡ {lang === 'es' ? 'Sistema / Setup' : 'System / Setup'}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('commands')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'commands'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            {lang === 'es' ? 'Comandos Rápidos' : 'Shortcuts'}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('profile')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'profile'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            {t.myInfo}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('billing')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'billing'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            {t.billingPlan}
-          </button>
-          <button
-            onClick={() => setActiveSettingsTab('password')}
-            className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'password'
-              ? 'bg-purple-500/10 text-purple-400 font-semibold'
-              : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
-              }`}
-          >
-            {t.changePassword}
-          </button>
+          {isAdminMode ? (
+            <button
+              onClick={() => setActiveSettingsTab('ai')}
+              className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'ai'
+                ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+            >
+              🔑 {lang === 'es' ? 'Llaves del Sistema' : 'System Keys'}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setActiveSettingsTab('general')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'general'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                {lang === 'es' ? 'General' : 'General'}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('ai')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'ai'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                🧠 {lang === 'es' ? 'Inteligencia Artificial' : 'Artificial Intelligence'}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('system')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'system'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                ⚡ {lang === 'es' ? 'Sistema / Setup' : 'System / Setup'}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('commands')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'commands'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                {lang === 'es' ? 'Comandos Rápidos' : 'Shortcuts'}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('profile')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'profile'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                {t.myInfo}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('billing')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'billing'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                {t.billingPlan}
+              </button>
+              <button
+                onClick={() => setActiveSettingsTab('password')}
+                className={`w-full text-left px-3 py-2 rounded text-xs transition-colors flex items-center gap-2 ${activeSettingsTab === 'password'
+                  ? 'bg-purple-500/10 text-purple-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                  }`}
+              >
+                {t.changePassword}
+              </button>
+            </>
+          )}
 
           <button
             onClick={onClose}
@@ -206,7 +221,9 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
               {/* Cloud Engines (API Keys) */}
               <div>
                 <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2 mb-3">
-                  {lang === 'es' ? 'Motores en la Nube (API Keys)' : 'Cloud Engines (API Keys)'}
+                  {isAdminMode 
+                    ? (lang === 'es' ? 'Llaves del Sistema' : 'System Keys')
+                    : (lang === 'es' ? 'Motores en la Nube (API Keys)' : 'Cloud Engines (API Keys)')}
                 </h4>
                 <p className="text-[10px] text-zinc-400 mb-3">
                   {lang === 'es' 
@@ -316,6 +333,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
               </div>
 
               {/* Local Engines (Ollama) */}
+              {!isAdminMode && (
               <div>
                 <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
                   {lang === 'es' ? 'Tus Motores Locales' : 'Your Local Engines'}
@@ -388,6 +406,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user }: UserS
                   })()}
                 </div>
               </div>
+              )}
             </div>
           )}
 

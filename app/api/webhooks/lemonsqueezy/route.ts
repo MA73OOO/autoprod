@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 
 const LEMONSQUEEZY_WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET || '';
@@ -34,7 +33,8 @@ export async function POST(req: Request) {
       const isSubscription = eventType === 'subscription_created';
       
       // A. Registrar en Libro Mayor (Dinero Real)
-      await prisma.paymentLedger.create({
+      // TODO: Migrar a Supabase
+      /* await prisma.paymentLedger.create({
         data: {
           userId,
           amountUsd,
@@ -42,17 +42,17 @@ export async function POST(req: Request) {
           referenceId: payload.data.id,
           description: payload.data.attributes.first_order_item?.product_name || 'Compra en AutoProd'
         }
-      });
+      }); */
 
       // B. Acreditar Capacidades (Créditos) en Wallet
       // TODO: Determinar cuántos créditos otorgar según el monto pagado
       const creditsToAdd = amountUsd * 10; // Ejemplo: 1 USD = 10 créditos
 
-      await prisma.wallet.upsert({
+      /* await prisma.wallet.upsert({
         where: { userId },
         update: { balance: { increment: creditsToAdd } },
         create: { userId, balance: creditsToAdd }
-      });
+      }); */
     }
 
     return NextResponse.json({ received: true });

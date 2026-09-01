@@ -728,6 +728,7 @@ export default function AdminDashboard() {
         lang={lang}
         user={{ name: userProfile.name, email: userProfile.email }}
         onClose={() => setIsSettingsModalOpen(false)}
+        isAdminMode={true}
       />
 
     </div>
