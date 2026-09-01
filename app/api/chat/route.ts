@@ -74,13 +74,55 @@ export async function POST(req: Request) {
       }
     } 
     
+    let requiredCredits = 1; // Default fallback
+    let usedSystemKey = false;
+    let userWalletId: string | null = null;
+
     if (!apiKey) {
       // 2. EL USUARIO NO TIENE BYOK: Pasamos directo a las Llaves Maestras del Sistema (Admin)
+      usedSystemKey = true;
+
+      // Calcular costo dinámico
+      try {
+        const pricing = await prisma.servicePricing.findUnique({
+          where: {
+            serviceType_modelName: {
+              serviceType: 'CHAT',
+              modelName: model || 'default'
+            }
+          }
+        });
+        if (pricing && pricing.isActive) {
+          requiredCredits = pricing.costPerUnit;
+        }
+      } catch (e) {
+        console.warn('Error reading service pricing, defaulting to 1', e);
+      }
+
+      // Verificar saldo
+      if (userId) {
+        try {
+          let wallet = await prisma.wallet.findUnique({ where: { userId } });
+          // Auto-crear wallet si no existe (para cuentas antiguas)
+          if (!wallet) {
+            wallet = await prisma.wallet.create({ data: { userId, balance: 10 } }); // 10 créditos gratis de cortesía
+          }
+          if (wallet.balance < requiredCredits) {
+             return NextResponse.json({ 
+               error: `Créditos insuficientes. Necesitas ${requiredCredits} crédito(s) para usar este modelo. Por favor recarga tu saldo o configura tu API Key personal (BYOK).`
+             }, { status: 402 }); 
+          }
+          userWalletId = wallet.id;
+        } catch(e) {
+          console.warn('Error checking wallet', e);
+        }
+      }
+
       if (!confirmCreditUsage) {
         // Detenemos la ejecución y le avisamos al frontend que pregunte al usuario
         return NextResponse.json({ 
           requiresConfirmation: true, 
-          message: "Esta acción consumirá créditos de AutoProd. ¿Deseas continuar?"
+          message: `Esta acción consumirá ${requiredCredits} crédito(s) de la plataforma. ¿Deseas continuar?`
         }, { status: 402 }); // 402 Payment Required
       }
 
@@ -229,22 +271,47 @@ export async function POST(req: Request) {
       maxSteps: 5 // Permite al LLM iterar, llamar herramientas y luego responder
     });
 
-    // Guardar token usage
-    if (result.usage && result.usage.totalTokens > 0 && userId) {
-      try {
-        if (prisma.tokenUsage) {
-          prisma.tokenUsage.create({
-            data: {
-              userId,
-              provider,
-              modelName: model || 'unknown',
-              promptTokens: result.usage.promptTokens,
-              completionTokens: result.usage.completionTokens,
-              totalTokens: result.usage.totalTokens
-            }
-          }).catch(err => console.warn("[TokenUsage] Error guardando:", err.message));
+    // Guardar token usage y descontar créditos si usó llave maestra
+    if (userId) {
+      if (result.usage && result.usage.totalTokens > 0) {
+        try {
+          if (prisma.tokenUsage) {
+            prisma.tokenUsage.create({
+              data: {
+                userId,
+                provider,
+                modelName: model || 'unknown',
+                promptTokens: result.usage.promptTokens,
+                completionTokens: result.usage.completionTokens,
+                totalTokens: result.usage.totalTokens
+              }
+            }).catch(err => console.warn("[TokenUsage] Error guardando:", err.message));
+          }
+        } catch { /* ignorar silenciosamente si la tabla no existe */ }
+      }
+
+      // Descuento de créditos
+      if (usedSystemKey && userWalletId && requiredCredits > 0) {
+        try {
+          await prisma.$transaction([
+            prisma.wallet.update({
+              where: { id: userWalletId },
+              data: { balance: { decrement: requiredCredits } }
+            }),
+            prisma.creditConsumption.create({
+              data: {
+                walletId: userWalletId,
+                creditsUsed: -requiredCredits,
+                serviceType: 'CHAT',
+                modelName: model || 'unknown',
+                description: `Chat interactivo con ${model || 'unknown'}`
+              }
+            })
+          ]);
+        } catch (e: any) {
+          console.warn('Error deducting credits:', e.message);
         }
-      } catch { /* ignorar silenciosamente si la tabla no existe */ }
+      }
     }
     
     return NextResponse.json({ text: result.text });

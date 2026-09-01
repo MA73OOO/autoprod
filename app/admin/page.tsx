@@ -40,6 +40,8 @@ const adminTranslations = {
     tabUsers: "Usuarios & Suscripciones",
     tabKeys: "Llaves de Acceso (Invitaciones)",
     tabMonitor: "Monitoreo en Vivo",
+    tabPricing: "Tarifas y Capacidades",
+    tabLedger: "Libro Mayor",
     newUser: "Crear Usuario",
     generateKey: "Generar Llave",
     code: "Código",
@@ -77,6 +79,8 @@ const adminTranslations = {
     tabUsers: "Users & Subscriptions",
     tabKeys: "Access Keys (Invites)",
     tabMonitor: "Live Monitoring",
+    tabPricing: "Pricing & Capacities",
+    tabLedger: "Ledger",
     newUser: "Create User",
     generateKey: "Generate Key",
     code: "Code",
@@ -110,7 +114,7 @@ const adminTranslations = {
 
 export default function AdminDashboard() {
   const [lang, setLang] = useState<Language>('es');
-  const [activeTab, setActiveTab] = useState<'users' | 'keys' | 'monitor'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'keys' | 'monitor' | 'pricing' | 'ledger'>('pricing');
 
   // Load language preference
   useEffect(() => {
@@ -302,6 +306,22 @@ export default function AdminDashboard() {
           }`}
         >
           {t.tabKeys}
+        </button>
+        <button
+          onClick={() => setActiveTab('pricing')}
+          className={`px-4 py-3 text-xs font-bold transition-all relative ${
+            activeTab === 'pricing' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          {t.tabPricing}
+        </button>
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className={`px-4 py-3 text-xs font-bold transition-all relative ${
+            activeTab === 'ledger' ? 'text-purple-400 border-b-2 border-purple-500' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          {t.tabLedger}
         </button>
         <button
           onClick={() => setActiveTab('monitor')}
@@ -519,6 +539,43 @@ export default function AdminDashboard() {
         )}
 
       </main>
+
+      {/* Tab 4: Pricing & Capacities */}
+      {activeTab === 'pricing' && (
+        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214]">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-zinc-900 flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-bold text-white">{t.tabPricing}</h3>
+                <p className="text-[10px] text-zinc-500 mt-1">Controla cuánto cuesta usar cada modelo (Créditos).</p>
+              </div>
+              <button className="px-3 py-1.5 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded text-xs font-bold transition-colors">
+                + Nueva Tarifa
+              </button>
+            </div>
+            <div className="p-8 text-center text-zinc-500 text-sm">
+              <span className="text-2xl mb-2 block">🚧</span>
+              Vista en construcción. Conectando con la tabla <b>ServicePricing</b>...
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tab 5: Ledger */}
+      {activeTab === 'ledger' && (
+        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214]">
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-zinc-900">
+              <h3 className="text-sm font-bold text-white">{t.tabLedger}</h3>
+              <p className="text-[10px] text-zinc-500 mt-1">Registro de entradas de dinero (Lemon Squeezy) y salidas (Consumo de IA).</p>
+            </div>
+            <div className="p-8 text-center text-zinc-500 text-sm">
+              <span className="text-2xl mb-2 block">📊</span>
+              Vista en construcción. Conectando con <b>PaymentLedger</b> y <b>CreditConsumption</b>...
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal 1: Edit User Plan */}
       {isEditUserOpen && selectedUser && (

@@ -22,6 +22,8 @@ model User {
   conversations    Conversation[]
   settings         UserSettings?
   subscription     UserSubscription?
+  wallet           Wallet?
+  paymentLedgers   PaymentLedger[]
 
   @@map("user")
   @@schema("public")
@@ -824,5 +826,65 @@ model SystemSettings {
   anthropicVaultId String?
 
   @@map("systemSettings")
+  @@schema("public")
+}
+
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @db.Uuid
+  balance   Int      @default(0)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creditConsumptions CreditConsumption[]
+
+  @@map("wallet")
+  @@schema("public")
+}
+
+model PaymentLedger {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  amountUsd   Float
+  paymentType String   
+  referenceId String?
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("paymentLedger")
+  @@schema("public")
+}
+
+model CreditConsumption {
+  id          String   @id @default(uuid()) @db.Uuid
+  walletId    String   @db.Uuid
+  creditsUsed Int      
+  serviceType String   
+  modelName   String   
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@map("creditConsumption")
+  @@schema("public")
+}
+
+model ServicePricing {
+  id          String   @id @default(uuid()) @db.Uuid
+  serviceType String
+  modelName   String
+  costPerUnit Int
+  unitType    String   @default("PER_REQUEST")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([serviceType, modelName])
+  @@map("servicePricing")
   @@schema("public")
 }

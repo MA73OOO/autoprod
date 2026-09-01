@@ -17,6 +17,7 @@ import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
+import CreditCounter from '@/components/dashboard/CreditCounter';
 
 import { Conversation, Message } from '@/components/dashboard/types';
 import { FileNode } from '@/components/dashboard/FileTree';
@@ -738,7 +739,8 @@ export default function Dashboard() {
           </button>
 
           <div className="flex items-center gap-3 text-xs relative">
-            <span className="text-zinc-400">{userProfile?.email || 'demo@autoprod.io'}</span>
+            <CreditCounter />
+            <span className="text-zinc-400 border-l border-zinc-700 pl-3">{userProfile?.email || 'demo@autoprod.io'}</span>
 
             <div className="relative">
               <button
