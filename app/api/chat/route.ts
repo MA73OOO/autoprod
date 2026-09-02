@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       try {
         userRecord = await prisma.user.findUnique({
           where: { id: userId },
-          select: { openaiVaultId: true, geminiVaultId: true, anthropicVaultId: true }
+          select: { name: true, email: true, openaiVaultId: true, geminiVaultId: true, anthropicVaultId: true }
         });
       } catch (e: any) {
         console.warn('Failed to retrieve user settings', e);
@@ -152,7 +152,11 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 1. Cargar Orquestador y Herramientas (Agentic Pattern)
     // ──────────────────────────────────────────────
-    let systemPrompt = 'Eres AutoProd, un asistente inteligente.';
+    let baseSystemPrompt = 'Eres AutoProd, un asistente inteligente.';
+    if (userRecord?.name) {
+      baseSystemPrompt = `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` + baseSystemPrompt;
+    }
+    let systemPrompt = baseSystemPrompt;
     const aiTools: Record<string, any> = {};
 
     try {
@@ -160,67 +164,54 @@ export async function POST(req: Request) {
       const orchestrator = await prisma.agent.findFirst({
         where: { slug: 'orchestrator' },
         include: {
-          steps: {
-            include: { agentTool: true }
+          agentTools: {
+            include: { tool: true }
           }
         }
       });
 
       if (orchestrator) {
-        systemPrompt = orchestrator.systemPrompt;
+        systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + orchestrator.systemPrompt;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
-        for (const step of orchestrator.steps) {
-          if (!step.agentTool) continue;
-          const dbTool = step.agentTool;
+        const toolNames: string[] = [];
+        for (const at of orchestrator.agentTools) {
+          const dbTool = at.tool;
+          if (!dbTool) continue;
           
+          toolNames.push(dbTool.name);
+
           aiTools[dbTool.name] = aiTool({
             description: dbTool.description || '',
             parameters: jsonSchema(dbTool.schema as any),
             execute: async (args: any) => {
-               if (!workspacePath) return "Error: No workspace selected in the UI.";
-               
                try {
-                 if (dbTool.name === 'workspace_list') {
-                    const base = path.join(workspacePath, '.');
-                    const res = await callPythonMotor('GET', `/?base_path=${encodeURIComponent(base)}`);
-                    
-                    function formatTree(nodes: any[], indent = ''): string {
-                      let out = '';
-                      for (let i = 0; i < nodes.length; i++) {
-                        const node = nodes[i];
-                        const isLast = i === nodes.length - 1;
-                        const prefix = isLast ? '└── ' : '├── ';
-                        out += `${indent}${prefix}${node.name}${node.type === 'directory' ? '/' : ''}\n`;
-                        if (node.children && node.children.length > 0) {
-                          const childIndent = indent + (isLast ? '    ' : '│   ');
-                          out += formatTree(node.children, childIndent);
-                        }
-                      }
-                      return out;
-                    }
-                    return `Estructura del proyecto:\n${formatTree(res.tree || [])}`;
-                 }
-                 if (dbTool.name === 'workspace_read') {
-                    const fullPath = path.join(workspacePath, args.file.trim());
-                    const res = await callPythonMotor('GET', `/file?path=${encodeURIComponent(fullPath)}`);
-                    const content = res.content || '';
-                    return content.length > 8000 ? content.slice(0, 8000) + '\n... [truncated]' : content;
-                 }
-                 if (dbTool.name === 'workspace_write') {
-                    const fullPath = path.join(workspacePath, args.file.trim());
-                    await callPythonMotor('POST', `/file`, { path: fullPath, content: args.content });
-                    return "Archivo guardado exitosamente.";
-                 }
+                 console.log(`[Proxy Tool] Invocando ${dbTool.name} en ${dbTool.apiEndpoint}`);
                  
-                 // Futuro: Aquí podemos despertar Sub-Agentes si la tool delega trabajo
-                 return `Herramienta ${dbTool.name} ejecutada, pero no hay lógica proxy definida.`;
+                 // Inyectar el contexto del usuario en los argumentos
+                 const payload = { ...args, _userContext: { id: userId, name: userRecord?.name, email: userRecord?.email } };
                  
+                 const response = await fetch(dbTool.apiEndpoint, {
+                   method: dbTool.method,
+                   headers: {
+                     'Content-Type': 'application/json'
+                   },
+                   body: dbTool.method !== 'GET' ? JSON.stringify(payload) : undefined
+                 });
+                 
+                 const data = await response.json();
+                 
+                 return JSON.stringify(data);
                } catch(e: any) {
                  return `Error ejecutando ${dbTool.name}: ${e.message}`;
                }
             }
           });
+        }
+        
+        // Inyectar la lista de herramientas disponibles para que no invente opciones
+        if (toolNames.length > 0) {
+          systemPrompt += `\n\n--- HERRAMIENTAS CONECTADAS ---\nActualmente tienes disponibles las siguientes herramientas: ${toolNames.join(', ')}. NUNCA inventes herramientas que no estén en esta lista.`;
         }
       }
 
@@ -267,7 +258,7 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 3. Generar Texto (Function Calling Nativo)
     // ──────────────────────────────────────────────
-    const finalSystemPrompt = systemPrompt + "\n\nREGLA CRÍTICA: Si usas una herramienta, DEBES escribir un mensaje de texto explicando el resultado al usuario. NUNCA respondas solo con la llamada a la herramienta.";
+    const finalSystemPrompt = systemPrompt + "\n\nREGLA CRÍTICA: Si usas una herramienta, DEBES escribir un mensaje de texto explicando el resultado al usuario. NUNCA respondas solo con la llamada a la herramienta.\nREGLA CRÍTICA 2: Si el usuario te pregunta qué puedes hacer, DEBES responder EXCLUSIVAMENTE listando las HERRAMIENTAS CONECTADAS que se te pasaron en el contexto. ESTÁ ESTRICTAMENTE PROHIBIDO inventar capacidades genéricas (como SEO, edición de video, redacción, etc.). Solo puedes hacer lo que tus herramientas literales te permiten.";
     const result = await generateText({
       model: aiModel,
       messages: history.filter((h: any) => h.role !== 'system'),

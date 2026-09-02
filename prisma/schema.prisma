@@ -202,6 +202,7 @@ model Agent {
   systemPrompt String
   createdAt    DateTime    @default(now())
   steps        AgentStep[]
+  agentTools   AgentTool[]
 
   @@map("agent")
   @@schema("public")
@@ -216,18 +217,33 @@ model AgentStep {
   method                String      @default("POST")
   dynamicPromptTemplate String?
   agent                 Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  agentTool             AgentTool[]
 
   @@map("agentStep")
   @@schema("public")
 }
 
-model AgentTool {
-  id        String    @id
-  stepId    String
-  toolName  String
-  agentStep AgentStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+model Tool {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String
+  schema      Json        
+  apiEndpoint String      
+  method      String      @default("POST")
+  createdAt   DateTime    @default(now())
+  agentTools  AgentTool[]
 
+  @@map("tool")
+  @@schema("public")
+}
+
+model AgentTool {
+  id        String    @id @default(uuid())
+  agentId   String
+  toolId    String
+  agent     Agent     @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  tool      Tool      @relation(fields: [toolId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, toolId])
   @@map("agentTool")
   @@schema("public")
 }

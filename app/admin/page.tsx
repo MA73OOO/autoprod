@@ -24,6 +24,16 @@ interface AccessKey {
   createdAt: string;
 }
 
+interface ToolAdmin {
+  id: string;
+  name: string;
+  description: string;
+  apiEndpoint: string;
+  method: string;
+  schema: any;
+  createdAt: string;
+}
+
 interface ActiveProcess {
   id: string;
   userEmail: string;
@@ -41,6 +51,7 @@ const adminTranslations = {
     statsRenders: "Procesos de Render",
     tabUsers: "Usuarios & Suscripciones",
     tabKeys: "Llaves de Acceso (Invitaciones)",
+    tabTools: "Herramientas de Agentes",
     tabMonitor: "Monitoreo en Vivo",
     tabPricing: "Tarifas y Capacidades",
     tabLedger: "Libro Mayor",
@@ -80,6 +91,7 @@ const adminTranslations = {
     statsRenders: "Rendering Processes",
     tabUsers: "Users & Subscriptions",
     tabKeys: "Access Keys (Invites)",
+    tabTools: "Agent Tools",
     tabMonitor: "Live Monitoring",
     tabPricing: "Pricing & Capacities",
     tabLedger: "Ledger",
@@ -116,7 +128,7 @@ const adminTranslations = {
 
 export default function AdminDashboard() {
   const [lang, setLang] = useState<Language>('es');
-  const [activeTab, setActiveTab] = useState<'users' | 'keys' | 'monitor' | 'pricing' | 'ledger'>('pricing');
+  const [activeTab, setActiveTab] = useState<'users' | 'keys' | 'tools' | 'monitor' | 'pricing' | 'ledger'>('tools');
 
   // Load language preference
   useEffect(() => {
@@ -148,6 +160,86 @@ export default function AdminDashboard() {
     { id: 'k2', code: 'ENT-90B1-12C8', planToGrant: 'ENTERPRISE', status: 'USED', usedBy: 'juan@gmail.com', createdAt: '2026-08-24' },
     { id: 'k3', code: 'PRO-1234-ABCD', planToGrant: 'PRO', status: 'UNUSED', createdAt: '2026-08-25' },
   ]);
+
+  // 2.5. Tools State
+  const [tools, setTools] = useState<ToolAdmin[]>([]);
+  const [isLoadingTools, setIsLoadingTools] = useState(false);
+  const [isToolModalOpen, setIsToolModalOpen] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<ToolAdmin | null>(null);
+  const [toolForm, setToolForm] = useState({ name: '', description: '', apiEndpoint: '', method: 'POST', schema: '{}' });
+
+  useEffect(() => {
+    if (activeTab === 'tools') {
+      fetchTools();
+    }
+  }, [activeTab]);
+
+  const fetchTools = async () => {
+    setIsLoadingTools(true);
+    try {
+      const res = await fetch('/api/admin/tools');
+      const data = await res.json();
+      if (data.tools) setTools(data.tools);
+    } catch (error) {
+      console.error("Failed to load tools", error);
+    } finally {
+      setIsLoadingTools(false);
+    }
+  };
+
+  const handleSaveTool = async () => {
+    try {
+      const method = selectedTool ? 'PUT' : 'POST';
+      const body = {
+        ...toolForm,
+        id: selectedTool?.id,
+        schema: toolForm.schema
+      };
+      
+      const res = await fetch('/api/admin/tools', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        setIsToolModalOpen(false);
+        fetchTools();
+      } else {
+        const error = await res.json();
+        alert(`Error: ${error.error}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save tool");
+    }
+  };
+
+  const handleDeleteTool = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this tool?")) return;
+    try {
+      const res = await fetch(`/api/admin/tools?id=${id}`, { method: 'DELETE' });
+      if (res.ok) fetchTools();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const openToolModal = (tool?: ToolAdmin) => {
+    if (tool) {
+      setSelectedTool(tool);
+      setToolForm({
+        name: tool.name,
+        description: tool.description || '',
+        apiEndpoint: tool.apiEndpoint,
+        method: tool.method,
+        schema: JSON.stringify(tool.schema, null, 2)
+      });
+    } else {
+      setSelectedTool(null);
+      setToolForm({ name: '', description: '', apiEndpoint: 'http://localhost:3000/api/', method: 'POST', schema: '{\n  "type": "object",\n  "properties": {},\n  "required": []\n}' });
+    }
+    setIsToolModalOpen(true);
+  };
 
   // 3. Active Processes State
   const [renders, setRenders] = useState<ActiveProcess[]>([
@@ -305,6 +397,15 @@ export default function AdminDashboard() {
           }`}
         >
           {t.tabKeys}
+        </button>
+        <button
+          onClick={() => setActiveTab('tools')}
+          className={`px-4 py-3 text-xs font-bold transition-all relative flex items-center gap-2 ${
+            activeTab === 'tools' ? 'text-indigo-400 border-b-2 border-indigo-500' : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+        >
+          <span className="h-4 w-4 bg-indigo-500/10 rounded flex items-center justify-center text-[10px]">🤖</span>
+          {lang === 'es' ? 'Tools' : 'Tools'}
         </button>
         <button
           onClick={() => setActiveTab('pricing')}
@@ -507,6 +608,80 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {/* Tab 2.5: Tools Management */}
+        {activeTab === 'tools' && (
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-[#0c0c0e]">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="text-indigo-400">🤖</span> {lang === 'es' ? 'Gestión de Herramientas (Function Calling)' : 'Tool Management (Function Calling)'}
+                </h3>
+                <p className="text-[10px] text-zinc-500 mt-1">
+                  {lang === 'es' ? 'Estas herramientas se auto-asocian al Orquestador y están disponibles dinámicamente.' : 'These tools auto-link to the Orchestrator and are dynamically available.'}
+                </p>
+              </div>
+              <button 
+                onClick={() => openToolModal()}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-colors shadow-lg shadow-indigo-500/20"
+              >
+                + {lang === 'es' ? 'Nueva Tool' : 'New Tool'}
+              </button>
+            </div>
+            
+            {isLoadingTools ? (
+              <div className="p-12 text-center text-zinc-500 text-xs font-mono animate-pulse">Cargando herramientas...</div>
+            ) : tools.length === 0 ? (
+              <div className="p-12 text-center text-zinc-500 text-xs">No hay herramientas registradas.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-zinc-900 text-zinc-500 font-semibold bg-zinc-950">
+                      <th className="p-4 w-48">Tool Name</th>
+                      <th className="p-4">Description</th>
+                      <th className="p-4 w-32">Method</th>
+                      <th className="p-4 w-64">Endpoint</th>
+                      <th className="p-4 text-right w-32">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tools.map(tool => (
+                      <tr key={tool.id} className="border-b border-zinc-900 hover:bg-zinc-900/30 transition-colors">
+                        <td className="p-4 font-mono font-bold text-indigo-400">{tool.name}</td>
+                        <td className="p-4 text-zinc-400 truncate max-w-[300px]" title={tool.description}>{tool.description || '-'}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            tool.method === 'GET' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-purple-500/10 text-purple-400'
+                          }`}>
+                            {tool.method}
+                          </span>
+                        </td>
+                        <td className="p-4 text-zinc-500 font-mono text-[10px] truncate max-w-[200px]" title={tool.apiEndpoint}>
+                          {tool.apiEndpoint}
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button 
+                            onClick={() => openToolModal(tool)}
+                            className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded font-semibold transition-colors"
+                          >
+                            ✏️
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteTool(tool.id)}
+                            className="px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded font-semibold transition-colors"
+                          >
+                            🗑️
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
 
@@ -716,6 +891,99 @@ export default function AdminDashboard() {
                 className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-colors"
               >
                 {t.save}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2.5: Create/Edit Tool */}
+      {isToolModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="bg-[#0c0c0e] border border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
+              <h3 className="font-bold text-white text-sm">
+                {selectedTool ? (lang === 'es' ? 'Editar Herramienta' : 'Edit Tool') : (lang === 'es' ? 'Crear Herramienta' : 'Create Tool')}
+              </h3>
+              <button onClick={() => setIsToolModalOpen(false)} className="text-zinc-500 hover:text-white">✕</button>
+            </div>
+            
+            <div className="p-6 space-y-4 overflow-y-auto minimal-scrollbar flex-1 text-xs">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Nombre (slug) *</label>
+                  <input
+                    type="text"
+                    placeholder="ej. buscar_video"
+                    value={toolForm.name}
+                    onChange={(e) => setToolForm({ ...toolForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') })}
+                    className="w-full bg-[#121214] border border-zinc-800 rounded-lg p-2.5 text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                  <p className="text-[10px] text-zinc-600 mt-1">Sin espacios ni mayúsculas. Solo letras, números y guiones bajos.</p>
+                </div>
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Método HTTP</label>
+                  <select
+                    value={toolForm.method}
+                    onChange={(e) => setToolForm({ ...toolForm, method: e.target.value })}
+                    className="w-full bg-[#121214] border border-zinc-800 rounded-lg p-2.5 text-white focus:outline-none focus:border-indigo-500 font-bold"
+                  >
+                    <option value="POST">POST</option>
+                    <option value="GET">GET</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold">API Endpoint (URL) *</label>
+                <input
+                  type="text"
+                  placeholder="https://tu-backend.com/api/..."
+                  value={toolForm.apiEndpoint}
+                  onChange={(e) => setToolForm({ ...toolForm, apiEndpoint: e.target.value })}
+                  className="w-full bg-[#121214] border border-zinc-800 rounded-lg p-2.5 text-white font-mono focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold">Descripción (Instrucciones para la IA) *</label>
+                <textarea
+                  rows={3}
+                  placeholder="Explícale a Gemini cuándo y cómo usar esta herramienta..."
+                  value={toolForm.description}
+                  onChange={(e) => setToolForm({ ...toolForm, description: e.target.value })}
+                  className="w-full bg-[#121214] border border-zinc-800 rounded-lg p-2.5 text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold flex justify-between items-center">
+                  <span>Esquema JSON (Zod-compatible) *</span>
+                  <a href="https://json-schema.org/learn/getting-started-step-by-step" target="_blank" rel="noreferrer" className="text-indigo-400 text-[10px] hover:underline">Ver Doc JSON Schema</a>
+                </label>
+                <textarea
+                  rows={8}
+                  value={toolForm.schema}
+                  onChange={(e) => setToolForm({ ...toolForm, schema: e.target.value })}
+                  className="w-full bg-[#09090b] border border-zinc-800 rounded-lg p-3 text-emerald-400 font-mono text-[11px] focus:outline-none focus:border-indigo-500 transition-colors"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-zinc-900 flex justify-end gap-3 bg-zinc-950">
+              <button
+                onClick={() => setIsToolModalOpen(false)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold transition-colors text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveTool}
+                disabled={!toolForm.name || !toolForm.apiEndpoint}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/20 text-xs"
+              >
+                Guardar Herramienta
               </button>
             </div>
           </div>

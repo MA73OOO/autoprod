@@ -1,0 +1,1 @@
+import { PrismaClient } from '@prisma/client'; const prisma = new PrismaClient(); async function main() { const a = await prisma.agent.findFirst({where: {slug: 'orchestrator'}, include: {agentTools: true}}); console.log(JSON.stringify(a, null, 2)); } main();
