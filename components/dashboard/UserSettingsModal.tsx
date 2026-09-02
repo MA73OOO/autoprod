@@ -391,10 +391,19 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                       onClick={async () => {
                         setIsPickingPath(true);
                         try {
-                          const res = await ControladorClient.pickWorkspace();
-                          setInstallPath(res.path);
+                          const res = await fetch('/api/setup/pick-folder');
+                          if (!res.ok) throw new Error('Error abriendo explorador');
+                          const data = await res.json();
+                          if (data.success && data.path) {
+                            let p = data.path;
+                            if (!p.toLowerCase().endsWith('autoprodai')) {
+                              const separator = p.includes('\\') ? '\\' : '/';
+                              p = p.endsWith(separator) ? `${p}AutoProdAI` : `${p}${separator}AutoProdAI`;
+                            }
+                            setInstallPath(p);
+                          }
                         } catch (e) {
-                          toast.error(lang === 'es' ? 'Error abriendo explorador (¿Está encendido el motor?)' : 'Error opening explorer');
+                          toast.error(lang === 'es' ? 'Error abriendo el explorador de carpetas' : 'Error opening explorer');
                         } finally {
                           setIsPickingPath(false);
                         }
@@ -428,6 +437,10 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                           eventSource.close();
                           setIsInstalling(false);
                           checkSystemStatus();
+                          if (data.status === 'complete') {
+                            localStorage.removeItem('autoprod_workspace_path'); // Force dashboard to resync
+                            window.location.reload();
+                          }
                         }
                       };
                     } catch (err) {

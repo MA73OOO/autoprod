@@ -1,9 +1,9 @@
 export function getControladorUrl() {
   if (typeof window !== 'undefined') {
     const port = localStorage.getItem('autoprod_motor_port') || '8000';
-    return `http://localhost:${port}`;
+    return `http://127.0.0.1:${port}`;
   }
-  return 'http://localhost:8000';
+  return 'http://127.0.0.1:8000';
 };
 
 export class ControladorClient {

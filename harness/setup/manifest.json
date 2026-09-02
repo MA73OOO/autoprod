@@ -64,6 +64,24 @@
       "min_version": "1.0.3",
       "pip_package": "moviepy",
       "check_command": "python -c \"import moviepy; print(moviepy.__version__)\""
+    },
+    {
+      "id": "fastapi",
+      "name": "FastAPI",
+      "description": "Framework web moderno y rápido para construir APIs con Python.",
+      "type": "pip",
+      "min_version": "0.100.0",
+      "pip_package": "fastapi",
+      "check_command": "python -c \"import fastapi; print(fastapi.__version__)\""
+    },
+    {
+      "id": "uvicorn",
+      "name": "Uvicorn",
+      "description": "Servidor web asíncrono para ejecutar el motor de Python.",
+      "type": "pip",
+      "min_version": "0.23.0",
+      "pip_package": "uvicorn",
+      "check_command": "python -c \"import uvicorn; print(uvicorn.__version__)\""
     }
   ]
 }

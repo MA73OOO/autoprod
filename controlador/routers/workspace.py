@@ -17,7 +17,7 @@ router = APIRouter(
 def default_workspace():
     """Retorna la ruta por defecto donde se ubican los canales."""
     default_path = Path.home() / "AutoProd" / "youtube"
-    return {"path": str(default_path.resolve())}
+    return {"path": default_path.resolve().as_posix()}
 
 @router.get("/pick")
 def pick_workspace():
@@ -42,7 +42,7 @@ def pick_workspace():
             raise HTTPException(status_code=500, detail="Sistema operativo no soportado para el explorador nativo.")
 
         if folder_path:
-            return {"path": str(Path(folder_path).resolve())}
+            return {"path": Path(folder_path).resolve().as_posix()}
         else:
             raise HTTPException(status_code=400, detail="No se seleccionó ninguna carpeta")
     except Exception as e:

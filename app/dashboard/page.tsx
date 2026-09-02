@@ -86,10 +86,15 @@ export default function Dashboard() {
           let savedPath = localStorage.getItem('autoprod_workspace_path');
           if (!savedPath) {
             try {
-              const defaultWs = await ControladorClient.getDefaultWorkspace();
-              savedPath = defaultWs.path;
-              localStorage.setItem('autoprod_workspace_path', savedPath);
-              setWorkspacePath(savedPath);
+              const res = await fetch('/api/setup/workspace');
+              if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.path) {
+                  savedPath = data.path;
+                  localStorage.setItem('autoprod_workspace_path', savedPath!);
+                  setWorkspacePath(savedPath);
+                }
+              }
             } catch (e) {
               console.warn("Could not get default workspace path");
             }

@@ -19,7 +19,6 @@ interface Props {
   onSelectConversation: (id: string) => void;
   onDeleteConversation?: (id: string) => void;
   onRenameConversation?: (id: string, newTitle: string) => void;
-  onLinkWorkspace: () => void;
   onAddNode: (parentPath: string, type: 'channel' | 'video') => void;
   onOpenFile?: (path: string) => void;
 }
@@ -36,7 +35,6 @@ export default function ConversationSidebar({
   onSelectConversation,
   onDeleteConversation,
   onRenameConversation,
-  onLinkWorkspace,
   onAddNode,
   onOpenFile,
 }: Props) {
@@ -124,13 +122,6 @@ export default function ConversationSidebar({
         <div className="space-y-3 shrink-0">
           <div className="flex items-center justify-between mb-3 px-2">
             <h3 className="text-[10px] font-bold text-zinc-500 tracking-wider">PROYECTO / WORKSPACE</h3>
-            <button 
-              onClick={onLinkWorkspace}
-              className="text-zinc-500 hover:text-white transition-colors"
-              title="Vincular nueva carpeta raíz"
-            >
-              +
-            </button>
           </div>
           <div className="bg-zinc-900/50 rounded-lg p-2 border border-zinc-800/50">
             {!workspacePath ? (

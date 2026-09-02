@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Spawn the python process detached so it runs in the background
-    const child = spawn(pythonCmd, ['-m', 'uvicorn', 'main:app', '--reload', '--port', String(port)], {
+    const child = spawn(pythonCmd, ['-m', 'uvicorn', 'main:app', '--port', String(port)], {
       cwd,
       detached: true,
       stdio: 'ignore', // Ignoramos stdout/stderr para que no bloquee Next.js

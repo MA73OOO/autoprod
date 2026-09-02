@@ -17,23 +17,32 @@ export async function GET(req: Request) {
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ progress: percentage })}\n\n`));
       };
 
+      let isClosed = false;
+
       const onComplete = () => {
+        if (isClosed) return;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ status: 'complete' })}\n\n`));
+        isClosed = true;
         cleanup();
         controller.close();
       };
 
       const onError = (error: string) => {
+        if (isClosed) return;
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error })}\n\n`));
+        isClosed = true;
         cleanup();
         controller.close();
       };
+
+      let interval: NodeJS.Timeout;
 
       const cleanup = () => {
         setupEmitter.off('log', onLog);
         setupEmitter.off('progress', onProgress);
         setupEmitter.off('complete', onComplete);
         setupEmitter.off('error', onError);
+        if (interval) clearInterval(interval);
       };
 
       setupEmitter.on('log', onLog);
@@ -42,12 +51,21 @@ export async function GET(req: Request) {
       setupEmitter.on('error', onError);
 
       // Keep connection alive
-      const interval = setInterval(() => {
-        controller.enqueue(encoder.encode(': keepalive\n\n'));
+      interval = setInterval(() => {
+        if (isClosed) {
+          clearInterval(interval);
+          return;
+        }
+        try {
+          controller.enqueue(encoder.encode(': keepalive\n\n'));
+        } catch (e) {
+          isClosed = true;
+          clearInterval(interval);
+        }
       }, 15000);
 
       req.signal.addEventListener('abort', () => {
-        clearInterval(interval);
+        isClosed = true;
         cleanup();
       });
     }
