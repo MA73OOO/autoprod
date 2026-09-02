@@ -25,11 +25,11 @@ export class ControladorClient {
   }
 
   /**
-   * Instala o valida el motor de Python llamando a la API local de Next.js
+   * Arranca el motor de Python llamando a la API local de Next.js
    */
-  static async installMotor(port: number = 8000): Promise<void> {
+  static async startMotor(port: number = 8000): Promise<void> {
     try {
-      const response = await fetch('/api/setup/install', { 
+      const response = await fetch('/api/motor/start', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ port })
@@ -40,14 +40,14 @@ export class ControladorClient {
       }
       
       if (!response.ok) {
-        throw new Error('Error al instalar o validar el motor');
+        throw new Error('Error al arrancar el motor');
       }
       const data = await response.json();
       if (!data.success) {
-        throw new Error(data.error || 'Error desconocido instalando el motor');
+        throw new Error(data.error || 'Error desconocido arrancando el motor');
       }
     } catch (error) {
-      console.error('Controlador Client: installMotor failed', error);
+      console.error('Controlador Client: startMotor failed', error);
       throw error;
     }
   }

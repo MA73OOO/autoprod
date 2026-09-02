@@ -98,9 +98,9 @@ export default function ConversationSidebar({
               if (motorStatus) {
                 ControladorClient.shutdownMotor();
               } else {
-                const toastId = toast.loading('Instalando/Validando motor...');
+                const toastId = toast.loading('Arrancando motor...');
                 try {
-                  await ControladorClient.installMotor();
+                  await ControladorClient.startMotor();
                   toast.success('Motor listo y ejecutándose', { id: toastId });
                 } catch (error: any) {
                   toast.error(error.message || 'Error validando motor', { id: toastId });

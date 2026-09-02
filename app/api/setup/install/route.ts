@@ -6,9 +6,16 @@ import { installBinary, installPipPackage } from '@/harness/setup/installer';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 
 export async function POST(req: NextRequest) {
   try {
+    const body = await req.json().catch(() => ({}));
+    if (body.basePath) {
+      const configPath = path.join(process.cwd(), '.autoprod-config.json');
+      fsSync.writeFileSync(configPath, JSON.stringify({ basePath: body.basePath }, null, 2));
+    }
+
     const manifestPath = path.join(process.cwd(), 'harness', 'setup', 'manifest.json');
     const manifestData = await fs.readFile(manifestPath, 'utf-8');
     const manifest = JSON.parse(manifestData);
@@ -35,6 +42,10 @@ async function runSetupTask(toInstall: any[], manifest: any) {
     // 1. Crear estructura de carpetas base
     const workspacePath = getWorkspacePath();
     const binPath = getLocalBinPath();
+
+    if (!workspacePath || !binPath) {
+      throw new Error("No se ha configurado la ruta de instalación válida.");
+    }
     
     setupEmitter.emit('log', `Creando carpeta de proyecto principal en: ${path.dirname(workspacePath)}`);
     await fs.mkdir(workspacePath, { recursive: true });

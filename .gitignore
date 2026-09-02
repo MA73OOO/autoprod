@@ -64,3 +64,4 @@ env/
 /.autoprod/
 *.cjs
 scripts/seed-orchestrator.ts
+delete-saludar.ts

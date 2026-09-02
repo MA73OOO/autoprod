@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Language, translations } from '@/app/translations';
-import { getControladorUrl } from '@/lib/controlador-client';
+import { getControladorUrl, ControladorClient } from '@/lib/controlador-client';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -23,6 +23,8 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
   const [isSystemDetecting, setIsSystemDetecting] = useState(false);
   const [installLogs, setInstallLogs] = useState<string[]>([]);
   const [isInstalling, setIsInstalling] = useState(false);
+  const [installPath, setInstallPath] = useState('');
+  const [isPickingPath, setIsPickingPath] = useState(false);
 
   const checkSystemStatus = async () => {
     setIsSystemDetecting(true);
@@ -333,80 +335,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
               </div>
 
               {/* Local Engines (Ollama) */}
-              {!isAdminMode && (
-              <div>
-                <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
-                  {lang === 'es' ? 'Tus Motores Locales' : 'Your Local Engines'}
-                </h4>
-                <p className="text-xs text-zinc-400 mt-2">
-                  {lang === 'es' 
-                    ? 'Motores 100% gratuitos que corren en tu computadora (ej: Ollama).'
-                    : '100% free engines running on your computer (e.g. Ollama).'}
-                </p>
-                
-                <div className="space-y-3 mt-4">
-                  {(() => {
-                    const isOllamaConnected = detectedClis.some(cli => cli.id === 'ollama');
-                    
-                    return (
-                      <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-4 flex flex-col gap-3">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                          <div>
-                            <h5 className="text-sm font-bold text-zinc-200">Ollama (Local)</h5>
-                            <p className="text-[10px] text-zinc-500 font-mono mt-0.5">CLI: ollama</p>
-                          </div>
-                          
-                          {isDetecting ? (
-                            <div className="flex items-center gap-2 text-zinc-500 text-xs">
-                              <div className="w-3.5 h-3.5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                              {lang === 'es' ? 'Conectando...' : 'Connecting...'}
-                            </div>
-                          ) : isOllamaConnected ? (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded text-emerald-400 text-xs font-bold">
-                              🟢 {lang === 'es' ? 'Conectado' : 'Connected'}
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-xs font-bold">
-                              🔴 {lang === 'es' ? 'Desconectado' : 'Disconnected'}
-                            </div>
-                          )}
-                        </div>
-
-                        {!isOllamaConnected && !isDetecting && (
-                          <div className="flex flex-col sm:flex-row gap-2 mt-2 pt-3 border-t border-zinc-800/50">
-                            <button 
-                              onClick={detectEngines}
-                              className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition-colors text-center"
-                            >
-                              {lang === 'es' ? '🔌 Conectar a Ollama' : '🔌 Connect to Ollama'}
-                            </button>
-                            <button 
-                              onClick={async () => {
-                                const confirmMsg = lang === 'es' 
-                                  ? 'Se descargará e instalará Ollama en segundo plano. ¿Continuar?'
-                                  : 'Ollama will be downloaded and installed in the background. Continue?';
-                                if (!window.confirm(confirmMsg)) return;
-                                try {
-                                  const res = await fetch(`${getControladorUrl()}/ollama/install`, { method: 'POST' });
-                                  const data = await res.json();
-                                  if (res.ok) toast.info(data.message);
-                                  else toast.error(data.detail || 'Error instalando Ollama');
-                                } catch (e) {
-                                  toast.error('No se pudo contactar con el backend.');
-                                }
-                              }}
-                              className="flex-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-4 py-2 rounded-lg transition-colors text-center"
-                            >
-                              {lang === 'es' ? 'Descargar Instalar' : 'Download Install'}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-              )}
+              {/* Local Engines (Ollama) Eliminado */}
             </div>
           )}
 
@@ -443,14 +372,51 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 ))}
               </div>
 
-              <div className="flex flex-col gap-2 pt-2">
+              <div className="flex flex-col gap-3 pt-2">
+                <div>
+                  <label className="text-zinc-500 block mb-1 text-xs font-bold">
+                    {lang === 'es' ? 'Ruta de Instalación' : 'Installation Path'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={installPath}
+                      placeholder={lang === 'es' ? "Selecciona una carpeta base..." : "Select a base folder..."}
+                      className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none cursor-not-allowed text-xs"
+                    />
+                    <button
+                      type="button"
+                      disabled={isPickingPath}
+                      onClick={async () => {
+                        setIsPickingPath(true);
+                        try {
+                          const res = await ControladorClient.pickWorkspace();
+                          setInstallPath(res.path);
+                        } catch (e) {
+                          toast.error(lang === 'es' ? 'Error abriendo explorador (¿Está encendido el motor?)' : 'Error opening explorer');
+                        } finally {
+                          setIsPickingPath(false);
+                        }
+                      }}
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded font-bold transition-colors cursor-pointer text-xs whitespace-nowrap disabled:opacity-50"
+                    >
+                      {isPickingPath ? '...' : (lang === 'es' ? '📂 Explorar' : '📂 Browse')}
+                    </button>
+                  </div>
+                </div>
+
                 <button
-                  disabled={isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))}
+                  disabled={isInstalling || (!installPath && !(systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed')))}
                   onClick={async () => {
                     setIsInstalling(true);
                     setInstallLogs([]);
                     try {
-                      await fetch('/api/setup/install', { method: 'POST' });
+                      await fetch('/api/setup/install', { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ basePath: installPath })
+                      });
                       const eventSource = new EventSource('/api/setup/stream');
                       
                       eventSource.onmessage = (event) => {
@@ -479,7 +445,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     ? (lang === 'es' ? 'Instalando...' : 'Installing...')
                     : (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
                       ? (lang === 'es' ? 'Todo Instalado' : 'All Installed')
-                      : (lang === 'es' ? 'Instalar Faltantes' : 'Install Missing')}
+                      : (lang === 'es' ? 'Instalar Motor' : 'Install Motor')}
                 </button>
               </div>
 

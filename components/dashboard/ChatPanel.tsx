@@ -5,6 +5,8 @@ import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
 import { getControladorUrl } from '@/lib/controlador-client';
 import ChannelCreatorConsole from '@/components/agents/ChannelCreatorConsole';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Checklist {
   cta: boolean;
@@ -207,13 +209,21 @@ export default function ChatPanel({
               }`}>
               {msg.text.includes('🛑 Proceso cancelado por el usuario.') ? (
                 <>
-                  <p className="whitespace-pre-line">{msg.text.replace('🛑 Proceso cancelado por el usuario.', '').trim()}</p>
+                  <div className="prose prose-invert max-w-none text-sm leading-relaxed break-words">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text.replace('🛑 Proceso cancelado por el usuario.', '').trim()}
+                    </ReactMarkdown>
+                  </div>
                   <div className="mt-3 flex items-center gap-2 text-sm font-medium text-red-400 bg-red-950/30 border border-red-900/50 rounded-md px-3 py-2 w-fit">
                     <span className="text-base">🛑</span> {lang === 'es' ? 'Proceso cancelado por el usuario.' : 'Process canceled by user.'}
                   </div>
                 </>
               ) : (
-                <p className="whitespace-pre-line">{msg.text}</p>
+                <div className="prose prose-invert max-w-none text-sm leading-relaxed break-words">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.text}
+                  </ReactMarkdown>
+                </div>
               )}
               <div className="flex justify-between items-center mt-2 gap-4">
                 <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-2">

@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import os from 'os';
 
 const execAsync = promisify(exec);
@@ -16,18 +17,30 @@ export interface DependencyInfo {
   required_version: string;
 }
 
-export function getAutoProdRoot() {
-  // Creamos la carpeta AutoProd directamente en la carpeta de usuario (Home), 
-  // para que sea visible y accesible fácilmente (ej: C:\Users\Juan\AutoProd)
-  return path.join(os.homedir(), 'AutoProd');
+export function getAutoProdRoot(): string | null {
+  const configPath = path.join(process.cwd(), '.autoprod-config.json');
+  try {
+    if (fsSync.existsSync(configPath)) {
+      const data = fsSync.readFileSync(configPath, 'utf-8');
+      const config = JSON.parse(data);
+      if (config.basePath) {
+        return config.basePath;
+      }
+    }
+  } catch (err) {
+    // Ignore read/parse errors
+  }
+  return null;
 }
 
-export function getLocalBinPath() {
-  return path.join(getAutoProdRoot(), 'bin');
+export function getLocalBinPath(): string | null {
+  const root = getAutoProdRoot();
+  return root ? path.join(root, 'bin') : null;
 }
 
-export function getWorkspacePath() {
-  return path.join(getAutoProdRoot(), 'youtube');
+export function getWorkspacePath(): string | null {
+  const root = getAutoProdRoot();
+  return root ? path.join(root, 'youtube') : null;
 }
 
 export async function detectDependencies(): Promise<DependencyInfo[]> {
@@ -47,7 +60,7 @@ export async function detectDependencies(): Promise<DependencyInfo[]> {
     let cmdToRun = dep.check_command;
     if (dep.type === 'binary') {
       const localExe = process.platform === 'win32' ? dep.local_path_win : dep.local_path_mac;
-      if (localExe) {
+      if (localExe && localBin) {
         const fullPath = path.join(localBin, localExe);
         try {
           // Check if local file exists

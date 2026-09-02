@@ -64,7 +64,9 @@ export async function GET(req: Request) {
       userId = user?.id;
     } else {
       // Fallback a la sesión del servidor para cuando se llama directo en la app de Next.js
-      const { data: userData } = await supabaseAdmin.auth.getUser();
+      const { createClient: createServerClient } = require('@/lib/supabase/server');
+      const supabaseServer = await createServerClient();
+      const { data: userData } = await supabaseServer.auth.getUser();
       userId = userData?.user?.id;
     }
 
