@@ -6,6 +6,7 @@ import { openai } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
+import { getWorkspacePath } from '@/harness/setup/detector';
 import path from 'path';
 
 // ──────────────────────────────────────────────
@@ -171,7 +172,10 @@ export async function POST(req: Request) {
       });
 
       if (orchestrator) {
-        systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + orchestrator.systemPrompt;
+        // Inyectar workspace_path dinámicamente en el system prompt
+        const workspacePath = getWorkspacePath() || 'No configurado';
+        const resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', workspacePath);
+        systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + resolvedPrompt;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
         const toolNames: string[] = [];
@@ -191,7 +195,51 @@ export async function POST(req: Request) {
                  // Inyectar el contexto del usuario en los argumentos
                  const payload = { ...args, _userContext: { id: userId, name: userRecord?.name, email: userRecord?.email } };
                  
-                 const response = await fetch(dbTool.apiEndpoint, {
+                  // Normalización inteligente de sinónimos de parámetros (anti-422)
+                  if (!payload.path && (payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file)) {
+                    payload.path = payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file;
+                  }
+                  if (!payload.content && (payload.text || payload.body || payload.data || payload.contenido)) {
+                    payload.content = payload.text || payload.body || payload.data || payload.contenido;
+                  }
+                  if (!payload.folder_name && (payload.folder || payload.name || payload.nombre_carpeta || payload.directory)) {
+                    payload.folder_name = payload.folder || payload.name || payload.nombre_carpeta || payload.directory;
+                  }
+                  if (!payload.target_path && (payload.target || payload.destination || payload.ruta_destino)) {
+                    payload.target_path = payload.target || payload.destination || payload.ruta_destino;
+                  }
+                  if (!payload.base_path && (payload.path && dbTool.name === 'listar_directorio')) {
+                    payload.base_path = payload.path;
+                  }
+
+                  // Blindaje: Si es una herramienta de archivos y la ruta es relativa, anteponer el workspace
+                  const workspaceRoot = getWorkspacePath();
+                  if (workspaceRoot && payload.path && typeof payload.path === 'string' && !path.isAbsolute(payload.path)) {
+                    payload.path = path.join(workspaceRoot, payload.path);
+                  }
+                  if (workspaceRoot && payload.target_path && typeof payload.target_path === 'string' && !path.isAbsolute(payload.target_path)) {
+                    payload.target_path = path.join(workspaceRoot, payload.target_path);
+                  }
+                  if (workspaceRoot && payload.base_path && typeof payload.base_path === 'string' && !path.isAbsolute(payload.base_path)) {
+                    payload.base_path = path.join(workspaceRoot, payload.base_path);
+                  }
+
+                 // Para métodos GET, convertir argumentos a query params
+                 let url = dbTool.apiEndpoint;
+                 if (dbTool.method === 'GET' && payload && Object.keys(payload).length > 0) {
+                   const params = new URLSearchParams();
+                   for (const [key, val] of Object.entries(payload)) {
+                     if (key !== '_userContext' && val !== undefined && val !== null) {
+                       params.append(key, String(val));
+                     }
+                   }
+                   const qs = params.toString();
+                   if (qs) {
+                     url += (url.includes('?') ? '&' : '?') + qs;
+                   }
+                 }
+                 
+                 const response = await fetch(url, {
                    method: dbTool.method,
                    headers: {
                      'Content-Type': 'application/json'
@@ -199,20 +247,26 @@ export async function POST(req: Request) {
                    body: dbTool.method !== 'GET' ? JSON.stringify(payload) : undefined
                  });
                  
+                 if (!response.ok) {
+                   const errorJson = await response.json().catch(() => ({}));
+                   let detail = errorJson.detail;
+                   if (Array.isArray(detail)) {
+                     detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join(' | ');
+                   } else if (typeof detail === 'object') {
+                     detail = JSON.stringify(detail);
+                   }
+                   return `[Error en ${dbTool.name} (HTTP ${response.status})]: ${detail || response.statusText}. Por favor revisa los parámetros e inténtalo de nuevo con la ruta absoluta correcta.`;
+                 }
+
                  const data = await response.json();
-                 
                  return JSON.stringify(data);
                } catch(e: any) {
-                 return `Error ejecutando ${dbTool.name}: ${e.message}`;
+                 return `[Fallo de conexión en ${dbTool.name}]: ${e.message}. Verifica si el motor local está activo en el puerto 8000.`;
                }
             }
           });
         }
         
-        // Inyectar la lista de herramientas disponibles para que no invente opciones
-        if (toolNames.length > 0) {
-          systemPrompt += `\n\n--- HERRAMIENTAS CONECTADAS ---\nActualmente tienes disponibles las siguientes herramientas: ${toolNames.join(', ')}. NUNCA inventes herramientas que no estén en esta lista.`;
-        }
       }
 
       // Inyectar contexto de las reglas del canal si existe
@@ -258,11 +312,10 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 3. Generar Texto (Function Calling Nativo)
     // ──────────────────────────────────────────────
-    const finalSystemPrompt = systemPrompt + "\n\nREGLA CRÍTICA: Si usas una herramienta, DEBES escribir un mensaje de texto explicando el resultado al usuario. NUNCA respondas solo con la llamada a la herramienta.\nREGLA CRÍTICA 2: Si el usuario te pregunta qué puedes hacer, DEBES responder EXCLUSIVAMENTE listando las HERRAMIENTAS CONECTADAS que se te pasaron en el contexto. ESTÁ ESTRICTAMENTE PROHIBIDO inventar capacidades genéricas (como SEO, edición de video, redacción, etc.). Solo puedes hacer lo que tus herramientas literales te permiten.";
     const result = await generateText({
       model: aiModel,
       messages: history.filter((h: any) => h.role !== 'system'),
-      system: finalSystemPrompt,
+      system: systemPrompt,
       tools: Object.keys(aiTools).length > 0 ? aiTools : undefined,
       maxSteps: 5 // Permite al LLM iterar, llamar herramientas y luego responder
     });
@@ -312,21 +365,49 @@ export async function POST(req: Request) {
     
     let finalOutput = result.text;
     
-    // Si el LLM decidió no escribir texto final pero sí ejecutó herramientas (Falla común en Gemini 3.5 con Vercel AI SDK)
-    // En lugar de pasar el texto crudo (perdiendo la lógica del orquestador), obligamos al modelo a hacer una segunda pasada para sintetizar.
+    // Si el LLM decidió no escribir texto final pero sí ejecutó herramientas (Falla común en Gemini con Vercel AI SDK)
+    // Forzamos una segunda pasada para que sintetice los resultados de las herramientas.
     if (!finalOutput && result.toolResults && result.toolResults.length > 0) {
-      const toolSummaryPrompt = `Acabas de ejecutar una o más herramientas. Los resultados fueron:\n\n${JSON.stringify(result.toolResults, null, 2)}\n\nSintetiza estos resultados y dale una respuesta natural al usuario basándote en ellos.`;
-      
-      const synthesisResult = await generateText({
-        model: aiModel,
-        messages: [
-           ...history.filter((h: any) => h.role !== 'system'),
-           { role: 'user', content: toolSummaryPrompt }
-        ],
-        system: systemPrompt,
-      });
-      
-      finalOutput = synthesisResult.text;
+      try {
+        const toolSummaryPrompt = `Acabas de ejecutar una o más herramientas del sistema. Estos fueron los resultados obtenidos:\n\n${JSON.stringify(result.toolResults, null, 2)}\n\nPor favor, responde al usuario explicándole con amabilidad y claridad qué acciones realizaste en su workspace y cuál es el estado actual de su proyecto.`;
+        
+        const synthesisResult = await generateText({
+          model: aiModel,
+          messages: [
+             ...history.filter((h: any) => h.role !== 'system'),
+             { role: 'user', content: toolSummaryPrompt }
+          ],
+          system: systemPrompt,
+        });
+        
+        finalOutput = synthesisResult.text;
+      } catch (synthesisErr: any) {
+        console.warn("[Synthesis Error]:", synthesisErr.message);
+      }
+    }
+
+    // ── GUARDIÁN DE RESPUESTA: Nunca retornar una respuesta vacía ──
+    if (!finalOutput || finalOutput.trim() === '') {
+      if (result.toolResults && result.toolResults.length > 0) {
+        const resumenHerramientas = result.toolResults.map((tr: any) => {
+          let outputStr = '';
+          if (typeof tr.result === 'string') {
+            outputStr = tr.result;
+          } else if (tr.result !== undefined && tr.result !== null) {
+            outputStr = JSON.stringify(tr.result);
+          } else {
+            outputStr = 'Ejecutado con éxito';
+          }
+          if (outputStr && outputStr.length > 180) {
+            outputStr = outputStr.substring(0, 180) + '...';
+          }
+          return `• **${tr.toolName}**: ${outputStr}`;
+        }).join('\n');
+
+        finalOutput = `He ejecutado las siguientes acciones en tu workspace:\n\n${resumenHerramientas}\n\n¿Deseas continuar con el siguiente paso?`;
+      } else {
+        finalOutput = "He procesado tu mensaje. ¿En qué más te puedo colaborar en tu proyecto de AutoProd?";
+      }
     }
 
     return NextResponse.json({ text: finalOutput, modelName: cleanModel || model });

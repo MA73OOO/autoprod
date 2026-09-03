@@ -13,9 +13,22 @@ router = APIRouter(
 
 
 
+import json
+
 @router.get("/default")
 def default_workspace():
-    """Retorna la ruta por defecto donde se ubican los canales."""
+    """Retorna la ruta por defecto donde se ubican los canales leyendo la configuración."""
+    config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
+    if config_path.exists():
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                if "basePath" in config:
+                    return {"path": (Path(config["basePath"]) / "youtube").resolve().as_posix()}
+        except Exception:
+            pass
+
+    # Fallback si no existe o falla
     default_path = Path.home() / "AutoProd" / "youtube"
     return {"path": default_path.resolve().as_posix()}
 
