@@ -19,6 +19,9 @@ export interface Video {
 export interface Channel {
   id: string;
   name: string;
+  localPath?: string | null;
+  niche?: string | null;
+  context?: any;
   videos: Video[];
 }
 

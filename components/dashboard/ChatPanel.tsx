@@ -180,33 +180,58 @@ export default function ChatPanel({
     );
   }
 
+  const activeChannelObj = channels.find(c => c.id === activeConversation?.channelId);
+
   return (
     <div className="flex-1 flex flex-col relative h-full">
-      {/* Channel Association Banner - only shown on first message */}
-      {activeConversation && activeConversation.messages.length <= 1 && (
-        <div className="p-4 bg-zinc-950/40 border-b border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
-          <div className="space-y-0.5">
-            <p className="text-xs font-bold text-zinc-200 flex items-center gap-1.5">
-              💡 {lang === 'es' ? 'Asociar conversación a un Canal' : 'Associate conversation to a Channel'}
-            </p>
-            <p className="text-[10px] text-zinc-500">
-              {lang === 'es'
-                ? 'Vincula este chat a un canal para segmentar y organizar mejor tus optimizaciones.'
-                : 'Link this chat to a channel to better segment and organize your optimizations.'}
-            </p>
+      {/* Permanent Active Channel & Niche Governance Bar */}
+      <div className="px-4 py-2 bg-zinc-950/80 border-b border-zinc-800/80 flex flex-wrap items-center justify-between gap-3 shrink-0 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-300 flex items-center gap-1.5">
+              📺 {lang === 'es' ? 'Canal Activo:' : 'Active Channel:'}
+            </span>
+            <select
+              value={activeConversation?.channelId || ''}
+              onChange={(e) => onAssociateChannel(e.target.value || null)}
+              className="bg-[#18181b] border border-zinc-700/80 text-xs font-medium text-zinc-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 cursor-pointer min-w-[190px] shadow-sm transition-all"
+            >
+              <option value="">{lang === 'es' ? '🌐 Sin canal específico (General)' : '🌐 No Channel (General)'}</option>
+              {channels.map(ch => (
+                <option key={ch.id} value={ch.id}>
+                  {ch.name} {ch.niche ? `(${ch.niche})` : ''}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            value={activeConversation.channelId || ''}
-            onChange={(e) => onAssociateChannel(e.target.value || null)}
-            className="bg-[#18181b] border border-zinc-800 text-[11px] text-zinc-300 rounded px-2.5 py-1.5 focus:outline-none focus:border-purple-500 cursor-pointer min-w-[150px]"
-          >
-            <option value="">{lang === 'es' ? 'Sin Canal (General)' : 'No Channel (General)'}</option>
-            {channels.map(ch => (
-              <option key={ch.id} value={ch.id}>{ch.name}</option>
-            ))}
-          </select>
+
+          {/* Active Channel Details Pill */}
+          {activeChannelObj ? (
+            <div className="flex items-center gap-2 text-xs flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-950/60 border border-purple-800/50 text-purple-300 font-medium">
+                🎯 {lang === 'es' ? 'Nicho:' : 'Niche:'} {activeChannelObj.niche || activeChannelObj.name}
+              </span>
+              {activeChannelObj.localPath && (
+                <span 
+                  className="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 font-mono max-w-[280px] truncate"
+                  title={activeChannelObj.localPath}
+                >
+                  📁 {activeChannelObj.localPath}
+                </span>
+              )}
+              <span className="hidden lg:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium bg-emerald-950/40 border border-emerald-900/50 px-2 py-0.5 rounded">
+                🛡️ {lang === 'es' ? 'Guardrail Activo: IA restringida a este nicho' : 'Active Guardrail: AI restricted to this niche'}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-zinc-500 italic hidden sm:inline">
+              {lang === 'es'
+                ? '💡 Selecciona un canal para enfocar las ideas y contenidos exclusivamente a su nicho'
+                : '💡 Select a channel to lock AI ideation and content strictly to its niche'}
+            </span>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Messages log */}
       <div

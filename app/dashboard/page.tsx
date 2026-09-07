@@ -149,17 +149,37 @@ export default function Dashboard() {
 
   const handleCreateChannel = async (basePath: string, channelName: string, folders: string[]) => {
     const maxChannels = userProfile?.maxChannels ?? 1;
-    if (userProfile?.role !== 'ADMIN' && workspaceTree.length >= maxChannels) {
-      toast.error(lang === 'es'
-        ? `Límite alcanzado. Tu plan permite un máximo de ${maxChannels} canal(es). Mejora a Pro o Enterprise para agregar más canales.`
-        : `Limit reached. Your plan allows a maximum of ${maxChannels} channel(s). Upgrade to Pro or Enterprise.`);
-      setShowPlansModal(true);
-      return;
-    }
-    const toastId = toast.loading('Creando estructura...');
+    const channelLocalPath = `${basePath}/${channelName}`.replace(/\\/g, '/');
+    const toastId = toast.loading(lang === 'es' ? 'Validando límites y creando canal...' : 'Validating limits and creating channel...');
     try {
+      // 1. Validar y registrar en base de datos con control estricto de límite de plan
+      const res = await fetch('/api/channels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: channelName,
+          localPath: channelLocalPath,
+          niche: channelName,
+        })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 403 || errorData.code === 'MAX_CHANNELS_REACHED') {
+          toast.error(errorData.message || (lang === 'es'
+            ? `Límite alcanzado. Tu plan permite un máximo de ${maxChannels} canal(es). Mejora a Pro o Enterprise para agregar más canales.`
+            : `Limit reached. Your plan allows a maximum of ${maxChannels} channel(s). Upgrade to Pro or Enterprise.`), { id: toastId, duration: 6000 });
+          setIsPlansModalOpen(true);
+          return;
+        }
+        throw new Error(errorData.error || 'Error al registrar el canal en base de datos');
+      }
+
+      // 2. Si el registro en BD fue exitoso, crear las carpetas físicas en disco local
       await ControladorClient.initVideoWorkspace(basePath, channelName, "Estructura_Base", folders);
-      toast.success('Estructura de canal creada correctamente', { id: toastId });
+      toast.success(lang === 'es' ? 'Canal y carpetas creadas correctamente' : 'Channel and folders created successfully', { id: toastId });
+      
+      await fetchDbChannels();
       if (workspacePath) loadWorkspaceTree(workspacePath);
     } catch (err: any) {
       toast.error(err.message, { id: toastId });
@@ -229,15 +249,53 @@ export default function Dashboard() {
 
   // ── Data State ──
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [dbChannels, setDbChannels] = useState<any[]>([]);
   const [promptTemplates, setPromptTemplates] = useState<any[]>([]);
   const [geminiKey, setGeminiKey] = useState('');
   const [isKeySaved, setIsKeySaved] = useState(false);
   const [loadedConversations, setLoadedConversations] = useState<Record<string, boolean>>({});
 
+  const fetchDbChannels = useCallback(async () => {
+    try {
+      const res = await fetch('/api/channels');
+      if (res.ok) {
+        const data = await res.json();
+        setDbChannels(data);
+      }
+    } catch (e) {
+      console.warn('Error al cargar canales de BD:', e);
+    }
+  }, []);
+
   // ── Derived Variables ──
   const activeConversation = conversations.find(c => c.id === activeConversationId);
   const messages = activeConversation?.messages ?? [];
-  const channels = workspaceTree.map(node => ({ id: node.name, name: node.name }));
+
+  // Canales derivados: prioridad canales registrados en BD con UUIDs y metadatos de nicho
+  const channels = (() => {
+    const list: any[] = dbChannels.map(ch => ({
+      id: ch.id,
+      name: ch.name,
+      localPath: ch.localPath,
+      niche: ch.niche || ch.name,
+      context: ch.context,
+      videos: ch.videos || []
+    }));
+
+    // Complementar con carpetas de workspace físicas que no estén aún en BD
+    for (const node of workspaceTree) {
+      if (!list.some(c => c.name.toLowerCase() === node.name.toLowerCase())) {
+        list.push({
+          id: node.name,
+          name: node.name,
+          localPath: workspacePath ? `${workspacePath}/${node.name}`.replace(/\\/g, '/') : null,
+          niche: node.name,
+          videos: []
+        });
+      }
+    }
+    return list;
+  })();
 
   useEffect(() => {
     const saved = localStorage.getItem('gemini_api_key');
@@ -249,12 +307,14 @@ export default function Dashboard() {
     let active = true;
     const load = async () => {
       try {
-        const [pr, co] = await Promise.all([
+        const [pr, co, ch] = await Promise.all([
           fetch('/api/prompts'),
           fetch('/api/conversations'),
+          fetch('/api/channels'),
         ]);
         if (!active) return;
         if (pr.ok) setPromptTemplates(await pr.json());
+        if (ch.ok) setDbChannels(await ch.json());
         if (co.ok) {
           const raw = await co.json();
           const formatted: Conversation[] = raw.map((c: any) => ({
@@ -603,6 +663,7 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
               provider,
               model: actualModel,
               workspacePath: workspacePath || '',
+              channelId: activeConversation?.channelId || null,
               agentSlug,
               deepThinking: isDeepThinking,
               confirmCreditUsage: typeof window !== 'undefined' ? localStorage.getItem('autoprod_always_confirm_credits') === 'true' : false

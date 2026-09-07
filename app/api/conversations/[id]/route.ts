@@ -32,7 +32,30 @@ export async function PATCH(
       updatedAt: new Date().toISOString()
     };
     if (title !== undefined) updateData.title = title;
-    if (channelId !== undefined) updateData.channelId = channelId || null;
+    if (channelId !== undefined) {
+      if (!channelId) {
+        updateData.channelId = null;
+      } else {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channelId);
+        if (isUuid) {
+          updateData.channelId = channelId;
+        } else {
+          let found = await db.channel.findFirst({
+            where: { userId: user.id, name: { equals: channelId, mode: 'insensitive' } }
+          });
+          if (!found) {
+            found = await db.channel.create({
+              data: {
+                userId: user.id,
+                name: channelId,
+                niche: channelId,
+              }
+            });
+          }
+          updateData.channelId = found.id;
+        }
+      }
+    }
     if (videoId !== undefined) updateData.videoId = videoId || null;
 
     // Update

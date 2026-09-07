@@ -628,12 +628,43 @@ Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extr
         
       }
 
-      // Inyectar contexto de las reglas del canal si existe
+      // Inyectar contexto y guardrail estricto de nicho del canal activo
+      let activeChannel: any = null;
       if (channelId) {
-         const channel = await prisma.channel.findUnique({ where: { id: channelId } });
-         if (channel && channel.contextRules) {
-            systemPrompt += `\n\n--- REGLAS DEL CANAL ACTUAL ---\n${channel.contextRules}`;
-         }
+        activeChannel = await prisma.channel.findUnique({
+          where: { id: channelId },
+          include: { context: true }
+        });
+      } else if (userId) {
+        const userChannels = await prisma.channel.findMany({
+          where: { userId },
+          include: { context: true },
+          take: 2
+        });
+        if (userChannels.length === 1) {
+          activeChannel = userChannels[0];
+        }
+      }
+
+      if (activeChannel) {
+        const channelNiche = activeChannel.niche || activeChannel.context?.title || activeChannel.name;
+        const channelSummary = activeChannel.context?.contextSummary || activeChannel.context?.description || 'Canal temático enfocado en su nicho específico.';
+        const channelLocal = activeChannel.localPath || (workspacePath ? path.join(workspacePath, activeChannel.name) : 'Ruta asignada en workspace');
+
+        systemPrompt += `\n\n=== GUARDRAIL ESTRICTO: CANAL ACTIVO Y DELIMITACIÓN DE NICHO ===
+- CANAL ACTIVO ASIGNADO: "${activeChannel.name}"
+- NICHO Y TEMÁTICA PERMITIDA: "${channelNiche}"
+- RUTA FÍSICA ASOCIADA: "${channelLocal}"
+- CONTEXTO / RESUMEN DEL CANAL:
+${channelSummary}
+
+REGLAS DE OBLIGATORIO CUMPLIMIENTO:
+1. Todo el contenido generado en esta conversación (ideas de video, guiones, títulos, miniaturas, descripciones, hooks, prompts y estructuras de archivos) DEBE pertenecer ESTRICTAMENTE al nicho de "${channelNiche}" del canal "${activeChannel.name}".
+2. Si el usuario te pide crear o planear contenido sobre un tema completamente ajeno o fuera de este nicho (ejemplos: pedir temas de criptomonedas, finanzas o recetas en un canal de vaqueros, o viceversa):
+   - DEBES RECHAZAR CORDIALMENTE la solicitud.
+   - Explícale amablemente: "Actualmente estamos trabajando en el contexto de tu canal '${activeChannel.name}' (Nicho: ${channelNiche}). Para mantener la coherencia algorítmica y cumplir con las políticas de control de canales de tu plan, no está permitido mezclar nichos ajenos en este canal."
+   - Indícale que puede seleccionar otro canal en el menú superior del chat o registrar un nuevo canal en la plataforma (según la disponibilidad de su suscripción: Free 1, Starter 1, Pro 3, Enterprise Ilimitado).
+3. Todas las operaciones de archivos, carpetas o herramientas para este canal deben dirigirse a su carpeta local "${channelLocal}".`;
       }
 
       // Inyectar directiva de Pensamiento Profundo si está activado

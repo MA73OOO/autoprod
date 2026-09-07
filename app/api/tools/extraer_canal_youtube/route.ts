@@ -134,6 +134,11 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 5. Persistencia en Base de Datos (Prisma + Supabase)
     // ──────────────────────────────────────────────
+    const workspaceRoot = _userContext?.workspacePath || getWorkspacePath();
+    const cleanChannelName = sanitizeFolderName(channelData.channel.title);
+    const channelLocalPath = workspaceRoot ? path.join(workspaceRoot, cleanChannelName) : null;
+    const channelNiche = analytics.topTags?.[0]?.tag || channelData.channel.title;
+
     // 5a. Upsert del Canal en tabla Channel
     let channelRecord = await prisma.channel.findFirst({
       where: {
@@ -152,6 +157,8 @@ export async function POST(req: Request) {
           name: channelData.channel.title,
           youtubeChannelId: channelData.channel.id,
           profilePicture: channelData.channel.thumbnailUrl || channelRecord.profilePicture,
+          localPath: channelLocalPath || channelRecord.localPath,
+          niche: channelNiche || channelRecord.niche,
         }
       });
     } else {
@@ -160,6 +167,8 @@ export async function POST(req: Request) {
           name: channelData.channel.title,
           youtubeChannelId: channelData.channel.id,
           profilePicture: channelData.channel.thumbnailUrl,
+          localPath: channelLocalPath,
+          niche: channelNiche,
           userId,
         }
       });
