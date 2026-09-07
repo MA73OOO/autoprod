@@ -23,36 +23,80 @@ provider "vercel" {
 }
 
 # ----------------------------------------------------
-# 1. Creación del Proyecto en Supabase (Entorno DEV)
+# 1. Proyectos en Supabase (DEV y PROD aislados)
 # ----------------------------------------------------
+
+# Entorno de Desarrollo y Pruebas
 resource "supabase_project" "dev" {
   organization_id   = var.supabase_org_id
   name              = "autoprod-dev"
   database_password = var.db_password_dev
-  region            = "us-east-1"
-  
-  # Opcional: Configuración del tamaño de instancia si tuvieras un plan Pro
-  # instance_size = "micro"
+  region            = var.region
+}
+
+# Entorno de Producción (Usuarios Reales)
+resource "supabase_project" "prod" {
+  organization_id   = var.supabase_org_id
+  name              = "autoprod-prod"
+  database_password = var.db_password_prod
+  region            = var.region
 }
 
 # ----------------------------------------------------
-# 2. Configuración del Proyecto en Vercel
+# 2. Proyecto en Vercel
 # ----------------------------------------------------
-# (Referenciamos un proyecto que ya existe o lo creamos)
 data "vercel_project" "autoprod" {
-  name = "autoprod"
+  name = var.vercel_project_name
 }
 
 # ----------------------------------------------------
-# 3. Inyección de Variables de Entorno en Vercel (DEV/PREVIEW)
+# 3. Inyección de Variables en Vercel: PRODUCCIÓN
+# (Aplica cuando haces merge/commit en master/main)
 # ----------------------------------------------------
-# Nota: Supabase Terraform Provider no expone las contraseñas ni ciertas URLs directamente 
-# por seguridad, así que construimos la URL basados en la salida del proyecto.
+
+resource "vercel_project_environment_variable" "prod_db_url" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "DATABASE_URL"
+  value      = "postgresql://postgres.${supabase_project.prod.id}:${var.db_password_prod}@aws-0-${supabase_project.prod.region}.pooler.supabase.com:6543/postgres?pgbouncer=true"
+  target     = ["production"]
+}
+
+resource "vercel_project_environment_variable" "prod_direct_url" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "DIRECT_URL"
+  value      = "postgresql://postgres.${supabase_project.prod.id}:${var.db_password_prod}@aws-0-${supabase_project.prod.region}.pooler.supabase.com:5432/postgres"
+  target     = ["production"]
+}
+
+resource "vercel_project_environment_variable" "prod_supabase_url" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "NEXT_PUBLIC_SUPABASE_URL"
+  value      = "https://${supabase_project.prod.id}.supabase.co"
+  target     = ["production"]
+}
+
+resource "vercel_project_environment_variable" "prod_supabase_anon_key" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+  value      = supabase_project.prod.anon_key
+  target     = ["production"]
+}
+
+resource "vercel_project_environment_variable" "prod_app_url" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "NEXT_PUBLIC_APP_URL"
+  value      = "https://${var.custom_domain}"
+  target     = ["production"]
+}
+
+# ----------------------------------------------------
+# 4. Inyección de Variables en Vercel: DESARROLLO Y PREVIEWS
+# (Aplica en ramas secundarias, PRs y desarrollo local con vercel env pull)
+# ----------------------------------------------------
 
 resource "vercel_project_environment_variable" "dev_db_url" {
   project_id = data.vercel_project.autoprod.id
   key        = "DATABASE_URL"
-  # URL construida con pgBouncer (puerto 6543)
   value      = "postgresql://postgres.${supabase_project.dev.id}:${var.db_password_dev}@aws-0-${supabase_project.dev.region}.pooler.supabase.com:6543/postgres?pgbouncer=true"
   target     = ["development", "preview"]
 }
@@ -60,7 +104,6 @@ resource "vercel_project_environment_variable" "dev_db_url" {
 resource "vercel_project_environment_variable" "dev_direct_url" {
   project_id = data.vercel_project.autoprod.id
   key        = "DIRECT_URL"
-  # URL directa (puerto 5432)
   value      = "postgresql://postgres.${supabase_project.dev.id}:${var.db_password_dev}@aws-0-${supabase_project.dev.region}.pooler.supabase.com:5432/postgres"
   target     = ["development", "preview"]
 }
@@ -72,10 +115,34 @@ resource "vercel_project_environment_variable" "dev_supabase_url" {
   target     = ["development", "preview"]
 }
 
-# La llave anónima se recupera a través de la API del proyecto
 resource "vercel_project_environment_variable" "dev_supabase_anon_key" {
   project_id = data.vercel_project.autoprod.id
   key        = "NEXT_PUBLIC_SUPABASE_ANON_KEY"
   value      = supabase_project.dev.anon_key
   target     = ["development", "preview"]
+}
+
+resource "vercel_project_environment_variable" "dev_app_url" {
+  project_id = data.vercel_project.autoprod.id
+  key        = "NEXT_PUBLIC_APP_URL"
+  value      = "https://dev.${var.custom_domain}"
+  target     = ["development", "preview"]
+}
+
+# ----------------------------------------------------
+# 5. Configuración del Dominio Personalizado en Vercel
+# ----------------------------------------------------
+
+# Dominio Apex (ej. autoprodai.com)
+resource "vercel_project_domain" "production_domain" {
+  project_id = data.vercel_project.autoprod.id
+  domain     = var.custom_domain
+}
+
+# Redirección de www hacia el dominio principal con código 308 (Permanente)
+resource "vercel_project_domain" "production_www" {
+  project_id           = data.vercel_project.autoprod.id
+  domain               = "www.${var.custom_domain}"
+  redirect             = vercel_project_domain.production_domain.domain
+  redirect_status_code = 308
 }

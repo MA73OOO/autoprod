@@ -37,13 +37,14 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
 - 💳 **Subscriptions, Billing & Token Economics:** [Ficha Técnica](file:///e:/autoprod/docs/features/subscriptions_and_billing/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/subscriptions_and_billing/idea.md)
 - 🗃️ **Biblioteca de Recursos (Asset Library & CRUD):** [Ficha Técnica](file:///e:/autoprod/docs/features/asset_library/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/asset_library/idea.md)
 - 🎨 **Creador de Imágenes & Miniaturas IA (Image Studio):** [Ficha Técnica](file:///e:/autoprod/docs/features/image_generator/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/image_generator/idea.md)
+- 🏛️ **Gobernanza de Canales (FEAT-12):** [Ficha Técnica](file:///e:/autoprod/docs/features/channel_governance/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_governance/idea.md)
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.
 - 🌐 **[Backend (Next.js)](file:///e:/autoprod/docs/backend/README.md):** API Routes, Supabase, Vercel AI SDK.
 - 🗄️ **[Base de Datos (Prisma)](file:///e:/autoprod/docs/database/README.md):** Esquemas, migraciones, sincronización con auth de Supabase.
-- 🛣️ **[Roadmap y Planeación](file:///e:/autoprod/docs/plan/roadmap.md):** Visión a futuro e historial de implementaciones.
 - 🎯 **[Master Feature Tracker](file:///e:/autoprod/docs/features/README.md):** Control central de alcance, estado y banco de ideas.
+- 🔧 **[Catálogo de Funciones & Protocolo de Ideas](file:///e:/autoprod/docs/functions/README.md):** Herramientas activas del Orquestador, sub-agentes y lista de capacidades **no implementadas**. Si el usuario pide algo que no existe aquí, el agente DEBE preguntar si quiere gestionarlo.
 
 ---
 
@@ -55,3 +56,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
 4. **Estructura Estándar Dual para features:** Cada carpeta dentro de `docs/features/{tu_feature}/` DEBE contener:
    - **`ficha_tecnica.md`:** Código real detrás de la función (endpoints, modelos, archivos exactos, rendimiento y capacidades `✅ HECHAS`).
    - **`idea.md`:** Visión de negocio, propósito del creador, capacidades `⏳ FALTANTES` y banco de ideas de escalabilidad.
+5. **Protocolo de ideas no implementadas:** Si el usuario menciona una capacidad que **no existe** en el [Catálogo de Funciones](file:///e:/autoprod/docs/functions/README.md), DEBES:
+   - Notificarle que esa funcionalidad no está implementada aún.
+   - Preguntarle si quiere que la gestionemos: registrarla en el Master Tracker (`docs/features/README.md`) y/o crear su carpeta `docs/features/{slug}/` con `idea.md`.
+   - **Nunca improvisar código ni asumir que existe un endpoint para algo que no está catalogado.**

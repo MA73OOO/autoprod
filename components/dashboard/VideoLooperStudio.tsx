@@ -797,11 +797,23 @@ export default function VideoLooperStudio({
                   {lang === 'es' ? 'Previsualizador de Loop (HD)' : 'Loop Previsualizer (HD)'}
                 </h2>
               </div>
-              {previewVideoUrl && (
-                <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 font-bold">
-                  ✓ Listo
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                {previewVideoUrl && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/60 text-emerald-400 font-bold">
+                    ✓ Listo
+                  </span>
+                )}
+                {(previewVideoUrl || (!isRenderingPreview && !previewVideoUrl && selectedVideos.length > 0)) && (
+                  <button
+                    onClick={handleRenderPreview}
+                    disabled={isRenderingPreview || isRenderingFull || selectedVideos.length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer border bg-zinc-800 hover:bg-zinc-700 border-zinc-700 hover:border-purple-500 text-zinc-300 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                    title={lang === 'es' ? 'Regenerar previsualización con la configuración actual' : 'Regenerate preview with current settings'}
+                  >
+                    🔄 {lang === 'es' ? 'Regenerar' : 'Regenerate'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {isRenderingPreview ? (
@@ -859,16 +871,28 @@ export default function VideoLooperStudio({
                   loop
                   className="w-full rounded-lg border border-purple-500/40 shadow-2xl bg-black aspect-video object-contain"
                 />
-                <div className="flex items-center justify-between text-[11px] text-zinc-400 px-1">
+                <div className="flex items-center justify-between text-[11px] px-1">
                   <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
-                    <span className="text-emerald-400">✓</span> Muestra renderizada en alta fidelidad.
+                    <span className="text-emerald-400">✓</span> Muestra en alta fidelidad — 
+                    <span className="text-zinc-500 font-mono">{resolution.toUpperCase()} • {quality === 'master' ? 'CRF 14' : quality === 'balanced' ? 'CRF 21' : 'CRF 17'}{muteOriginalAudio ? ' • 🔇' : ''}</span>
                   </span>
-                  <button
-                    onClick={() => window.open(previewVideoUrl, '_blank')}
-                    className="text-purple-400 hover:text-purple-300 font-semibold cursor-pointer underline"
-                  >
-                    Abrir video en pestaña nueva ↗
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleRenderPreview}
+                      disabled={isRenderingPreview || selectedVideos.length === 0}
+                      className="flex items-center gap-1 text-zinc-400 hover:text-white font-semibold cursor-pointer transition-colors disabled:opacity-40"
+                      title="Regenerar preview con la configuración actual"
+                    >
+                      🔄 Regenerar
+                    </button>
+                    <span className="text-zinc-700">|</span>
+                    <button
+                      onClick={() => window.open(previewVideoUrl, '_blank')}
+                      className="text-purple-400 hover:text-purple-300 font-semibold cursor-pointer underline"
+                    >
+                      Abrir ↗
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

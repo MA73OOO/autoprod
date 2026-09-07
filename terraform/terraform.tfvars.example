@@ -1,0 +1,35 @@
+# ==============================================================================
+# AutoProd: Variables de Configuración para Terraform
+# ==============================================================================
+# INSTRUCCIONES:
+# 1. Copia este archivo con el nombre: terraform.tfvars
+# 2. Llena los valores reales de tus cuentas de Supabase y Vercel.
+# 3. NUNCA compartas ni hagas commit de terraform.tfvars (ya está en .gitignore).
+# ==============================================================================
+
+# 1. Credenciales de Supabase
+# Obtén tu token en: https://supabase.com/dashboard/account/tokens
+supabase_access_token = "sbp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Obtén tu Organization ID en: https://supabase.com/dashboard/org/_/general
+supabase_org_id       = "xxxxxxxxxxxxxxxxxxxx"
+
+# 2. Credenciales de Vercel
+# Obtén tu token en: https://vercel.com/account/tokens
+vercel_api_token      = "xxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Nombre exacto de tu proyecto en Vercel
+vercel_project_name   = "autoprod"
+
+# 3. Dominio Oficial de Producción
+custom_domain         = "autoprodai.com"
+
+# 4. Región de Supabase (us-east-1 es recomendada para latencia baja con Vercel)
+region                = "us-east-1"
+
+# 5. Contraseñas Fuertes para las Bases de Datos (Genera claves largas y seguras)
+db_password_dev       = "PasswordFuerteDev123!#"
+db_password_prod      = "PasswordFuerteProd456!#"
+
+# 6. Ejecutar script local de Vault vía psql (false por defecto para evitar errores si no tienes psql instalado)
+enable_vault_provisioner = false

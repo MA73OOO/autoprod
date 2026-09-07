@@ -48,6 +48,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 | **FEAT-09** | **Sistema de Suscripciones & Monetización** | Next.js / Lemon Squeezy / Nequi | [Ficha Técnica](file:///e:/autoprod/docs/features/subscriptions_and_billing/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/subscriptions_and_billing/idea.md) |
 | **FEAT-10** | **Token Tracker & Auditoría de Consumo** | Next.js / Prisma / Supabase | [Ficha Técnica](file:///e:/autoprod/docs/features/token_tracker/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/token_tracker/idea.md) |
 | **FEAT-11** | **Auth Guard SSR & Supabase Vault** | Next.js SSR / Vault RPC | [Ficha Técnica](file:///e:/autoprod/docs/features/auth_guard/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/auth_guard/idea.md) |
+| **FEAT-12** | **Gobernanza de Canales (localPath, niche, Guardrail IA)** | Next.js / Prisma / AI SDK | [Ficha Técnica](file:///e:/autoprod/docs/features/channel_governance/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_governance/idea.md) |
 
 ---
 

@@ -1,159 +1,108 @@
-# 🚀 Documentación de Funciones del Sistema
+# 🔧 Catálogo de Funciones y Herramientas del Sistema (AutoProd)
 
-## 📌 Arquitectura Funcional
-
-AutoProd opera con una **Arquitectura Agéntica Híbrida Multi-Modelo** donde las funciones se ejecutan mediante un catálogo dinámico de agentes almacenados en la base de datos.
+> **Propósito de este documento:** Referencia técnica del catálogo de herramientas, sub-agentes y funciones que el Orquestador puede invocar. Si durante una conversación **el usuario menciona una capacidad o idea que no existe aún en este catálogo**, el agente de IA debe:
+> 1. Identificar que la función aún no está implementada.
+> 2. Preguntarle al usuario si desea gestionar esa idea (crear una tarjeta en el Master Tracker o crear la carpeta en `docs/features/`).
+> 3. No improvisar ni asumir que existe.
 
 ---
 
-## 1. 🧠 Protocolo Agentic Orchestrator (Function Calling)
+## 🧠 1. Protocolo de Ejecución Agéntica (Function Calling)
 
-El Orquestador se comunica con el backend mediante la funcionalidad nativa de **Function Calling** (proveída por el Vercel AI SDK), reemplazando el antiguo modelo basado en Expresiones Regulares.
+El Orquestador opera mediante **Function Calling nativo** del Vercel AI SDK:
 
-**Flujo completo:**
 1. El usuario envía un mensaje al chat.
-2. El backend (`app/api/chat/route.ts`) consulta en Prisma el Agente `Orchestrator` (`isOrchestrator: true`) y carga sus herramientas (`Tools`) asociadas.
-3. Se construye un System Prompt dinámico inyectando automáticamente las reglas del canal (`contextRules`) si se provee un `channelId`.
-4. El backend convierte el JSON Schema de cada herramienta al formato Zod nativo utilizando `jsonSchema` de `ai-core`.
-5. El LLM (Gemini, OpenAI, Anthropic) evalúa si necesita llamar a una herramienta. Si decide usarla, el SDK Vercel AI interrumpe, ejecuta el bloque `execute` asociado (haciendo fetch al Motor Python) y devuelve la respuesta al LLM.
-6. El LLM genera una respuesta final informada con el resultado del sistema de archivos. Todo ocurre fluidamente usando `generateText` con `maxSteps: 5`.
+2. `app/api/chat/route.ts` consulta en Prisma el Agente `Orchestrator` (`isOrchestrator: true`) y carga sus `Tools`.
+3. Se construye un System Prompt dinámico inyectando `contextRules` del canal si se provee `channelId`.
+4. Los JSON Schemas de herramientas se convierten al formato Zod vía `jsonSchema()` de `ai-core`.
+5. El LLM decide si usar herramientas. Si las usa, el SDK ejecuta el bloque `execute` (fetch al Motor Python) y devuelve el resultado al LLM.
+6. El LLM genera la respuesta final con `generateText` con `maxSteps: 5`.
 
 ---
 
-## 2. 🔧 Herramientas Primitivas (Ejecución Vía Motor Local)
+## 🔌 2. Herramientas Primitivas (Motor Local Python `localhost:8000`)
 
-Estas herramientas se ejecutan delegando la petición al Motor Python en puerto 8000, lo que permite la manipulación física del sistema de archivos:
+Herramientas de bajo nivel registradas en el catálogo de Prisma:
 
-### `workspace_list` — Listar Workspace
-- **Función:** Lista recursiva del árbol de archivos y carpetas del proyecto seleccionado (hasta 4 niveles).
-- **Endpoint interno:** `GET http://localhost:8000/workspace/?base_path={path}`
-- **Respuesta formateada:** Árbol con formato `├──` / `└──` para presentar al modelo.
-
-### `workspace_read` — Leer Archivo
-- **Función:** Lee el contenido de un archivo. Trunca a 8000 caracteres.
-- **Endpoint interno:** `GET http://localhost:8000/workspace/file?path={fullPath}`
-- **Argumentos:** `file` (Ruta relativa).
-
-### `workspace_write` — Escribir Archivo
-- **Función:** Guarda o sobrescribe un archivo. Crea el directorio si no existe.
-- **Endpoint interno:** `POST http://localhost:8000/workspace/file` con body `{ path, content }`
-- **Argumentos:** `file` (Ruta), `content` (Texto).
-
-### `workspace_delete` — Eliminar Archivo
-- **Función:** Elimina un archivo del proyecto.
-- **Endpoint interno:** `DELETE http://localhost:8000/workspace/file?path={fullPath}`
-- **Argumentos:** `file` (Ruta).
+| Slug | Descripción | Endpoint Python | Estado |
+|---|---|---|:---:|
+| `workspace_list` | Lista recursiva del árbol de archivos hasta 4 niveles | `GET /workspace/?base_path={path}` | `✅ ACTIVA` |
+| `workspace_read` | Lee contenido de un archivo (máx 8000 chars) | `GET /workspace/file?path={fullPath}` | `✅ ACTIVA` |
+| `workspace_write` | Guarda o sobrescribe un archivo | `POST /workspace/file` | `✅ ACTIVA` |
+| `workspace_delete` | Elimina un archivo del proyecto | `DELETE /workspace/file?path={fullPath}` | `✅ ACTIVA` |
+| `crear_carpetas` | Crea canal y subcarpetas en bloque | `POST /workspace/create` | `✅ ACTIVA` |
+| `eliminar_carpetas` | Elimina una o varias carpetas | `POST /workspace/delete_folder` | `✅ ACTIVA` |
+| `extraer_canal_youtube` | Extrae metadatos y contexto vectorial de un canal de YouTube | `/api/tools/extraer_canal_youtube` | `✅ ACTIVA` |
 
 ---
 
-## 3. ⚡ Sub-Agentes (Agentes Especialistas)
+## ⚡ 3. Sub-Agentes Especialistas (Cloud Premium)
 
-Estos agentes usan modelos cloud premium (Gemini, OpenAI, Anthropic) y se activan por delegación del Orquestador:
+Agentes que usan modelos pesados y se activan por delegación del Orquestador:
 
-### `channel_architect` — Arquitecto de Canales
-- **Slug:** `channel_architect`
-- **Endpoint:** `/api/agents/channel-creator`
-- **Modelo:** Gemini 1.5 Flash (via `@ai-sdk/google`)
-- **Flujo:**
-  1. Recibe `workspacePath`, `channelName` y opcionalmente `superPrompt` de Llama.
-  2. Si hay Súper Prompt, llama a Gemini para generar contenido creativo.
-  3. Crea la estructura de carpetas via Motor Python: `Videos/`, `Imagenes/`, `Musica/`, `loop/`, `guion/`, `Prompts/`.
-  4. Guarda `ConfigCanal.md` con el contenido generado.
-
-### `gestor_movement` — Gestor Movement
-- **Slug:** `gestor_movement`
-- **Endpoint:** `/api/agents/movement`
-- **Modelo:** Gemini 1.5 Flash con **AI SDK tools nativos**
-- **Tools disponibles:**
-  - `read_file` — Lee archivo `.md`/`.txt` (máx. 15000 chars).
-  - `write_file` — Guarda contenido generado en archivo.
-  - `create_folder` — Crea carpeta con subcarpetas.
-- **Flujo:**
-  1. Recibe un `superPrompt` preparado por Llama.
-  2. Gemini ejecuta hasta 5 pasos (`maxSteps: 5`) pudiendo leer, pensar y escribir.
-  3. Las tools se comunican con el Motor Python en puerto 8000.
-  4. Retorna un resumen de lo ejecutado.
+| Slug | Nombre | Endpoint | Modelo | Estado |
+|---|---|---|---|:---:|
+| `channel_architect` | Arquitecto de Canales | `/api/agents/channel-creator` | Gemini Flash | `✅ ACTIVO` |
+| `gestor_movement` | Gestor Movement | `/api/agents/movement` | Gemini Flash + AI SDK Tools | `✅ ACTIVO` |
 
 ---
 
-## 4. 📋 ContextManager — Inyección de Reglas
+## 🎛️ 4. Herramientas Planificadas (No Implementadas)
 
-Implementado en [`lib/agents/context-manager.ts`](file:///e:/AutoProd/lib/agents/context-manager.ts), este módulo enriquece los prompts con contexto del proyecto:
+> **⚠️ IMPORTANTE PARA AGENTES:** Si el usuario solicita alguna de las siguientes capacidades, esta **NO existe aún**. Debes notificarlo y preguntar si quiere que la gestionemos creando una entrada en el [Master Feature Tracker](file:///e:/autoprod/docs/features/README.md).
 
-### Reglas Globales
-Lee archivos de la raíz del workspace:
-- `PROMPT_OPTIMIZADOR_SEO.md` — Reglas de SEO y formato.
-- `PLANTILLA_DESCRIPCIONES.md` — Plantilla de descripciones.
-
-### Reglas de Canal
-Lee el archivo `.autoprod_channel.md` dentro de la carpeta del canal:
-- Contiene reglas específicas del nicho, tono, público objetivo.
-- Se inyectan al System Prompt cuando hay un canal seleccionado.
+| Capacidad | Área | Estado | Referencia |
+|---|---|:---:|---|
+| Subida directa de video a YouTube (OAuth + Upload API v3) | Integración YouTube | `📋 PLANIFICADO` | [Idea](file:///e:/autoprod/docs/features/youtube_channel_extractor/idea.md) |
+| Editor/Parseador visual de `config_subida.md` | Frontend | `📋 PLANIFICADO` | — |
+| Instalador automático de dependencias (`autoprod-setup`) | Motor Local | `🔄 EN PROGRESO` | [Idea](file:///e:/autoprod/docs/features/local_motor/idea.md) |
+| Calendario de publicación y cron automatizado | Scheduler | `📋 PLANIFICADO` | [Idea](file:///e:/autoprod/docs/features/README.md) |
+| Motor TTS Multi-Voz (Edge-TTS + ElevenLabs) | Multimedia | `💡 IDEA` | — |
+| Render batch nocturno en cola | Multimedia | `💡 IDEA` | — |
+| Auto-corte a YouTube Shorts / TikTok (9:16) | Multimedia | `💡 IDEA` | — |
+| Agente A/B Testing de Miniaturas | IA Agéntica | `💡 IDEA` | — |
+| Dashboard de Analíticas de YouTube | Integración YouTube | `💡 IDEA` | — |
+| Webhooks de alerta a Discord / Telegram | Notificaciones | `💡 IDEA` | — |
+| Modo Agencia y Multi-Canal con roles | SaaS | `💡 IDEA` | — |
+| Empaquetador de escritorio (Tauri / Electron `.exe`) | Distribución | `💡 IDEA` | — |
 
 ---
 
-## 5. 📊 Token Usage Tracking
+## 📋 5. Protocolo de Gestión de Ideas para Agentes
 
-Cada llamada a un provider cloud registra automáticamente el consumo:
+Cuando el usuario mencione algo que **no está en las herramientas activas** de la sección 2 y 3:
 
-| Campo | Descripción |
+```
+1. Identificar que la capacidad no existe en el catálogo actual.
+2. Informar al usuario: "Esa funcionalidad no está implementada aún."
+3. Preguntar: "¿Quieres que la registremos como una idea en el Master Tracker?"
+4. Si acepta → crear la entrada en docs/features/README.md (sección Backlog)
+   y opcionalmente crear la carpeta docs/features/{slug}/ con idea.md.
+5. NO improvisar código ni asumir que existe un endpoint para ello.
+```
+
+---
+
+## 📁 6. ContextManager — Inyección de Reglas de Canal
+
+Implementado en [`lib/agents/context-manager.ts`](file:///e:/autoprod/lib/agents/context-manager.ts):
+
+**Reglas Globales** (desde raíz del workspace):
+- `PROMPT_OPTIMIZADOR_SEO.md` — Reglas de SEO y formato de títulos/descripciones.
+- `PLANTILLA_DESCRIPCIONES.md` — Plantilla estándar de descripciones de YouTube.
+
+**Reglas de Canal** (desde carpeta del canal):
+- `.autoprod_channel.md` — Nicho, tono, público objetivo y restricciones específicas del canal.
+- Se inyectan en el System Prompt cuando hay un `channelId` activo.
+
+---
+
+## 📝 7. Plantillas de Prompt del Sistema
+
+| Nombre | Propósito |
 |---|---|
-| `provider` | `gemini`, `openai`, `anthropic` |
-| `modelName` | `gemini-3.6-flash`, `gpt-4o`, `claude-3-5-sonnet-20240620` |
-| `promptTokens` | Tokens de entrada consumidos |
-| `completionTokens` | Tokens de salida generados |
-| `totalTokens` | Total (prompt + completion) |
-| `userId` | Usuario que hizo la llamada |
-| `conversationId` | Conversación asociada (opcional) |
-
-El registro es **fire-and-forget** — no bloquea la respuesta HTTP al usuario.
-
----
-
-## 6. 🔑 Modelo BYOK Multi-Provider (Bring Your Own Key)
-
-### Providers Soportados
-
-| Provider | Config en `User` | Modelo por Defecto |
-|---|---|---|
-| Gemini | `geminiVaultId` | `gemini-3.6-flash` |
-| OpenAI | `openaiVaultId` | `gpt-4o` |
-| Anthropic | `anthropicVaultId` | `claude-3-5-sonnet-20240620` |
-| Ollama | N/A (local) | `llama3.1:latest` |
-
-### Flujo de Encriptación
-1. Usuario ingresa API Key en `UserSettingsModal`.
-2. `/api/settings/keys` encripta la clave en Supabase Vault.
-3. Se guarda el `secretId` en el campo Vault del `User`.
-4. En cada chat, se desencripta con `supabase.rpc('get_decrypted_secret')`.
-
-### Costo Operativo: $0 USD
-- Cada usuario aporta su propia clave/cuota de IA.
-- Ollama corre 100% local sin costos.
-- El servidor de AutoProd no paga por tokens.
-
----
-
-## 7. 🗂️ Prompt Templates del Sistema
-
-Templates poblados via [`seed_agents.cjs`](file:///e:/AutoProd/seed_agents.cjs):
-
-| Name | Propósito |
-|---|---|
-| `orchestrator_base` | SOP del orquestador: reglas absolutas de exploración-primero, prohibición de inventar archivos |
-| `tool_injection` | Instrucción inyectada tras resultado de API: evaluar, pedir más contexto o responder |
-| `crear_canal` | Template para configurar y planificar un canal de YouTube |
-| `crear_video` | Template de planeación de carpetas y metadata de video |
-| `crear_guion` | Template para escritura de guiones escena por escena en Markdown |
-
----
-
-## 8. 🎬 Generador & Renderizador de Videos Local (Planificado)
-
-* **Propósito:** Concatenar pistas de audio, videos de fondo y audio ambiental.
-* **Modos de Duración:**
-  * Duración Natural (Suma exacta de canciones en `Musica/`).
-  * Duración Fija (60 minutos en bucle).
-  * Duración Personalizada.
-* **Ejecución:** Motor Python Local llamando a FFmpeg nativo.
-* **Estado:** Planificado para fases futuras del roadmap.
+| `orchestrator_base` | SOP del orquestador: explorar antes de actuar, no inventar rutas. |
+| `tool_injection` | Instrucción post-resultado de herramienta: evaluar, pedir contexto o responder. |
+| `crear_canal` | Template para configurar y planificar un canal de YouTube. |
+| `crear_video` | Template de planeación de carpetas y metadata de video. |
+| `crear_guion` | Template para escritura de guiones escena por escena en Markdown. |
