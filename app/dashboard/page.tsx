@@ -148,6 +148,14 @@ export default function Dashboard() {
   };
 
   const handleCreateChannel = async (basePath: string, channelName: string, folders: string[]) => {
+    const maxChannels = userProfile?.maxChannels ?? 1;
+    if (userProfile?.role !== 'ADMIN' && workspaceTree.length >= maxChannels) {
+      toast.error(lang === 'es'
+        ? `Límite alcanzado. Tu plan permite un máximo de ${maxChannels} canal(es). Mejora a Pro o Enterprise para agregar más canales.`
+        : `Limit reached. Your plan allows a maximum of ${maxChannels} channel(s). Upgrade to Pro or Enterprise.`);
+      setShowPlansModal(true);
+      return;
+    }
     const toastId = toast.loading('Creando estructura...');
     try {
       await ControladorClient.initVideoWorkspace(basePath, channelName, "Estructura_Base", folders);
@@ -370,6 +378,15 @@ export default function Dashboard() {
   };
 
   const handleNewConversationWithRole = async (roleType: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel') => {
+    const maxChannels = userProfile?.maxChannels ?? 1;
+    if ((roleType === 'channel' || roleType === 'import_channel') && userProfile?.role !== 'ADMIN' && workspaceTree.length >= maxChannels) {
+      toast.error(lang === 'es'
+        ? `Has alcanzado el límite de ${maxChannels} canal(es) de tu plan actual. Actualiza a Plan Pro o Enterprise para gestionar múltiples canales.`
+        : `You have reached the limit of ${maxChannels} channel(s) for your plan. Upgrade to Pro or Enterprise.`);
+      setShowPlansModal(true);
+      return;
+    }
+
     const nameMap: Record<string, string> = { channel: 'crear_canal', video: 'crear_video', script: 'crear_guion', prompt: 'crear_prompt', import_channel: 'extraer_canal_youtube' };
     const template = promptTemplates.find(p => p.name === nameMap[roleType]);
 

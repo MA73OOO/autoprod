@@ -8,6 +8,7 @@ import path from 'path';
 import { getWorkspacePath } from '@/harness/setup/detector';
 import { extractFullChannel } from '@/lib/youtube/extractor';
 import { processChannelAnalytics } from '@/lib/youtube/analytics';
+import { PLANS_CONFIG } from '@/lib/pricing-config';
 
 // Función auxiliar para obtener la YouTube API Key
 async function getYouTubeApiKey(supabase: any, userId: string): Promise<string> {
@@ -78,6 +79,28 @@ export async function POST(req: Request) {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false }
     });
+
+    // 0. Validar límite de canales del plan del usuario
+    const userRecord = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscription: { include: { plan: { include: { limits: true } } } },
+        channels: true,
+      }
+    });
+
+    const userPlan = (userRecord?.subscription?.plan?.name as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE') || 'FREE';
+    const planConfig = PLANS_CONFIG[userPlan] || PLANS_CONFIG.FREE;
+    const maxChannels = userRecord?.subscription?.plan?.limits?.maxChannels ?? planConfig.maxChannels;
+    const currentChannelsCount = userRecord?.channels?.length ?? 0;
+
+    if (userRecord?.role !== 'ADMIN' && currentChannelsCount >= maxChannels) {
+      return NextResponse.json({
+        success: false,
+        requiresUpgrade: true,
+        error: `Has alcanzado el límite de tu plan ${planConfig.displayName} (${maxChannels} canal${maxChannels > 1 ? 'es' : ''}). Para conectar más canales simultáneos, actualiza a Plan Pro ($100 USD) o Enterprise ($150 USD).`
+      }, { status: 403 });
+    }
 
     // ──────────────────────────────────────────────
     // 1. Obtener API Keys

@@ -266,6 +266,9 @@ export async function POST(req: Request) {
             for (const entry of entries) {
               if (entry.name.startsWith('.')) continue;
               if (entry.isDirectory()) {
+                if (!existingChannels.includes(entry.name)) {
+                  existingChannels.push(entry.name);
+                }
                 const subPath = path.join(currentWorkspacePath, entry.name);
                 let subDirs: string[] = [];
                 try {
@@ -279,7 +282,7 @@ export async function POST(req: Request) {
               }
             }
             if (structureLines.length > 0) {
-              workspaceStructureSnapshot = `\n\n--- ESTADO ACTUAL DEL WORKSPACE EN DISCO (TIEMPO REAL) ---\nUbicación: ${currentWorkspacePath}\nElementos detectados actualmente:\n${structureLines.join('\n')}\n(Usa esta lista como verdad absoluta de lo que existe físicamente en el disco duro del usuario al momento de responder. Si el usuario pregunta qué tiene o se refiere a un canal o carpeta, básate en este estado).`;
+              workspaceStructureSnapshot = `\n\n--- ESTADO ACTUAL DEL WORKSPACE EN DISCO (TIEMPO REAL) ---\nUbicación: ${currentWorkspacePath}\nCanales detectados físicamente (${existingChannels.length}): ${existingChannels.join(', ')}\nElementos detectados actualmente:\n${structureLines.join('\n')}\n(Usa esta lista como verdad absoluta de lo que existe físicamente en el disco duro del usuario al momento de responder. Si el usuario pregunta qué tiene o se refiere a un canal o carpeta, básate en este estado).`;
             } else {
               workspaceStructureSnapshot = `\n\n--- ESTADO ACTUAL DEL WORKSPACE EN DISCO (TIEMPO REAL) ---\nUbicación: ${currentWorkspacePath}\nEl workspace está actualmente vacío (sin canales ni archivos).`;
             }
@@ -288,7 +291,45 @@ export async function POST(req: Request) {
           console.warn("[Workspace Scan Error]:", scanErr.message);
         }
 
+        // Sincronizar canales de la base de datos
+        if (userId) {
+          try {
+            const dbChannels = await prisma.channel.findMany({ where: { userId }, select: { name: true } });
+            for (const dbc of dbChannels) {
+              if (!existingChannels.includes(dbc.name)) {
+                existingChannels.push(dbc.name);
+              }
+            }
+          } catch (dbErr: any) {
+            console.warn("[DB Channels Sync Error]:", dbErr.message);
+          }
+        }
+
         systemPrompt += workspaceStructureSnapshot;
+
+        const isAtChannelLimit = !isAdmin && existingChannels.length >= maxChannels;
+        const planLimitsDirective = `\n\n=== REGLAS COMERCIALES Y LÍMITES DE SUSCRIPCIÓN DEL USUARIO ===
+- Plan de Suscripción Actual: ${userPlan} (${planConfig.displayName})
+- Límite de canales permitidos por su plan: ${maxChannels >= 9999 ? 'Ilimitados' : `${maxChannels} canal(es)`}
+- Canales existentes actualmente en su workspace (${existingChannels.length}): ${existingChannels.length > 0 ? existingChannels.join(', ') : 'Ninguno'}
+
+⚠️ REGLA CRÍTICA DE GESTIÓN DE CANALES:
+${isAtChannelLimit ? `
+¡ATENCIÓN! El usuario ya ha alcanzado el límite máximo de canales permitidos por su plan (${existingChannels.length} de ${maxChannels} canal(es)).
+Si el usuario te solicita crear un nuevo canal, abrir un canal adicional, o generar una nueva carpeta raíz para otro canal (ejemplo: "crear otro canal", "ayúdame a crear el canal X"):
+1. TIENES ESTRICTAMENTE PROHIBIDO ejecutar herramientas de creación de carpetas o canales en la raíz del workspace (NO llames a "crear_carpetas" para un nuevo canal, ni a "extraer_canal_youtube").
+2. NUNCA digas que creaste el canal ni inventes que ya existe la carpeta o que vas a proceder a crearla.
+3. Debes responderle de forma muy amable, empática y profesional informándole:
+   "Actualmente te encuentras en el plan ${planConfig.displayName}, el cual permite un máximo de ${maxChannels} canal(es) de YouTube. Tu espacio de trabajo ya tiene activo el canal '${existingChannels[0] || 'existente'}'.
+   Para gestionar más canales simultáneos sin borrar el actual:
+   • Plan Pro ($100 USD/mes): Hasta 3 canales profesionales simultáneos (Multi-nicho).
+   • Plan Enterprise ($150 USD/mes): Canales ILIMITADOS.
+   Puedes actualizar tu plan en cualquier momento desde la ventana de Planes & Suscripciones o en la barra superior."
+` : `
+El usuario tiene disponibilidad para crear canales (${existingChannels.length} de ${maxChannels >= 9999 ? 'ilimitados' : maxChannels}). Puedes proceder con la creación cuando lo solicite.
+`}
+`;
+        systemPrompt += planLimitsDirective;
 
         const channelExtractionDirective = `\n\n--- INSTRUCCIÓN PARA EXPLICAR EXTRACCIÓN DE CANALES ---
 Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extracción de un canal o qué pasará en su espacio de trabajo:
@@ -419,6 +460,53 @@ Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extr
                         payload.target_path = effectiveWorkspaceRoot;
                       }
                     }
+                  }
+
+                  // GUARD DE LÍMITES DE SUSCRIPCIÓN PARA CREACIÓN DE CANALES
+                  if (dbTool.name === 'crear_carpetas' && !isAdmin && existingChannels.length >= maxChannels) {
+                    let isNewChannelAttempt = false;
+                    let requestedChannelName = '';
+
+                    // 1. Si se indicó channel_name y es diferente a los canales ya existentes
+                    if (payload.channel_name && !existingChannels.includes(payload.channel_name)) {
+                      isNewChannelAttempt = true;
+                      requestedChannelName = payload.channel_name;
+                    }
+
+                    // 2. Si el destino es la raíz del workspace (sin target_path o igual a effectiveWorkspaceRoot)
+                    const normTarget = (payload.target_path || '').replace(/\\/g, '/').toLowerCase();
+                    const normWsRoot = (effectiveWorkspaceRoot || '').replace(/\\/g, '/').toLowerCase();
+                    const isRootTarget = !payload.target_path || normTarget === normWsRoot || normTarget === '.' || normTarget === '/';
+
+                    if (isRootTarget && !payload.channel_name) {
+                      const candidateFolders = [
+                        payload.folder_name,
+                        ...(Array.isArray(payload.folders) ? payload.folders : []),
+                        ...(Array.isArray(payload.paths) ? payload.paths : [payload.path]),
+                      ].filter(Boolean);
+
+                      for (const f of candidateFolders) {
+                        if (typeof f === 'string') {
+                          const cleanName = path.basename(f.trim().replace(/\\/g, '/'));
+                          // Si no es un canal existente ni pertenece a uno existente
+                          if (!existingChannels.includes(cleanName) && !existingChannels.some(ch => f.includes(ch))) {
+                            isNewChannelAttempt = true;
+                            requestedChannelName = cleanName;
+                            break;
+                          }
+                        }
+                      }
+                    }
+
+                    if (isNewChannelAttempt) {
+                      console.warn(`[Plan Limit Guard]: Bloqueada creación del canal "${requestedChannelName}" para usuario en plan ${userPlan}`);
+                      return `[LÍMITE DE PLAN ALCANZADO]: No es posible crear el nuevo canal "${requestedChannelName}". El usuario tiene el plan ${planConfig.displayName} (${userPlan}), que solo permite un máximo de ${maxChannels} canal(es). Su workspace ya contiene el canal "${existingChannels[0] || 'existente'}". NO intentes crear la carpeta e informa claramente al usuario que ha alcanzado el límite de su plan, e invítalo a actualizar a Plan Pro ($100 USD para 3 canales) o Enterprise ($150 USD para canales ilimitados).`;
+                    }
+                  }
+
+                  if (dbTool.name === 'extraer_canal_youtube' && !isAdmin && existingChannels.length >= maxChannels) {
+                    console.warn(`[Plan Limit Guard]: Bloqueada extracción de canal para usuario en plan ${userPlan}`);
+                    return `[LÍMITE DE PLAN ALCANZADO]: No se puede extraer un nuevo canal de YouTube. El usuario se encuentra en el plan ${planConfig.displayName} (${userPlan}), el cual solo permite un máximo de ${maxChannels} canal(es). Su workspace ya cuenta con el canal '${existingChannels[0] || 'existente'}'. Informa al usuario que ha alcanzado el límite de su plan y debe subir a Plan Pro (hasta 3 canales) o Enterprise (canales ilimitados) para importar nuevos canales.`;
                   }
 
                   // 6. GUARD ESPECÍFICO para eliminar_carpetas: asegurar soporte individual y múltiple (multiplataforma)

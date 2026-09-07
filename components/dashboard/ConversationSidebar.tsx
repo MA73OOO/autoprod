@@ -26,6 +26,7 @@ interface Props {
   onOpenSubtitles?: () => void;
   onOpenAssets?: () => void;
   onOpenImages?: () => void;
+  onLinkWorkspace?: () => void;
 }
 
 export default function ConversationSidebar({
@@ -47,6 +48,7 @@ export default function ConversationSidebar({
   onOpenSubtitles,
   onOpenAssets,
   onOpenImages,
+  onLinkWorkspace,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');

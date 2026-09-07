@@ -40,6 +40,7 @@ Esta funcionalidad implementa el sistema integral de monetización, suscripcione
 - Si el balance en `Wallet` es inferior al costo requerido, responde con código **HTTP 402** y payload `{ error: '...', requiresUpgrade: true }`.
 - En el cliente (`app/dashboard/page.tsx`), la respuesta 402 abre de manera reactiva el modal `SubscriptionPlansModal`.
 - Tras una respuesta exitosa, se descuentan los créditos de forma atómica en `Wallet` y se registra el evento en `CreditConsumption`.
+- **Blindaje de Límite de Canales por Plan:** Inyecta en el `systemPrompt` el límite de canales (`maxChannels`) y los canales existentes. Si el usuario ya alcanzó el límite (ej: 1 canal en Free/Starter), la IA rechaza crear nuevos canales. Adicionalmente, las herramientas `crear_carpetas` y `extraer_canal_youtube` interceptan cualquier intento en el backend, bloqueando la llamada al motor local y devolviendo un error controlado `[LÍMITE DE PLAN ALCANZADO]`.
 
 ### 3. Pasarela de Pago Lemon Squeezy
 - El cliente llama a `POST /api/payments/checkout` con `{ planName: 'STARTER' | 'PRO' | 'ENTERPRISE' }`.
