@@ -448,13 +448,13 @@ export default function Dashboard() {
     const tempMsg: Message = { sender: 'user', text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), isTemp: true };
     
     try {
-      // 1. Obtener el modelo y deducir el proveedor seleccionado
-      let model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.5-flash' : 'gemini:gemini-3.5-flash';
-      if (model === 'default') model = 'gemini:gemini-3.5-flash';
+      // 1. Obtener el modelo y deducir el proveedor seleccionado (Por defecto OpenAI GPT-4o Mini)
+      let model = typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'openai:gpt-4o-mini' : 'openai:gpt-4o-mini';
+      if (model === 'default') model = 'openai:gpt-4o-mini';
       
-      let provider = 'gemini';
-      let actualModel = model;
-      let friendlyModelName = 'AI Model';
+      let provider = 'openai';
+      let actualModel = 'gpt-4o-mini';
+      let friendlyModelName = 'GPT-4o Mini';
       const firstColonIndex = model.indexOf(':');
       if (firstColonIndex !== -1) {
         provider = model.substring(0, firstColonIndex);
@@ -463,20 +463,14 @@ export default function Dashboard() {
         if (model.includes('gpt')) provider = 'openai';
         else if (model.includes('claude')) provider = 'anthropic';
         else if (model.includes('llama')) provider = 'ollama';
+        else if (model.includes('gemini')) provider = 'gemini';
       }
 
-      if (provider === 'gemini') {
-        const versionMatch = actualModel.match(/gemini-(\d+\.?\d*)/);
-        const version = versionMatch ? versionMatch[1] : '';
-        if (actualModel.includes('lite')) friendlyModelName = `Gemini ${version} Flash Lite`;
-        else if (actualModel.includes('flash')) friendlyModelName = `Gemini ${version} Flash`;
-        else if (actualModel.includes('pro')) friendlyModelName = `Gemini ${version} Pro`;
-        else friendlyModelName = `Gemini ${actualModel}`;
-      }
       if (provider === 'openai') friendlyModelName = actualModel.includes('mini') ? 'GPT-4o Mini' : 'GPT-4o';
-      if (provider === 'anthropic') friendlyModelName = 'Claude 3.5 Sonnet';
-      if (provider === 'ollama') friendlyModelName = `${actualModel} (Local)`;
-      if (provider === 'imagen3') friendlyModelName = 'Imagen 3';
+      else if (provider === 'gemini') friendlyModelName = 'Gemini Flash';
+      else if (provider === 'anthropic') friendlyModelName = 'Claude 3.5 Sonnet';
+      else if (provider === 'ollama') friendlyModelName = `${actualModel} (Local)`;
+      else if (provider === 'imagen3') friendlyModelName = 'Imagen 3';
       
       const startTime = Date.now();
       const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '', modelName: friendlyModelName, isGenerating: true, isTemp: true };

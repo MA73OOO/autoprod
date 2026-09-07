@@ -1,7 +1,7 @@
 # 🤖 Agentic Orchestrator
 
 ## 📌 Qué hace
-Es el "cerebro" central de la aplicación AutoProd. Recibe los mensajes del usuario desde la interfaz, los evalúa utilizando Modelos de Lenguaje (LLMs como Gemini, OpenAI o Anthropic), e invoca de manera autónoma herramientas y sub-agentes para cumplir tareas complejas como crear carpetas, redactar guiones o planificar canales.
+Es el "cerebro" central de la aplicación AutoProd. Recibe los mensajes del usuario desde la interfaz, los evalúa utilizando `gpt-4o-mini` (ChatGPT 4o Mini) de OpenAI como orquestador predeterminado, e invoca de manera autónoma herramientas y sub-agentes para cumplir tareas complejas como crear carpetas, redactar guiones o planificar canales.
 
 ## 🛠️ Cómo lo hace
 Utiliza el patrón **Function Calling Nativo** a través del Vercel AI SDK:

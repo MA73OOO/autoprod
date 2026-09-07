@@ -1,10 +1,29 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateText } from 'ai';
+import { openai } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import fs from 'fs/promises';
 import path from 'path';
 import { getWorkspacePath } from '@/harness/setup/detector';
+
+async function getToolAiModel(supabase: any, userId: string) {
+  if (process.env.OPENAI_API_KEY) {
+    return openai('gpt-4o-mini', { apiKey: process.env.OPENAI_API_KEY });
+  }
+  const { data: openaiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
+  if (openaiKey && typeof openaiKey === 'string' && openaiKey.trim() !== '') {
+    return openai('gpt-4o-mini', { apiKey: openaiKey });
+  }
+  if (process.env.GEMINI_API_KEY) {
+    return createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })('gemini-1.5-flash');
+  }
+  const { data: geminiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'gemini' });
+  if (geminiKey && typeof geminiKey === 'string' && geminiKey.trim() !== '') {
+    return createGoogleGenerativeAI({ apiKey: geminiKey })('gemini-1.5-flash');
+  }
+  return openai('gpt-4o-mini');
+}
 
 export async function POST(req: Request) {
   try {
@@ -19,14 +38,7 @@ export async function POST(req: Request) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: apiKey, error: rpcError } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'gemini' });
-    
-    if (rpcError || !apiKey) {
-      return NextResponse.json({ error: 'API Key for Gemini not found' }, { status: 403 });
-    }
-
-    const google = createGoogleGenerativeAI({ apiKey });
-    const aiModel = google('gemini-1.5-flash');
+    const aiModel = await getToolAiModel(supabase, userId);
 
     const prompt = `Eres un experto en Branding y Creación de Canales de YouTube de AutoProd.
 Debes crear la guía de recursos gráficos para el canal "${nombre_canal}".
@@ -61,7 +73,7 @@ Genera un documento Markdown con EXACTAMENTE este formato (reemplaza los valores
       prompt: prompt,
     });
 
-    const workspace = getWorkspacePath();
+    const workspace = _userContext?.workspacePath || getWorkspacePath();
     if (!workspace) throw new Error("No workspace path configured");
 
     const folderPath = path.join(workspace, nombre_canal, 'canal');

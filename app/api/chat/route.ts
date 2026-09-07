@@ -31,10 +31,14 @@ async function callPythonMotor(method: string, endpoint: string, body?: any) {
 // ──────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const { messages, provider, model, workspacePath, channelId, confirmCreditUsage } = await req.json();
+    const body = await req.json();
+    const messages = body.messages;
+    const provider = body.provider || 'openai';
+    const model = body.model === 'default' || !body.model ? 'gpt-4o-mini' : body.model;
+    const { workspacePath, channelId, confirmCreditUsage } = body;
 
-    if (!messages || !provider) {
-      return NextResponse.json({ error: 'Messages and provider are required' }, { status: 400 });
+    if (!messages) {
+      return NextResponse.json({ error: 'Messages are required' }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -62,19 +66,49 @@ export async function POST(req: Request) {
     }
 
     let apiKey = '';
-    let secretId = null;
 
-    if (provider === 'openai' || provider === 'chatgpt') secretId = userRecord?.openaiVaultId;
-    if (provider === 'gemini') secretId = userRecord?.geminiVaultId;
-    if (provider === 'anthropic') secretId = userRecord?.anthropicVaultId;
+    // 1a. PRIORIDAD 1: Variable de Entorno (.env / .env.local)
+    if ((provider === 'openai' || provider === 'chatgpt') && process.env.OPENAI_API_KEY) {
+      apiKey = process.env.OPENAI_API_KEY;
+    } else if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
+      apiKey = process.env.GEMINI_API_KEY;
+    } else if (provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+      apiKey = process.env.ANTHROPIC_API_KEY;
+    }
 
-    if (secretId) {
-      // 1. EL USUARIO TIENE BYOK ACTIVO: Usamos su llave incondicionalmente
-      const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: secretId });
-      if (secretData) {
-        apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+    // 1b. PRIORIDAD 2: BYOK en Vault (openaiVaultId, geminiVaultId, etc.)
+    if (!apiKey) {
+      let secretId = null;
+      if (provider === 'openai' || provider === 'chatgpt') secretId = userRecord?.openaiVaultId;
+      if (provider === 'gemini') secretId = userRecord?.geminiVaultId;
+      if (provider === 'anthropic') secretId = userRecord?.anthropicVaultId;
+
+      if (secretId) {
+        const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: secretId });
+        if (secretData) {
+          apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+        }
+      } 
+    }
+
+    // 1c. PRIORIDAD 3: RPC get_api_key (User API keys)
+    if (!apiKey && userId) {
+      const providerKey = (provider === 'openai' || provider === 'chatgpt') ? 'openai' : provider;
+      try {
+        const { data: rpcKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: providerKey });
+        if (rpcKey && typeof rpcKey === 'string' && rpcKey.trim() !== '') {
+          apiKey = rpcKey;
+        }
+        if (!apiKey && (provider === 'openai' || provider === 'chatgpt')) {
+          const { data: chatgptRpcKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'chatgpt' });
+          if (chatgptRpcKey && typeof chatgptRpcKey === 'string' && chatgptRpcKey.trim() !== '') {
+            apiKey = chatgptRpcKey;
+          }
+        }
+      } catch (e) {
+        console.warn('RPC get_api_key fallback error:', e);
       }
-    } 
+    }
     
     let requiredCredits = 1; // Default fallback
     let usedSystemKey = false;
@@ -172,9 +206,11 @@ export async function POST(req: Request) {
       });
 
       if (orchestrator) {
-        // Inyectar workspace_path dinámicamente en el system prompt
-        const workspacePath = getWorkspacePath() || 'No configurado';
-        const resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', workspacePath);
+        // Inyectar workspace_path dinámicamente en el system prompt (prioridad: request body del cliente -> detector)
+        const currentWorkspacePath = (workspacePath && typeof workspacePath === 'string' && workspacePath.trim() !== '')
+          ? workspacePath
+          : (getWorkspacePath() || 'No configurado');
+        const resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', currentWorkspacePath);
         systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + resolvedPrompt;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
@@ -185,22 +221,24 @@ export async function POST(req: Request) {
           
           toolNames.push(dbTool.name);
 
+          const toolSchemaObj = jsonSchema((dbTool.schema && typeof dbTool.schema === 'object') ? dbTool.schema as any : { type: 'object', properties: {} });
+
           aiTools[dbTool.name] = aiTool({
             description: dbTool.description || '',
-            parameters: jsonSchema(dbTool.schema as any),
+            inputSchema: toolSchemaObj,
+            parameters: toolSchemaObj,
             execute: async (args: any) => {
                try {
                  console.log(`[Proxy Tool] Invocando ${dbTool.name} en ${dbTool.apiEndpoint}`);
                  
-                 // Inyectar el contexto del usuario en los argumentos
-                 const payload = { ...args, _userContext: { id: userId, name: userRecord?.name, email: userRecord?.email } };
-                 
-                  // Normalización inteligente de sinónimos de parámetros (anti-422)
-                  if (!payload.path && (payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file)) {
-                    payload.path = payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file;
+                 // Inyectar el contexto dinámico del usuario en los argumentos (incluyendo workspacePath)
+                 const payload = { ...args, _userContext: { id: userId, name: userRecord?.name, email: userRecord?.email, workspacePath: currentWorkspacePath } };
+                  // 1. Normalización inteligente de sinónimos de parámetros (anti-422)
+                  if (!payload.path && (payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file || payload.target_path || payload.target || payload.nombre_archivo)) {
+                    payload.path = payload.file_path || payload.filepath || payload.filename || payload.archivo || payload.file || payload.target_path || payload.target || payload.nombre_archivo;
                   }
-                  if (!payload.content && (payload.text || payload.body || payload.data || payload.contenido)) {
-                    payload.content = payload.text || payload.body || payload.data || payload.contenido;
+                  if (!payload.content && (payload.text || payload.body || payload.data || payload.contenido || payload.idea || payload.ideas || payload.resumen || payload.guion)) {
+                    payload.content = payload.text || payload.body || payload.data || payload.contenido || payload.idea || payload.ideas || payload.resumen || payload.guion;
                   }
                   if (!payload.folder_name && (payload.folder || payload.name || payload.nombre_carpeta || payload.directory)) {
                     payload.folder_name = payload.folder || payload.name || payload.nombre_carpeta || payload.directory;
@@ -208,20 +246,146 @@ export async function POST(req: Request) {
                   if (!payload.target_path && (payload.target || payload.destination || payload.ruta_destino)) {
                     payload.target_path = payload.target || payload.destination || payload.ruta_destino;
                   }
-                  if (!payload.base_path && (payload.path && dbTool.name === 'listar_directorio')) {
-                    payload.base_path = payload.path;
+                  if (!payload.channel_name && (payload.channel || payload.canal || payload.nombre_canal)) {
+                    payload.channel_name = payload.channel || payload.canal || payload.nombre_canal;
+                  }
+                  if (!payload.base_path) {
+                    if (payload.path) payload.base_path = payload.path;
+                    else if (payload.channel_name) payload.base_path = payload.channel_name;
+                    else if (payload.folder_name && (dbTool.name === 'listar_directorio' || dbTool.name === 'listar_directorio_plano')) {
+                      payload.base_path = payload.folder_name;
+                    }
                   }
 
-                  // Blindaje: Si es una herramienta de archivos y la ruta es relativa, anteponer el workspace
-                  const workspaceRoot = getWorkspacePath();
-                  if (workspaceRoot && payload.path && typeof payload.path === 'string' && !path.isAbsolute(payload.path)) {
-                    payload.path = path.join(workspaceRoot, payload.path);
+                  // 2. Extensión .md o .txt automática para archivos
+                  if (dbTool.name === 'guardar_archivo' && payload.path && typeof payload.path === 'string') {
+                    if (!payload.path.endsWith('.md') && !payload.path.endsWith('.txt')) {
+                      payload.path += '.md';
+                    }
                   }
-                  if (workspaceRoot && payload.target_path && typeof payload.target_path === 'string' && !path.isAbsolute(payload.target_path)) {
-                    payload.target_path = path.join(workspaceRoot, payload.target_path);
+
+                  // 3. Obtener raíz de workspace efectiva (prioridad: request body -> detector)
+                  const effectiveWorkspaceRoot = (workspacePath && typeof workspacePath === 'string' && workspacePath.trim() !== '')
+                    ? workspacePath
+                    : (getWorkspacePath() || '');
+
+                  // 4. GUARD ESPECÍFICO para listar_directorio y listar_directorio_plano
+                  if (dbTool.name === 'listar_directorio' || dbTool.name === 'listar_directorio_plano') {
+                    if (!payload.base_path || payload.base_path === '.' || payload.base_path === '/') {
+                      if (payload.channel_name) {
+                        payload.base_path = effectiveWorkspaceRoot ? path.join(effectiveWorkspaceRoot, payload.channel_name) : payload.channel_name;
+                      } else {
+                        payload.base_path = effectiveWorkspaceRoot;
+                      }
+                    } else if (effectiveWorkspaceRoot && !path.isAbsolute(payload.base_path)) {
+                      payload.base_path = path.join(effectiveWorkspaceRoot, payload.base_path);
+                    }
                   }
-                  if (workspaceRoot && payload.base_path && typeof payload.base_path === 'string' && !path.isAbsolute(payload.base_path)) {
-                    payload.base_path = path.join(workspaceRoot, payload.base_path);
+
+                  // 5. GUARD ESPECÍFICO para crear_carpetas: normalización individual y múltiple
+                  if (dbTool.name === 'crear_carpetas') {
+                    // Normalizar arrays si el modelo los pasó con otros nombres
+                    if (Array.isArray(payload.folder_name)) {
+                      payload.folders = payload.folder_name;
+                      delete payload.folder_name;
+                    }
+                    if (!payload.folders && (payload.carpetas || payload.folder_names || payload.nombres)) {
+                      payload.folders = payload.carpetas || payload.folder_names || payload.nombres;
+                    }
+                    if (!payload.paths && payload.rutas) {
+                      payload.paths = payload.rutas;
+                    }
+                    if (!payload.subfolders && payload.subcarpetas) {
+                      payload.subfolders = payload.subcarpetas;
+                    }
+                    if (payload.channel && !payload.channel_name) {
+                      payload.channel_name = payload.channel;
+                    }
+                    if (payload.canal && !payload.channel_name) {
+                      payload.channel_name = payload.canal;
+                    }
+                    // Si no hay target_path ni paths, definir target_path por defecto
+                    if (!payload.target_path && !payload.paths) {
+                      if (payload.channel_name) {
+                        payload.target_path = payload.channel_name;
+                      } else {
+                        payload.target_path = effectiveWorkspaceRoot;
+                      }
+                    }
+                  }
+
+                  // 6. GUARD ESPECÍFICO para eliminar_carpetas: asegurar soporte individual y múltiple (multiplataforma)
+                  if (dbTool.name === 'eliminar_carpetas') {
+                    const channelName = payload.channel_name ?? payload.canal ?? payload.channel ?? null;
+                    if (channelName) payload.channel_name = String(channelName);
+
+                    const collectedPaths: string[] = [];
+
+                    // Recolectar de arrays
+                    const candidateArrays = [payload.paths, payload.rutas, payload.folders, payload.carpetas];
+                    for (const arr of candidateArrays) {
+                      if (Array.isArray(arr)) {
+                        for (const item of arr) {
+                          if (item && typeof item === 'string' && item.trim()) {
+                            collectedPaths.push(item.trim());
+                          }
+                        }
+                      }
+                    }
+
+                    // Recolectar de valores individuales
+                    const singleCandidates = [
+                      payload.ruta, payload.path, payload.target_path, payload.folder_path,
+                      payload.folder_name, payload.folder, payload.name, payload.carpeta
+                    ];
+                    for (const cand of singleCandidates) {
+                      if (cand && typeof cand === 'string' && cand.trim()) {
+                        if (!collectedPaths.includes(cand.trim())) {
+                          collectedPaths.push(cand.trim());
+                        }
+                      }
+                    }
+
+                    // Limpieza y estandarización a barras /
+                    if (collectedPaths.length > 0) {
+                      const cleanList = collectedPaths.map(p => {
+                        let c = p.replace(/\\/g, '/');
+                        const isAbs = c.startsWith('/') || /^[a-zA-Z]:\//.test(c);
+                        if (!isAbs && effectiveWorkspaceRoot && !payload.channel_name) {
+                          c = path.join(effectiveWorkspaceRoot, c).replace(/\\/g, '/');
+                        }
+                        return c;
+                      });
+
+                      payload.paths = cleanList;
+                      if (cleanList.length === 1) {
+                        payload.ruta = cleanList[0];
+                      }
+                    }
+                  }
+
+                  // Log args reales para debugging
+                  console.log(`[Proxy Tool] Args recibidos para ${dbTool.name}:`, JSON.stringify(args));
+                  console.log(`[Proxy Tool] Payload normalizado:`, JSON.stringify(payload));
+
+                  // 7. Garantizar que TODAS las rutas absolutas antepongan effectiveWorkspaceRoot si son relativas
+                  if (effectiveWorkspaceRoot) {
+                    if (payload.path && typeof payload.path === 'string' && !path.isAbsolute(payload.path)) {
+                      payload.path = path.join(effectiveWorkspaceRoot, payload.path);
+                    }
+                    if (payload.target_path && typeof payload.target_path === 'string' && !path.isAbsolute(payload.target_path)) {
+                      payload.target_path = path.join(effectiveWorkspaceRoot, payload.target_path);
+                    }
+                    if (payload.base_path && typeof payload.base_path === 'string' && !path.isAbsolute(payload.base_path)) {
+                      payload.base_path = path.join(effectiveWorkspaceRoot, payload.base_path);
+                    }
+                    if (Array.isArray(payload.paths) && dbTool.name !== 'eliminar_carpetas' && dbTool.name !== 'crear_carpetas') {
+                      payload.paths = payload.paths.map((p: any) => {
+                        if (typeof p !== 'string') return p;
+                        if (path.isAbsolute(p)) return p;
+                        return path.join(effectiveWorkspaceRoot, p);
+                      });
+                    }
                   }
 
                  // Para métodos GET, convertir argumentos a query params
@@ -229,7 +393,7 @@ export async function POST(req: Request) {
                  if (dbTool.method === 'GET' && payload && Object.keys(payload).length > 0) {
                    const params = new URLSearchParams();
                    for (const [key, val] of Object.entries(payload)) {
-                     if (key !== '_userContext' && val !== undefined && val !== null) {
+                     if (key !== '_userContext' && val !== undefined && val !== null && typeof val !== 'object') {
                        params.append(key, String(val));
                      }
                    }
@@ -287,7 +451,9 @@ export async function POST(req: Request) {
     let aiModel;
     let cleanModel = '';
     if (provider === 'openai' || provider === 'chatgpt') {
-      aiModel = openai('gpt-4o', { apiKey });
+      const selectedModel = model || 'gpt-4o-mini';
+      cleanModel = selectedModel;
+      aiModel = openai(selectedModel, { apiKey });
     } else if (provider === 'anthropic') {
       aiModel = anthropic(model || 'claude-3-5-sonnet-20240620', { apiKey });
     } else if (provider === 'gemini') {
@@ -298,15 +464,17 @@ export async function POST(req: Request) {
       throw new Error('Invalid provider');
     }
 
-    // Preparar historial
+    // Preparar historial (soporta contenido de texto y partes multimodales de imagen)
     const history = messages.map((m: any) => {
-      let textContent = '';
+      let content: any = '';
       if (typeof m.content === 'string') {
-        textContent = m.content;
+        content = m.content;
       } else if (Array.isArray(m.content)) {
-        textContent = m.content.map((part: any) => part.text || '').join('\n');
+        content = m.content;
+      } else {
+        content = String(m.content || '');
       }
-      return { role: m.role as 'user' | 'assistant' | 'system', content: textContent };
+      return { role: m.role as 'user' | 'assistant' | 'system', content };
     });
 
     // ──────────────────────────────────────────────

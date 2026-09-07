@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
-import { getControladorUrl } from '@/lib/controlador-client';
 import ChannelCreatorConsole from '@/components/agents/ChannelCreatorConsole';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -51,9 +50,6 @@ export default function ChatPanel({
   onSuccess,
 }: Props) {
   const t = translations[lang];
-
-  const [readyClis, setReadyClis] = useState<any[]>([]);
-  const [ollamaModels, setOllamaModels] = useState<any[]>([]);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -107,42 +103,6 @@ export default function ChatPanel({
     }
     return () => clearInterval(interval);
   }, [timerStart]);
-
-  useEffect(() => {
-    Promise.all([
-      fetch(`${getControladorUrl()}/chat/detect_clis`).then(res => res.json()).catch(() => ({ detected: [] })),
-      fetch('/api/settings/keys').then(res => res.json()).catch(() => ({ configured: [] }))
-    ]).then(([localData, cloudData]) => {
-
-      // Permite usar los motores locales (Ollama) detectados, incluso si el ping falló momentáneamente
-      const localReady = (localData.detected || []).map((cli: any) => ({
-        id: cli.id,
-        name: cli.name
-      }));
-
-      // Motores Cloud configurados en Vault
-      const cloudReady = (cloudData.configured || []).map((provider: string) => {
-        if (provider === 'gemini') return { id: 'gemini', name: 'Google Gemini (Cloud)' };
-        if (provider === 'openai' || provider === 'chatgpt') return { id: 'openai', name: 'OpenAI ChatGPT (Cloud)' };
-        if (provider === 'anthropic') return { id: 'anthropic', name: 'Anthropic Claude (Cloud)' };
-        return { id: provider, name: provider };
-      });
-
-      setReadyClis([...cloudReady, ...localReady]);
-
-      // If Ollama is ready, fetch models directly from local API
-      if (localReady.some((cli: any) => cli.id === 'ollama')) {
-        fetch('http://127.0.0.1:11434/api/tags')
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.models) {
-              setOllamaModels(data.models);
-            }
-          })
-          .catch(e => console.warn('No se pudieron obtener modelos de ollama local', e));
-      }
-    });
-  }, []);
 
   // Determinar si debemos renderizar una consola de agente especial
   if (activeConversation?.title.includes('Crear Canal')) {
@@ -278,46 +238,6 @@ export default function ChatPanel({
 
         {/* Input bar */}
         <div className="flex gap-2">
-
-          <select
-            className="bg-[#18181b] border border-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500 cursor-pointer min-w-[140px]"
-            id="modelSelector"
-            defaultValue={typeof window !== 'undefined' ? localStorage.getItem('autoprod_ai_model') || 'gemini:gemini-3.5-flash' : 'gemini:gemini-3.5-flash'}
-            onChange={(e) => {
-              if (typeof window !== 'undefined') localStorage.setItem('autoprod_ai_model', e.target.value);
-            }}
-          >
-            <option value="default">{lang === 'es' ? 'Modelo por Defecto' : 'Default Model'}</option>
-            {readyClis.some(cli => cli.id === 'openai') && (
-              <>
-                <option value="gpt-4o">GPT-4o (OpenAI)</option>
-                <option value="gpt-4o-mini">GPT-4o Mini (OpenAI)</option>
-              </>
-            )}
-            {readyClis.some(cli => cli.id === 'anthropic') && (
-              <option value="claude-3-5-sonnet-20240620">Claude 3.5 Sonnet (Anthropic)</option>
-            )}
-                <optgroup label="Gemini 3.x (Más nuevo)">
-                  <option value="gemini:gemini-3.7-flash">Gemini 3.7 Flash ✨</option>
-                  <option value="gemini:gemini-3.6-flash">Gemini 3.6 Flash</option>
-                  <option value="gemini:gemini-3.5-flash">Gemini 3.5 Flash</option>
-                  <option value="gemini:gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
-                  <option value="gemini:gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
-                  <option value="gemini:gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
-                </optgroup>
-                <optgroup label="Gemini 2.5">
-                  <option value="gemini:gemini-2.5-pro">Gemini 2.5 Pro</option>
-                  <option value="gemini:gemini-2.5-flash">Gemini 2.5 Flash</option>
-                  <option value="gemini:gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
-                </optgroup>
-            {readyClis.some(cli => cli.id === 'ollama') && ollamaModels.length > 0 ? (
-              ollamaModels.map(model => (
-                <option key={model.name} value={`ollama:${model.name}`}>{model.name} (Ollama Local)</option>
-              ))
-            ) : readyClis.some(cli => cli.id === 'ollama') ? (
-              <option value="ollama:llama3.1">Llama 3.1 (Ollama Local)</option>
-            ) : null}
-          </select>
           <input
             type="text"
             placeholder={t.promptPlaceholder}

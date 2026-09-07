@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Language, translations } from '@/app/translations';
-import { getControladorUrl, ControladorClient } from '@/lib/controlador-client';
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -14,7 +13,7 @@ interface UserSettingsModalProps {
 }
 
 export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdminMode = false }: UserSettingsModalProps) {
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>(isAdminMode ? 'ai' : 'general');
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>('general');
   const t = translations[lang];
   const [detectedClis, setDetectedClis] = useState<any[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -32,7 +31,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
       const res = await fetch('/api/setup/status');
       const data = await res.json();
       setSystemDeps(data.dependencies || []);
-    } catch(err) {
+    } catch (err) {
       console.error(err);
     } finally {
       setIsSystemDetecting(false);
@@ -45,27 +44,11 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
     }
   }, [activeSettingsTab]);
 
-  const detectEngines = () => {
-    setIsDetecting(true);
-    fetch(`${getControladorUrl()}/chat/detect_clis`)
-      .then(res => res.json())
-      .then(data => {
-        setDetectedClis(data.detected || []);
-      })
-      .catch(err => console.error("Error detecting CLIs:", err))
-      .finally(() => setIsDetecting(false));
-  };
-
-  // Fetch CLIs when AI tab is opened
-  useEffect(() => {
-    if (activeSettingsTab === 'ai') {
-      detectEngines();
-    }
-  }, [activeSettingsTab]);
+  // Removed detectEngines and related useEffect as model detection is no longer needed.
 
   const handleLogin = async (providerId: string) => {
     try {
-      const res = await fetch(`${getControladorUrl()}/chat/auth/${providerId}`, { method: 'POST' });
+      const res = await fetch(`/api/chat/auth/${providerId}`, { method: 'POST' });
       if (res.ok) {
         toast.info(lang === 'es' ? 'Sigue las instrucciones en la ventana de terminal que se acaba de abrir.' : 'Follow the instructions in the terminal window that just opened.');
       } else {
@@ -77,7 +60,6 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
   };
 
   if (!isOpen) return null;
-
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -219,16 +201,13 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
           {/* AI Settings Tab */}
           {activeSettingsTab === 'ai' && (
             <div className="space-y-6 overflow-y-auto pr-2 max-h-[350px] minimal-scrollbar">
-              
               {/* Cloud Engines (API Keys) */}
               <div>
                 <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2 mb-3">
-                  {isAdminMode 
-                    ? (lang === 'es' ? 'Llaves del Sistema' : 'System Keys')
-                    : (lang === 'es' ? 'Motores en la Nube (API Keys)' : 'Cloud Engines (API Keys)')}
+                  {isAdminMode ? (lang === 'es' ? 'Llaves del Sistema' : 'System Keys') : (lang === 'es' ? 'Motores en la Nube (API Keys)' : 'Cloud Engines (API Keys)')}
                 </h4>
                 <p className="text-[10px] text-zinc-400 mb-3">
-                  {lang === 'es' 
+                  {lang === 'es'
                     ? 'Ingresa tus API Keys para usar motores premium. Tus llaves se encriptan de forma segura en nuestra base de datos (Supabase Vault).'
                     : 'Enter your API Keys to use premium engines. Your keys are securely encrypted in our database (Supabase Vault).'}
                 </p>
@@ -254,8 +233,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                           if (res.ok) {
                             toast.success(lang === 'es' ? 'Llave de Gemini guardada' : 'Gemini Key saved');
                             window.dispatchEvent(new Event('settingsUpdated'));
-                          }
-                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                          } else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
                         }
@@ -265,7 +243,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                       {lang === 'es' ? 'Guardar Llave' : 'Save Key'}
                     </button>
                   </div>
-                  
+
                   <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-3">
                     <label className="text-xs font-bold text-zinc-200 block mb-1">OpenAI API Key (ChatGPT)</label>
                     <input
@@ -287,8 +265,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                           if (res.ok) {
                             toast.success(lang === 'es' ? 'Llave de OpenAI guardada' : 'OpenAI Key saved');
                             window.dispatchEvent(new Event('settingsUpdated'));
-                          }
-                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                          } else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
                         }
@@ -320,8 +297,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                           if (res.ok) {
                             toast.success(lang === 'es' ? 'Llave de Anthropic guardada' : 'Anthropic Key saved');
                             window.dispatchEvent(new Event('settingsUpdated'));
-                          }
-                          else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
+                          } else toast.error(lang === 'es' ? 'Error al guardar' : 'Error saving key');
                         } catch (e) {
                           toast.error('Error de conexión');
                         }
@@ -334,8 +310,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 </div>
               </div>
 
-              {/* Local Engines (Ollama) */}
-              {/* Local Engines (Ollama) Eliminado */}
+              {/* Local Engines (Ollama) Removed */}
             </div>
           )}
 
@@ -346,11 +321,10 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 {lang === 'es' ? 'Estado del Sistema' : 'System Status'}
               </h4>
               <p className="text-xs text-zinc-400">
-                {lang === 'es' 
-                  ? 'Gestiona las dependencias locales necesarias (Python, FFmpeg, Whisper, yt-dlp).' 
+                {lang === 'es'
+                  ? 'Gestiona las dependencias locales necesarias (Python, FFmpeg, Whisper, yt-dlp).'
                   : 'Manage local dependencies needed (Python, FFmpeg, Whisper, yt-dlp).'}
               </p>
-              
               <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-4 space-y-3">
                 <div className="flex justify-between items-center mb-2">
                   <h5 className="text-xs font-bold text-zinc-200">Dependencias</h5>
@@ -361,7 +335,6 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     {isSystemDetecting ? '↻...' : '↻ Refrescar'}
                   </button>
                 </div>
-
                 {systemDeps.map(dep => (
                   <div key={dep.id} className="flex items-center justify-between py-1.5 border-t border-zinc-800/50">
                     <span className="text-xs text-zinc-300">{dep.name}</span>
@@ -421,7 +394,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     setIsInstalling(true);
                     setInstallLogs([]);
                     try {
-                      await fetch('/api/setup/install', { 
+                      await fetch('/api/setup/install', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ basePath: installPath })
@@ -460,13 +433,12 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                       ? (lang === 'es' ? 'Todo Instalado' : 'All Installed')
                       : (lang === 'es' ? 'Instalar Motor' : 'Install Motor')}
                 </button>
+                {installLogs.length > 0 && (
+                  <div className="bg-black border border-zinc-800 rounded p-2 mt-4 max-h-32 overflow-y-auto font-mono text-[10px] text-zinc-400 minimal-scrollbar flex flex-col-reverse">
+                    {installLogs.slice().reverse().map((log, i) => <div key={i}>{log}</div>)}
+                  </div>
+                )}
               </div>
-
-              {installLogs.length > 0 && (
-                <div className="bg-black border border-zinc-800 rounded p-2 mt-4 max-h-32 overflow-y-auto font-mono text-[10px] text-zinc-400 minimal-scrollbar flex flex-col-reverse">
-                  {installLogs.slice().reverse().map((log, i) => <div key={i}>{log}</div>)}
-                </div>
-              )}
             </div>
           )}
 
@@ -474,7 +446,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
           {activeSettingsTab === 'commands' && (
             <div className="space-y-4">
               <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
-                {lang === 'es' ? 'Comandos y Atajos' : 'Commands & Shortcuts'}
+                {lang === 'es' ? 'Comandos y Atajos' : 'Commands \u0026 Shortcuts'}
               </h4>
               <div className="space-y-3 text-xs">
                 <div className="flex items-center justify-between bg-[#18181b] border border-zinc-800 rounded p-3">
@@ -618,28 +590,6 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
-                <div>
-                  <label className="text-zinc-500 block mb-1">
-                    {lang === 'es' ? 'Confirmar Nueva Contraseña' : 'Confirm New Password'}
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-                <button
-                  onClick={() =>
-                    toast.success(
-                      lang === 'es'
-                        ? 'Contraseña cambiada correctamente.'
-                        : 'Password updated successfully.'
-                    )
-                  }
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded font-bold transition-colors cursor-pointer"
-                >
-                  {lang === 'es' ? 'Cambiar Contraseña' : 'Update Password'}
-                </button>
               </div>
             </div>
           )}
