@@ -36,7 +36,8 @@ export async function POST(req: Request) {
     const messages = body.messages;
     const provider = body.provider || 'openai';
     const model = body.model === 'default' || !body.model ? 'gpt-4o-mini' : body.model;
-    const { workspacePath, channelId, confirmCreditUsage } = body;
+    const { workspacePath, channelId, confirmCreditUsage, deepThinking } = body;
+    const isDeepThinking = Boolean(deepThinking);
 
     if (!messages) {
       return NextResponse.json({ error: 'Messages are required' }, { status: 400 });
@@ -476,6 +477,20 @@ export async function POST(req: Request) {
             systemPrompt += `\n\n--- REGLAS DEL CANAL ACTUAL ---\n${channel.contextRules}`;
          }
       }
+
+      // Inyectar directiva de Pensamiento Profundo si está activado
+      if (isDeepThinking) {
+        systemPrompt += `\n\n=== MODO PENSAMIENTO PROFUNDO ACTIVADO (DEEP REASONING) ===
+- Tienes activado el modo de Pensamiento Profundo y Razonamiento Estratégico.
+- ANTES de ejecutar herramientas o dar tu respuesta definitiva, analiza exhaustivamente el problema paso a paso.
+- Evalúa:
+  1. Psicología y retención de la audiencia de YouTube (gancho en los primeros 5 segundos, retención a mitad del video, llamados a la acción sin fricción).
+  2. Arquitectura de contenido y coherencia con la temática del canal y el workspace.
+  3. Viabilidad técnica de las carpetas y archivos necesarios.
+  4. Optimización de CTR, SEO y posicionamiento algorítmico.
+- Si vas a ejecutar herramientas para crear canales, videos o archivos, asegúrate de planificar la estructura de carpetas y archivos con máxima precisión antes de invocar la herramienta.
+- Brinda una respuesta estructurada, profunda y de alto impacto para el creador.`;
+      }
       
     } catch (e) {
       console.warn("Fallo al cargar Orquestador de BD", e);
@@ -487,13 +502,21 @@ export async function POST(req: Request) {
     let aiModel;
     let cleanModel = '';
     if (provider === 'openai' || provider === 'chatgpt') {
-      const selectedModel = model || 'gpt-4o-mini';
+      let selectedModel = model || 'gpt-4o-mini';
+      if (isDeepThinking) {
+        selectedModel = (model && (model.includes('o1') || model.includes('o3') || (model.includes('4o') && !model.includes('mini')))) ? model : 'o3-mini';
+      }
       cleanModel = selectedModel;
       aiModel = openai(selectedModel, { apiKey });
     } else if (provider === 'anthropic') {
-      aiModel = anthropic(model || 'claude-3-5-sonnet-20240620', { apiKey });
+      const selectedModel = isDeepThinking ? 'claude-3-7-sonnet-20250219' : (model || 'claude-3-5-sonnet-20240620');
+      cleanModel = selectedModel;
+      aiModel = anthropic(selectedModel, { apiKey });
     } else if (provider === 'gemini') {
-      const rawModel = model || 'gemini-3.5-flash';
+      let rawModel = model || 'gemini-2.5-flash';
+      if (isDeepThinking) {
+        rawModel = (model && model.includes('pro')) ? model : 'gemini-2.0-flash-thinking-exp-01-21';
+      }
       cleanModel = rawModel.replace(/^models\//, '').trim();
       aiModel = createGoogleGenerativeAI({ apiKey })(cleanModel);
     } else {
@@ -627,7 +650,8 @@ export async function POST(req: Request) {
       text: finalOutput, 
       modelName: cleanModel || model,
       workspaceModified,
-      executedTools
+      executedTools,
+      isDeepThinking
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);

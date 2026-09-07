@@ -419,6 +419,7 @@ export default function Dashboard() {
 
 
   const [inputPrompt, setInputPrompt] = useState('');
+  const [isDeepThinking, setIsDeepThinking] = useState(false);
   const [checklist, setChecklist] = useState({ cta: true, timestamps: false, tags: true, saveThumbnail: true });
   const [seoOutput, setSeoOutput] = useState({
     title: 'Aprende Next.js 15 en 10 Minutos - Guía Definitiva de App Router',
@@ -473,7 +474,15 @@ export default function Dashboard() {
       else if (provider === 'imagen3') friendlyModelName = 'Imagen 3';
       
       const startTime = Date.now();
-      const tempAiMsg: Message = { sender: 'gemini', text: 'Pensando...', timestamp: '', modelName: friendlyModelName, isGenerating: true, isTemp: true };
+      const tempAiMsg: Message = { 
+        sender: 'gemini', 
+        text: isDeepThinking ? (lang === 'es' ? 'Razonando en profundidad...' : 'Deep reasoning...') : 'Pensando...', 
+        timestamp: '', 
+        modelName: friendlyModelName, 
+        isGenerating: true, 
+        isTemp: true,
+        isDeepThinking
+      };
       
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: [...c.messages, tempMsg, tempAiMsg] } : c));
 
@@ -510,6 +519,7 @@ export default function Dashboard() {
               model: actualModel,
               workspacePath: workspacePath || '',
               agentSlug,
+              deepThinking: isDeepThinking,
               confirmCreditUsage: typeof window !== 'undefined' ? localStorage.getItem('autoprod_always_confirm_credits') === 'true' : false
             }),
             signal: abortController.signal
@@ -559,7 +569,12 @@ export default function Dashboard() {
           setConversations(prev => prev.map(c => {
             if (c.id !== conversationId) return c;
             const newMsgs = [...c.messages];
-            newMsgs[newMsgs.length - 1] = { ...tempAiMsg, text: aiResponseText, modelName: data.modelName || friendlyModelName };
+            newMsgs[newMsgs.length - 1] = { 
+              ...tempAiMsg, 
+              text: aiResponseText, 
+              modelName: data.modelName || friendlyModelName,
+              isDeepThinking: data.isDeepThinking !== undefined ? data.isDeepThinking : isDeepThinking
+            };
             return { ...c, messages: newMsgs };
           }));
         }
@@ -834,6 +849,8 @@ export default function Dashboard() {
                   loadWorkspaceTree(workspacePath);
                 }
               }}
+              isDeepThinking={isDeepThinking}
+              onToggleDeepThinking={setIsDeepThinking}
             />
           )}
 

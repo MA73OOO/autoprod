@@ -7,6 +7,7 @@ export interface Message {
   isGenerating?: boolean;
   isTemp?: boolean;
   isQueued?: boolean;
+  isDeepThinking?: boolean;
 }
 
 export interface Video {

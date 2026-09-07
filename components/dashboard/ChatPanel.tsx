@@ -30,6 +30,8 @@ interface Props {
   onCancel?: () => void;
   workspacePath?: string | null;
   onSuccess?: () => void;
+  isDeepThinking?: boolean;
+  onToggleDeepThinking?: (val: boolean) => void;
 }
 
 export default function ChatPanel({
@@ -48,14 +50,69 @@ export default function ChatPanel({
   onCancel,
   workspacePath,
   onSuccess,
+  isDeepThinking = false,
+  onToggleDeepThinking,
 }: Props) {
   const t = translations[lang];
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [timerStart, setTimerStart] = useState<number | null>(null);
+
+  const PROMPT_TEMPLATES: Record<string, string> = {
+    channel: `[Configuración de Nuevo Canal de YouTube]
+• Nombre del canal: 
+• Nicho o temática (ej. Finanzas Personales, Misterio, Gaming, Tutoriales Tech): 
+• Público objetivo (edad, país, intereses): 
+• Estilo y tono del canal (ej. entretenido, analítico, formal, dinámico): 
+• Estructura de carpetas requerida (ej. Guiones, Miniaturas, Videos, Ambiente, prompts): `,
+
+    video: `[Planificación de Nuevo Video]
+• Canal de destino: 
+• Idea central o título preliminar: 
+• Formato (Short vertical / Video Largo horizontal): 
+• Duración aproximada deseada: 
+• Mensaje o aprendizaje clave para la audiencia: 
+• Objetivo principal (viralidad, conseguir suscriptores, retención máxima): `,
+
+    script: `[Redacción de Guion para Video]
+• Canal y Tema del video: 
+• Gancho inicial deseado (primeros 5-10 segundos): 
+• Tono del narrador (ej. dramático, entusiasta, sarcástico, educativo): 
+• Puntos clave o estructura deseada: 
+• Llamado a la acción (CTA) final: `,
+
+    image: `[Diseño de Miniatura / Arte Visual]
+• Canal / Video: 
+• Idea visual o concepto central de la miniatura: 
+• Emoción principal a transmitir (ej. asombro, curiosidad extrema, advertencia, éxito): 
+• Elementos visuales clave (ej. rostro en primer plano, gráfico impactante, flecha): 
+• Texto corto en la imagen (máx 3-4 palabras de alto CTR): 
+• Paleta de colores o estética visual (ej. alto contraste, oscuro y neón, minimalista): `,
+
+    editor: `[Pauta de Edición y Montaje]
+• Canal y Video: 
+• Ritmo de corte (rápido para shorts con cortes cada 2s / pausado y cinematográfico): 
+• Estilo de subtítulos (ej. dinámicos con colores y emojis / limpios y elegantes): 
+• Música de fondo sugerida y diseño de sonido (SFX): 
+• Recursos visuales o B-rolls requeridos: `
+  };
+
+  const handleInsertTemplate = (key: string) => {
+    const template = PROMPT_TEMPLATES[key];
+    if (template) {
+      onInputChange(template);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(textareaRef.current.value.length, textareaRef.current.value.length);
+        }
+      }, 50);
+    }
+  };
 
   const handleScroll = () => {
     if (chatContainerRef.current) {
@@ -186,8 +243,13 @@ export default function ChatPanel({
                 </div>
               )}
               <div className="flex justify-between items-center mt-2 gap-4">
-                <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-2">
+                <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-2 flex-wrap">
                   {msg.isQueued && <span className="text-amber-500 font-bold animate-pulse">⏳ {lang === 'es' ? 'En espera...' : 'Queued...'}</span>}
+                  {msg.isDeepThinking && (
+                    <span className="text-purple-300 bg-purple-950/70 border border-purple-800/50 rounded px-1.5 py-0.5 font-sans font-semibold flex items-center gap-1">
+                      🧠 {lang === 'es' ? 'Pensamiento Profundo' : 'Deep Thinking'}
+                    </span>
+                  )}
                   {msg.modelName && <span>🤖 {msg.modelName}</span>}
                   {msg.isGenerating && <span className="text-emerald-400 font-bold">⏳ {(elapsedMs / 1000).toFixed(1)}s</span>}
                   {!msg.isGenerating && msg.generationTimeMs && <span>⏱️ {(msg.generationTimeMs / 1000).toFixed(2)}s</span>}
@@ -213,42 +275,99 @@ export default function ChatPanel({
 
       {/* Bottom input panel */}
       <div className="p-4 border-t border-zinc-800 bg-[#0f0f12] flex flex-col gap-3">
-        {/* Agent Triggers / Switches */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => onSend('¡Inicia tu trabajo Arquitecto!', 'channel_architect')}
-            className="text-xs bg-purple-900/30 hover:bg-purple-800/50 text-purple-300 border border-purple-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
-          >
-            🏗️ {lang === 'es' ? 'Arquitecto de Canales' : 'Channel Architect'}
-          </button>
-          <button
-            onClick={() => onSend('¡Redacta un guion Guionista!', 'script_writer')}
-            className="text-xs bg-indigo-900/30 hover:bg-indigo-800/50 text-indigo-300 border border-indigo-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
-          >
-            ✍️ {lang === 'es' ? 'Guionista' : 'Script Writer'}
-          </button>
-          <button
-            onClick={() => onSend('¡Edita este contenido Editor!', 'editor')}
-            className="text-xs bg-emerald-900/30 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
-          >
-            ✂️ Editor
-          </button>
+        {/* Templates and Deep Thinking Toolbar */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-medium text-zinc-500 mr-1 flex items-center gap-1 select-none">
+              📝 {lang === 'es' ? 'Plantillas:' : 'Templates:'}
+            </span>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('channel')}
+              className="text-xs bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 border border-purple-800/40 hover:border-purple-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar preguntas para crear un canal' : 'Load questions to create a channel'}
+            >
+              🏗️ {lang === 'es' ? 'Crear Canal' : 'Create Channel'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('video')}
+              className="text-xs bg-blue-950/40 hover:bg-blue-900/60 text-blue-300 border border-blue-800/40 hover:border-blue-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar preguntas para planificar un video' : 'Load questions to plan a video'}
+            >
+              🎬 {lang === 'es' ? 'Crear Video' : 'Create Video'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('script')}
+              className="text-xs bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 border border-indigo-800/40 hover:border-indigo-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar preguntas para redactar guion' : 'Load questions to write script'}
+            >
+              ✍️ {lang === 'es' ? 'Guionista' : 'Script'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('image')}
+              className="text-xs bg-amber-950/40 hover:bg-amber-900/60 text-amber-300 border border-amber-800/40 hover:border-amber-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar preguntas para diseñar miniatura o imagen' : 'Load questions to design thumbnail'}
+            >
+              🎨 {lang === 'es' ? 'Miniatura / Arte' : 'Thumbnail'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('editor')}
+              className="text-xs bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 hover:border-emerald-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar pauta de edición' : 'Load editing checklist'}
+            >
+              ✂️ {lang === 'es' ? 'Editor' : 'Editor'}
+            </button>
+          </div>
+
+          {/* Deep Thinking Toggle */}
+          <div className="flex items-center">
+            <label 
+              className={`cursor-pointer text-xs flex items-center gap-2 px-3 py-1 rounded-md border transition-all select-none ${
+                isDeepThinking
+                  ? 'bg-purple-900/40 border-purple-500/70 text-purple-200 shadow-sm shadow-purple-500/20 font-medium'
+                  : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-zinc-300 hover:border-zinc-700'
+              }`}
+              title={lang === 'es' ? 'Activa razonamiento profundo paso a paso para tareas complejas' : 'Enable deep step-by-step reasoning for complex tasks'}
+            >
+              <input
+                type="checkbox"
+                checked={!!isDeepThinking}
+                onChange={(e) => onToggleDeepThinking && onToggleDeepThinking(e.target.checked)}
+                className="rounded bg-zinc-800 border-zinc-700 text-purple-600 focus:ring-0 focus:ring-offset-0 cursor-pointer h-3.5 w-3.5"
+              />
+              <span className="flex items-center gap-1.5">
+                🧠 {lang === 'es' ? 'Pensamiento Profundo' : 'Deep Thinking'}
+              </span>
+              {isDeepThinking && (
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+              )}
+            </label>
+          </div>
         </div>
 
-
         {/* Input bar */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder={t.promptPlaceholder}
+        <div className="flex gap-2 items-end">
+          <textarea
+            ref={textareaRef}
+            rows={Math.min(6, Math.max(2, inputPrompt.split('\n').length))}
+            placeholder={lang === 'es' ? 'Escribe tu mensaje o selecciona una plantilla de arriba... (Shift+Enter para salto de línea, Enter para enviar)' : 'Type a message or select a template above... (Shift+Enter for newline, Enter to send)'}
             value={inputPrompt}
             onChange={(e) => onInputChange(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onSend()}
-            className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                onSend();
+              }
+            }}
+            className="flex-1 bg-[#18181b] border border-zinc-800 rounded-lg px-4 py-2.5 text-sm placeholder-zinc-500 focus:outline-none focus:border-purple-500 resize-none font-sans leading-relaxed minimal-scrollbar max-h-48"
           />
           <button
             onClick={() => onSend()}
-            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 rounded-lg transition-colors flex items-center gap-2"
+            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm px-6 py-2.5 rounded-lg transition-colors flex items-center gap-2 shrink-0 h-[42px]"
           >
             {t.sendBtn}
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,7 +377,7 @@ export default function ChatPanel({
           {isGenerating && (
             <button
               onClick={onCancel}
-              className="bg-red-900/40 hover:bg-red-800/50 text-red-400 border border-red-500/30 font-bold text-sm px-4 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-red-900/40 hover:bg-red-800/50 text-red-400 border border-red-500/30 font-bold text-sm px-4 rounded-lg transition-colors flex items-center gap-2 shrink-0 h-[42px]"
               title={lang === 'es' ? 'Cancelar generación' : 'Cancel generation'}
             >
               🛑
