@@ -288,10 +288,14 @@ class SaveFileRequest(BaseModel):
     content: str
 
 @router.get("/raw")
+@router.head("/raw")
 def get_raw_file(path: str):
-    """Sirve archivos binarios o multimedia (video, audio, imagen, texto) desde el workspace para previsualización."""
+    """Sirve archivos binarios o multimedia (video, audio, imagen, texto) desde el workspace para streaming y previsualización."""
+    if not path or not path.strip():
+        raise HTTPException(status_code=400, detail="Ruta de archivo no proporcionada.")
+
     ws_root = default_workspace_path()
-    file_path = Path(path)
+    file_path = Path(path.strip())
     if not file_path.is_absolute():
         file_path = (ws_root / file_path).resolve()
     else:
@@ -301,11 +305,37 @@ def get_raw_file(path: str):
         raise HTTPException(status_code=404, detail="El archivo no existe.")
 
     mime_type, _ = mimetypes.guess_type(str(file_path))
+    if not mime_type:
+        ext = file_path.suffix.lower()
+        if ext in [".mp4", ".m4v"]:
+            mime_type = "video/mp4"
+        elif ext == ".webm":
+            mime_type = "video/webm"
+        elif ext == ".mov":
+            mime_type = "video/quicktime"
+        elif ext == ".mkv":
+            mime_type = "video/x-matroska"
+        elif ext == ".mp3":
+            mime_type = "audio/mpeg"
+        elif ext == ".wav":
+            mime_type = "audio/wav"
+        elif ext == ".ogg":
+            mime_type = "audio/ogg"
+        elif ext in [".jpg", ".jpeg"]:
+            mime_type = "image/jpeg"
+        elif ext == ".png":
+            mime_type = "image/png"
+        elif ext == ".webp":
+            mime_type = "image/webp"
+        else:
+            mime_type = "application/octet-stream"
+
     return FileResponse(
         path=str(file_path),
-        media_type=mime_type or "application/octet-stream",
-        filename=file_path.name
+        media_type=mime_type,
+        content_disposition_type="inline"
     )
+
 
 @router.get("/file")
 def read_file(path: str):
@@ -640,38 +670,66 @@ def scan_media(req: ScanMediaRequest):
         media_files = []
         skip_dirs = {".git", "node_modules", "__pycache__", ".next", ".autoprod"}
 
-        for root, dirs, files in os.walk(target_dir):
-            dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
-            for f in files:
-                ext = f.split(".")[-1].lower() if "." in f else ""
-                if ext in valid_exts:
-                    file_path = Path(root) / f
-                    try:
-                        stat = file_path.stat()
-                        in_miniat = "miniatura" in root.lower() or "thumbnail" in root.lower()
-                        in_subtit = "subtitulo" in root.lower() or "subtitles" in root.lower()
-                        in_musica = "musica" in root.lower() or "cancion" in root.lower() or "audio" in root.lower()
+        scan_roots = [target_dir]
+        # Si es un escaneo general (sin canal específico), incluir también la carpeta temp_renders externa si existe
+        if not req.channel_name:
+            config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
+            if config_path.exists():
+                try:
+                    with open(config_path, "r", encoding="utf-8") as f:
+                        cfg = json.load(f)
+                        if "basePath" in cfg:
+                            ext_temp = Path(cfg["basePath"]) / "temp_renders"
+                            if ext_temp.exists() and ext_temp.is_dir() and ext_temp.resolve() != target_dir.resolve():
+                                scan_roots.append(ext_temp)
+                except Exception:
+                    pass
 
-                        detected_type = valid_exts[ext]
-                        if detected_type == "IMAGE" and in_miniat:
-                            detected_type = "THUMBNAIL"
-                        elif ext == "txt" and not in_subtit:
+        seen_paths = set()
+        for s_root in scan_roots:
+            for root, dirs, files in os.walk(s_root):
+                dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
+                for f in files:
+                    if f.startswith("concat_"):
+                        continue
+                    ext = f.split(".")[-1].lower() if "." in f else ""
+                    if ext in valid_exts:
+                        file_path = Path(root) / f
+                        resolved_path = file_path.resolve().as_posix()
+                        if resolved_path in seen_paths:
+                            continue
+                        seen_paths.add(resolved_path)
+
+                        try:
+                            stat = file_path.stat()
+                            in_miniat = "miniatura" in root.lower() or "thumbnail" in root.lower()
+                            in_subtit = "subtitulo" in root.lower() or "subtitles" in root.lower()
+                            in_musica = "musica" in root.lower() or "cancion" in root.lower() or "audio" in root.lower()
+
+                            detected_type = valid_exts[ext]
+                            if detected_type == "IMAGE" and in_miniat:
+                                detected_type = "THUMBNAIL"
+                            elif ext == "txt" and not in_subtit:
+                                continue
+
+                            mod_iso = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                            try:
+                                rel_path = file_path.relative_to(target_dir).as_posix()
+                            except Exception:
+                                rel_path = f"temp_renders/{f}"
+
+                            media_files.append({
+                                "name": f,
+                                "format": ext,
+                                "type": detected_type,
+                                "localPath": resolved_path,
+                                "relativePath": rel_path,
+                                "sizeBytes": stat.st_size,
+                                "modifiedAt": mod_iso
+                            })
+                        except Exception:
                             continue
 
-                        mod_iso = datetime.fromtimestamp(stat.st_mtime).isoformat()
-                        rel_path = file_path.relative_to(target_dir).as_posix()
-
-                        media_files.append({
-                            "name": f,
-                            "format": ext,
-                            "type": detected_type,
-                            "localPath": file_path.resolve().as_posix(),
-                            "relativePath": rel_path,
-                            "sizeBytes": stat.st_size,
-                            "modifiedAt": mod_iso
-                        })
-                    except Exception:
-                        continue
 
         media_files.sort(key=lambda x: x["modifiedAt"], reverse=True)
 
@@ -684,6 +742,5 @@ def scan_media(req: ScanMediaRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al escanear medios locales: {str(e)}")
-
 
 

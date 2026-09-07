@@ -24,8 +24,13 @@ export async function GET(req: NextRequest) {
     }
 
     if (channelId && channelId !== 'ALL') {
-      where.channelId = channelId;
+      if (channelId === 'UNASSIGNED') {
+        where.channelId = null;
+      } else {
+        where.channelId = channelId;
+      }
     }
+
 
     if (search && search.trim()) {
       where.OR = [

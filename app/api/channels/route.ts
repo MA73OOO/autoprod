@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/src/prisma/db';
 import { getAuthUser } from '@/lib/auth';
 import { PLANS_CONFIG } from '@/lib/pricing-config';
+import { createClient } from '@supabase/supabase-js';
+
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 export async function GET() {
   try {
@@ -9,10 +16,10 @@ export async function GET() {
     if (!auth.ok) return auth.response;
     const { user } = auth;
 
+    // 1. Obtener canales desde Prisma (sin relación context inexistente en Prisma)
     const channels = await db.channel.findMany({
       where: { userId: user.id },
       include: {
-        context: true,
         videos: {
           orderBy: { createdAt: 'desc' }
         }
@@ -20,7 +27,28 @@ export async function GET() {
       orderBy: { createdAt: 'desc' }
     });
 
-    return NextResponse.json(channels);
+    // 2. Obtener contextos semánticos desde Supabase si existen
+    let contextMap = new Map();
+    try {
+      const supabase = getSupabaseClient();
+      const { data: contexts } = await supabase
+        .from('channelContext')
+        .select('*')
+        .eq('userId', user.id);
+
+      if (contexts && Array.isArray(contexts)) {
+        contextMap = new Map(contexts.map((c: any) => [c.channelId, c]));
+      }
+    } catch (sbErr) {
+      console.warn('No se pudieron obtener channelContexts desde Supabase:', sbErr);
+    }
+
+    const result = channels.map(ch => ({
+      ...ch,
+      context: contextMap.get(ch.id) || null
+    }));
+
+    return NextResponse.json(result);
   } catch (err: any) {
     console.error('Error fetching channels:', err);
     return NextResponse.json({ error: err.message || 'Error interno del servidor' }, { status: 500 });
@@ -65,9 +93,6 @@ export async function POST(req: Request) {
       where: {
         userId: user.id,
         name: { equals: cleanName, mode: 'insensitive' }
-      },
-      include: {
-        context: true
       }
     });
 
@@ -87,6 +112,8 @@ export async function POST(req: Request) {
       }, { status: 403 });
     }
 
+    const supabase = getSupabaseClient();
+
     // 4. Si ya existe, actualizar datos (localPath, niche)
     if (existingChannel) {
       const updated = await db.channel.update({
@@ -94,12 +121,16 @@ export async function POST(req: Request) {
         data: {
           ...(localPath ? { localPath: localPath.trim() } : {}),
           ...(niche ? { niche: niche.trim() } : {}),
-        },
-        include: {
-          context: true
         }
       });
-      return NextResponse.json(updated);
+
+      let ctx = null;
+      try {
+        const { data } = await supabase.from('channelContext').select('*').eq('channelId', existingChannel.id).maybeSingle();
+        ctx = data;
+      } catch {}
+
+      return NextResponse.json({ ...updated, context: ctx });
     }
 
     // 5. Crear nuevo canal
@@ -109,36 +140,27 @@ export async function POST(req: Request) {
         name: cleanName,
         localPath: localPath ? localPath.trim() : null,
         niche: niche ? niche.trim() : null,
-      },
-      include: {
-        context: true
       }
     });
 
-    // Si se envió un nicho o descripción inicial y no hay contexto, inicializar ChannelContext básico
+    let createdCtx = null;
     if (niche || description) {
       try {
-        await db.channelContext.create({
-          data: {
-            channelId: newChannel.id,
-            userId: user.id,
-            channelUrl: `local://${encodeURIComponent(cleanName)}`,
-            title: niche?.trim() || cleanName,
-            description: description?.trim() || `Canal enfocado en ${niche || cleanName}`,
-            contextSummary: `Canal temático enfocado en el nicho: ${niche || cleanName}.`
-          }
-        });
+        const { data } = await supabase.from('channelContext').insert({
+          channelId: newChannel.id,
+          userId: user.id,
+          channelUrl: `local://${encodeURIComponent(cleanName)}`,
+          title: niche?.trim() || cleanName,
+          description: description?.trim() || `Canal enfocado en ${niche || cleanName}`,
+          contextSummary: `Canal temático enfocado en el nicho: ${niche || cleanName}.`
+        }).select().maybeSingle();
+        createdCtx = data;
       } catch (ctxErr) {
         console.warn('No se pudo inicializar channelContext:', ctxErr);
       }
     }
 
-    const fullChannel = await db.channel.findUnique({
-      where: { id: newChannel.id },
-      include: { context: true }
-    });
-
-    return NextResponse.json(fullChannel, { status: 201 });
+    return NextResponse.json({ ...newChannel, context: createdCtx }, { status: 201 });
   } catch (err: any) {
     console.error('Error creating/updating channel:', err);
     return NextResponse.json({ error: err.message || 'Error interno al registrar canal' }, { status: 500 });

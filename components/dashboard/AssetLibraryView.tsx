@@ -458,6 +458,9 @@ export default function AssetLibraryView({
               <option value="ALL" className="bg-zinc-900 text-zinc-200">
                 {lang === 'es' ? 'Todos los Canales' : 'All Channels'}
               </option>
+              <option value="UNASSIGNED" className="bg-zinc-900 text-purple-300 font-semibold">
+                ⚡ {lang === 'es' ? 'Renders Temporales / General' : 'Temp Renders / General'}
+              </option>
               {channels.map(ch => (
                 <option key={ch.id} value={ch.id} className="bg-zinc-900 text-zinc-200">
                   {ch.name}
@@ -465,6 +468,7 @@ export default function AssetLibraryView({
               ))}
             </select>
           </div>
+
 
           {/* Search Box */}
           <div className="relative">
@@ -600,12 +604,17 @@ export default function AssetLibraryView({
                   {/* Overlay Badges */}
                   <div className="absolute top-2 left-2 flex items-center gap-1.5">
                     {getStorageBadge(asset)}
-                    {asset.channelName && (
+                    {asset.channelName ? (
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-zinc-900/80 text-zinc-300 border border-zinc-700/80 backdrop-blur">
                         📺 {asset.channelName}
                       </span>
-                    )}
+                    ) : asset.localPath?.toLowerCase().includes('temp_renders') ? (
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-purple-950/80 text-purple-300 border border-purple-800/80 backdrop-blur">
+                        ⚡ temp_renders
+                      </span>
+                    ) : null}
                   </div>
+
 
                   <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-black/70 text-zinc-300 border border-zinc-800 backdrop-blur">
                     {formatBytes(asset.sizeBytes)}
@@ -743,9 +752,14 @@ export default function AssetLibraryView({
                         <span className="px-2 py-0.5 rounded bg-zinc-900 text-zinc-300 border border-zinc-800 text-[10px] font-medium">
                           📺 {asset.channelName}
                         </span>
+                      ) : asset.localPath?.toLowerCase().includes('temp_renders') ? (
+                        <span className="px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/80 text-[10px] font-medium">
+                          ⚡ temp_renders
+                        </span>
                       ) : (
                         <span className="text-zinc-600 italic">General</span>
                       )}
+
                     </td>
                     <td className="p-3">{getStorageBadge(asset)}</td>
                     <td className="p-3 font-mono text-zinc-400">{formatBytes(asset.sizeBytes)}</td>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Language } from '@/app/translations';
 import { ControladorClient } from '@/lib/controlador-client';
 import { Channel } from './types';
@@ -40,9 +40,11 @@ export default function VideoLooperStudio({
   onBack,
   onRefreshWorkspace,
 }: Props) {
-  // ── Videos seleccionados para el Loop ──
+  // ── Videos seleccionados para la Línea de Tiempo del Loop ──
   const [selectedVideos, setSelectedVideos] = useState<VideoItem[]>([]);
   const [isInspecting, setIsInspecting] = useState(false);
+  const [draggedClipIndex, setDraggedClipIndex] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Modo de Duración ──
   const [durationMode, setDurationMode] = useState<'custom' | 'audio_folder'>('custom');
@@ -56,8 +58,8 @@ export default function VideoLooperStudio({
   const [isScanningAudio, setIsScanningAudio] = useState(false);
 
   // ── Calidad y Resolución ──
-  const [resolution, setResolution] = useState<string>('1080p');
-  const [quality, setQuality] = useState<string>('high'); // 'high' (CRF 18), 'master' (CRF 16), 'balanced' (CRF 22)
+  const [resolution, setResolution] = useState<string>('original');
+  const [quality, setQuality] = useState<string>('lossless_copy'); // 'lossless_copy' (1:1 stream copy), 'master' (CRF 12), 'high' (CRF 15), 'balanced' (CRF 18)
   const [selectedChannel, setSelectedChannel] = useState<string>(channels[0]?.id || '');
   const [outputFilename, setOutputFilename] = useState<string>('loop_produccion.mp4');
   const [muteOriginalAudio, setMuteOriginalAudio] = useState<boolean>(false);
@@ -83,11 +85,86 @@ export default function VideoLooperStudio({
 
   const loopsCount = cycleDuration > 0 ? Math.ceil(targetDurationSeconds / cycleDuration) : 1;
 
-  // ── Manejadores de Drag & Drop de Videos ──
+  // ── Inspeccionar metadatos de un video ──
+  const inspectAndAttachMeta = async (filePath: string) => {
+    try {
+      const meta = await ControladorClient.inspectMedia(filePath);
+      setSelectedVideos(prev => prev.map(v => v.path === filePath ? {
+        ...v,
+        duration: meta.duration_seconds,
+        durationFormatted: meta.duration_formatted,
+        width: meta.width,
+        height: meta.height,
+        sizeMb: meta.size_mb,
+        hasAudio: meta.has_audio
+      } : v));
+    } catch (err) {
+      console.warn('Could not inspect media:', err);
+    }
+  };
+
+  // ── Subir videos directamente desde el explorador del PC ──
+  const handleFilesUploaded = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    await processUploadedFiles(Array.from(files));
+  };
+
+  const processUploadedFiles = async (files: File[]) => {
+    setIsInspecting(true);
+    const toastId = toast.loading(lang === 'es' ? `Importando ${files.length} video(s) a la línea de tiempo...` : `Importing ${files.length} video(s)...`);
+    try {
+      for (const file of files) {
+        const isVid = ['.mp4', '.mov', '.mkv', '.webm', '.avi'].some(ext => file.name.toLowerCase().endsWith(ext));
+        if (!isVid) {
+          toast.error(`${file.name} no es un video compatible.`);
+          continue;
+        }
+
+        // Convertir archivo a base64 para guardarlo en el workspace local
+        const reader = new FileReader();
+        const base64Promise = new Promise<string>((resolve, reject) => {
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const base64Data = await base64Promise;
+
+        const saved = await ControladorClient.saveBinaryFile({
+          base64_data: base64Data,
+          file_name: file.name,
+          channel_name: selectedChannel || undefined,
+          subfolder: 'Videos',
+        });
+
+        if (saved && saved.path) {
+          const newItem: VideoItem = { name: file.name, path: saved.path };
+          setSelectedVideos(prev => [...prev, newItem]);
+          inspectAndAttachMeta(saved.path);
+        }
+      }
+      toast.success(lang === 'es' ? 'Videos añadidos a la línea de tiempo con éxito' : 'Videos added to timeline successfully', { id: toastId });
+      if (onRefreshWorkspace) onRefreshWorkspace();
+    } catch (err: any) {
+      toast.error(err.message || 'Error al importar videos', { id: toastId });
+    } finally {
+      setIsInspecting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // ── Manejadores de Drag & Drop de Videos (Workspace Tree o Archivos de Windows) ──
   const handleDropVideos = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOverVideo(false);
+
+    // 1. Si soltó archivos directos desde el Explorador de Windows
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await processUploadedFiles(Array.from(e.dataTransfer.files));
+      return;
+    }
     
+    // 2. Si arrastró desde el explorador del workspace de AutoProd
     let droppedPath = e.dataTransfer.getData('text/plain');
     let customJson = e.dataTransfer.getData('application/json');
 
@@ -110,31 +187,10 @@ export default function VideoLooperStudio({
         continue;
       }
       
-      // Evitar duplicados consecutivos
-      if (selectedVideos.some(v => v.path === p)) {
-        toast.info(lang === 'es' ? 'El video ya está en la lista.' : 'Video already in playlist.');
-        continue;
-      }
-
       const fileName = p.split(/[\\/]/).pop() || 'video.mp4';
       const newItem: VideoItem = { name: fileName, path: p };
       setSelectedVideos(prev => [...prev, newItem]);
-
-      // Inspeccionar metadatos en segundo plano
-      try {
-        const meta = await ControladorClient.inspectMedia(p);
-        setSelectedVideos(prev => prev.map(v => v.path === p ? {
-          ...v,
-          duration: meta.duration_seconds,
-          durationFormatted: meta.duration_formatted,
-          width: meta.width,
-          height: meta.height,
-          sizeMb: meta.size_mb,
-          hasAudio: meta.has_audio
-        } : v));
-      } catch (err) {
-        console.warn('Could not inspect media:', err);
-      }
+      inspectAndAttachMeta(p);
     }
   };
 
@@ -182,10 +238,11 @@ export default function VideoLooperStudio({
     }
   };
 
-  // Mover videos arriba/abajo
-  const moveVideo = (index: number, direction: 'up' | 'down') => {
-    if ((direction === 'up' && index === 0) || (direction === 'down' && index === selectedVideos.length - 1)) return;
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  // Mover videos en la línea de tiempo (izquierda/derecha)
+  const moveVideo = (index: number, direction: 'left' | 'right' | 'up' | 'down') => {
+    const isMoveBack = direction === 'left' || direction === 'up';
+    if ((isMoveBack && index === 0) || (!isMoveBack && index === selectedVideos.length - 1)) return;
+    const targetIndex = isMoveBack ? index - 1 : index + 1;
     const newItems = [...selectedVideos];
     const temp = newItems[index];
     newItems[index] = newItems[targetIndex];
@@ -193,8 +250,40 @@ export default function VideoLooperStudio({
     setSelectedVideos(newItems);
   };
 
+  const duplicateVideo = (index: number) => {
+    const item = selectedVideos[index];
+    if (!item) return;
+    const newItems = [...selectedVideos];
+    newItems.splice(index + 1, 0, { ...item });
+    setSelectedVideos(newItems);
+    toast.success(lang === 'es' ? 'Clip duplicado en la línea de tiempo' : 'Clip duplicated in timeline');
+  };
+
   const removeVideo = (index: number) => {
     setSelectedVideos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearTimeline = () => {
+    setSelectedVideos([]);
+    setPreviewVideoUrl(null);
+    setCompletedOutputPath(null);
+    toast.info(lang === 'es' ? 'Línea de tiempo vaciada' : 'Timeline cleared');
+  };
+
+  const handleClipDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedClipIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleClipDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedClipIndex === null || draggedClipIndex === targetIndex) return;
+    const items = [...selectedVideos];
+    const [draggedItem] = items.splice(draggedClipIndex, 1);
+    items.splice(targetIndex, 0, draggedItem);
+    setSelectedVideos(items);
+    setDraggedClipIndex(null);
+    toast.success(lang === 'es' ? 'Orden actualizado en la línea de tiempo' : 'Timeline order updated');
   };
 
   // ── Renderizado de Previsualización (Máx 5 min) ──
@@ -265,10 +354,15 @@ export default function VideoLooperStudio({
       return;
     }
 
+    // Limpiar previsualizador antes de iniciar el render completo
+    setPreviewVideoUrl(null);
+    setPreviewJobId(null);
+
     setIsRenderingFull(true);
     setRenderProgress(5);
-    setRenderMessage(lang === 'es' ? 'Iniciando codificación en alta fidelidad...' : 'Starting high fidelity encode...');
+    setRenderMessage(lang === 'es' ? 'Limpiando previsualización e iniciando renderizado en alta fidelidad...' : 'Clearing preview and starting high fidelity encode...');
     setCompletedOutputPath(null);
+
 
     try {
       const res = await ControladorClient.createVideoLoop({
@@ -419,94 +513,263 @@ export default function VideoLooperStudio({
               )}
             </div>
 
-            {/* Drop Zone */}
+            {/* Hidden Native File Input for PC Uploads */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFilesUploaded}
+              multiple
+              accept="video/mp4,video/quicktime,video/x-matroska,video/webm,video/avi"
+              className="hidden"
+            />
+
+            {/* Drop Zone & Upload Trigger */}
             <div
               onDragOver={(e) => { e.preventDefault(); setIsDraggingOverVideo(true); }}
               onDragLeave={() => setIsDraggingOverVideo(false)}
               onDrop={handleDropVideos}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition-all flex flex-col items-center justify-center gap-2 ${
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-5 text-center transition-all flex flex-col items-center justify-center gap-2 cursor-pointer ${
                 isDraggingOverVideo
-                  ? 'border-purple-500 bg-purple-950/20 text-purple-200 scale-[1.01]'
-                  : 'border-zinc-800 hover:border-zinc-700 bg-zinc-950/40 text-zinc-400'
+                  ? 'border-purple-500 bg-purple-950/25 text-purple-200 scale-[1.01] shadow-lg shadow-purple-900/20'
+                  : 'border-zinc-800 hover:border-purple-600/60 bg-zinc-950/40 text-zinc-400 hover:bg-zinc-900/40'
               }`}
             >
               <div className="h-10 w-10 rounded-full bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-lg text-purple-400">
-                📁
+                📥
               </div>
-              <p className="text-xs font-semibold text-zinc-300">
-                {lang === 'es' ? 'Arrastra videos desde el explorador del workspace aquí' : 'Drag videos from workspace file tree here'}
-              </p>
-              <p className="text-[11px] text-zinc-500">
-                {lang === 'es'
-                  ? 'Formatos compatibles: .mp4, .mov, .mkv, .webm. Puedes añadir varios para crear un ciclo.'
-                  : 'Supported formats: .mp4, .mov, .mkv, .webm. Add multiple to create a loop cycle.'}
-              </p>
+              <div className="flex flex-col items-center">
+                <p className="text-xs font-semibold text-zinc-200">
+                  {lang === 'es' 
+                    ? 'Haz clic para subir videos desde tu PC o arrástralos aquí' 
+                    : 'Click to upload videos from your PC or drag them here'}
+                </p>
+                <p className="text-[11px] text-zinc-500 mt-0.5">
+                  {lang === 'es'
+                    ? 'También puedes arrastrar desde el explorador del Workspace de AutoProd • MP4, MOV, WEBM'
+                    : 'You can also drag from AutoProd Workspace explorer • MP4, MOV, WEBM'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] px-2.5 py-1 rounded bg-purple-950/60 border border-purple-800/40 text-purple-300 font-semibold flex items-center gap-1">
+                  📂 {lang === 'es' ? 'Explorar PC' : 'Browse PC'}
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono">
+                  {lang === 'es' ? 'Admite múltiples archivos' : 'Supports multiple files'}
+                </span>
+              </div>
             </div>
 
-            {/* Playlist Table */}
-            {selectedVideos.length > 0 && (
-              <div className="flex flex-col gap-2 mt-2">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-zinc-500 px-1 flex justify-between">
-                  <span>Orden de Reproducción</span>
-                  <span>Acciones</span>
+            {/* Visual Timeline Section */}
+            {selectedVideos.length > 0 ? (
+              <div className="flex flex-col gap-3 mt-1 bg-zinc-950/70 border border-zinc-800/80 rounded-xl p-4">
+                {/* Timeline Header & Actions */}
+                <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">⏱️</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      {lang === 'es' ? 'Línea de Tiempo Multiclip' : 'Multiclip Sequence Timeline'}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800/40 font-mono font-bold">
+                      {selectedVideos.length} {selectedVideos.length === 1 ? 'clip' : 'clips'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                      title={lang === 'es' ? 'Añadir más videos' : 'Add more videos'}
+                    >
+                      <span>➕</span> {lang === 'es' ? 'Añadir Clip' : 'Add Clip'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearTimeline}
+                      className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-red-950/30 hover:bg-red-950/60 text-red-300 border border-red-800/40 transition-colors flex items-center gap-1 cursor-pointer"
+                      title={lang === 'es' ? 'Vaciar toda la línea de tiempo' : 'Clear timeline'}
+                    >
+                      <span>🗑️</span> {lang === 'es' ? 'Vaciar' : 'Clear'}
+                    </button>
+                  </div>
                 </div>
-                {selectedVideos.map((video, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center justify-between bg-zinc-900/60 border border-zinc-800 hover:border-zinc-700 p-3 rounded-lg text-xs transition-colors"
-                  >
-                    <div className="flex items-center gap-3 truncate">
-                      <span className="h-6 w-6 rounded bg-purple-950/50 border border-purple-800/40 text-purple-300 flex items-center justify-center font-bold text-[10px]">
-                        {idx + 1}
-                      </span>
-                      <div className="truncate">
-                        <p className="font-semibold text-zinc-200 truncate">{video.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-zinc-500 font-mono">
-                            {video.width && video.height ? `${video.width}x${video.height}` : 'Video'} • {video.durationFormatted || 'Calculando...'} {video.sizeMb ? `• ${video.sizeMb} MB` : ''}
-                          </span>
-                          {video.hasAudio !== undefined && (
-                            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium border ${
-                              video.hasAudio 
-                                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40' 
-                                : 'bg-zinc-800/60 text-zinc-500 border-zinc-700/50'
-                            }`}>
-                              {video.hasAudio ? '🔊 Con audio' : '🔇 Sin audio'}
-                            </span>
+
+                {/* Timeline Stats Ribbon */}
+                <div className="flex items-center justify-between text-[11px] bg-zinc-900/80 px-3 py-1.5 rounded-lg border border-zinc-800 text-zinc-400 font-mono">
+                  <div className="flex items-center gap-3">
+                    <span>
+                      {lang === 'es' ? 'Secuencia:' : 'Sequence:'}{' '}
+                      <strong className="text-zinc-200 font-bold">
+                        {selectedVideos.map((_, i) => `#${i + 1}`).join(' ➔ ')}
+                      </strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span>{lang === 'es' ? '1 Ciclo Master:' : '1 Master Cycle:'}</span>
+                    <strong className="text-purple-300 font-bold">{Math.round(cycleDuration)}s</strong>
+                    <span className="text-zinc-600">•</span>
+                    <span>{loopsCount} {lang === 'es' ? 'repeticiones para la duración final' : 'loops for target duration'}</span>
+                  </div>
+                </div>
+
+                {/* Instructions Hint */}
+                <p className="text-[10px] text-zinc-500 italic px-1">
+                  💡 {lang === 'es' 
+                    ? 'Arrastra los clips horizontalmente para cambiar el orden, o usa las flechas ◀ ▶. Al terminar el último clip, se reinicia el bucle.' 
+                    : 'Drag clips horizontally to reorder, or use ◀ ▶ buttons. When the last clip ends, it loops back to clip #1.'}
+                </p>
+
+                {/* Horizontal Scrolling Timeline Track */}
+                <div className="overflow-x-auto pb-2 pt-1 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-zinc-900">
+                  <div className="flex items-center gap-2.5 min-w-max">
+                    {selectedVideos.map((video, idx) => {
+                      const isDragged = draggedClipIndex === idx;
+                      return (
+                        <div key={idx} className="flex items-center gap-2">
+                          {/* Timeline Card */}
+                          <div
+                            draggable
+                            onDragStart={(e) => handleClipDragStart(e, idx)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => handleClipDrop(e, idx)}
+                            className={`w-64 bg-zinc-900/90 rounded-xl border p-3 flex flex-col justify-between gap-2.5 transition-all shadow-md select-none cursor-grab active:cursor-grabbing ${
+                              isDragged
+                                ? 'opacity-40 border-purple-500 scale-95 ring-2 ring-purple-500/50'
+                                : 'border-zinc-800 hover:border-purple-500/60 hover:bg-zinc-900'
+                            }`}
+                          >
+                            {/* Card Top: Order Badge & Delete */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="h-5 px-2 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center shadow">
+                                  Clip #{idx + 1}
+                                </span>
+                                {video.hasAudio !== undefined && (
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-medium border ${
+                                    video.hasAudio 
+                                      ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/40' 
+                                      : 'bg-zinc-800/60 text-zinc-500 border-zinc-700/50'
+                                  }`}>
+                                    {video.hasAudio ? '🔊 Audio' : '🔇 Mudo'}
+                                  </span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeVideo(idx)}
+                                className="h-5 w-5 rounded hover:bg-red-950/60 text-zinc-500 hover:text-red-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                                title={lang === 'es' ? 'Quitar clip' : 'Remove clip'}
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* Card Middle: Video Icon, Name & Meta */}
+                            <div className="flex items-start gap-2.5">
+                              <div className="h-10 w-10 rounded-lg bg-zinc-950 border border-zinc-800 flex items-center justify-center text-lg text-purple-400 shrink-0">
+                                🎞️
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-semibold text-xs text-zinc-100 truncate" title={video.name}>
+                                  {video.name}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-1 text-[10px] text-zinc-400 font-mono">
+                                  <span className="px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-300">
+                                    ⏱️ {video.durationFormatted || 'Calculando...'}
+                                  </span>
+                                  {video.width && video.height && (
+                                    <span className="px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-400">
+                                      {video.width}x{video.height}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card Bottom: Reordering & Duplication Controls */}
+                            <div className="flex items-center justify-between pt-2 border-t border-zinc-800/80">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => moveVideo(idx, 'left')}
+                                  disabled={idx === 0}
+                                  className="h-6 w-6 rounded bg-zinc-800 hover:bg-purple-900/50 hover:text-purple-200 text-zinc-300 flex items-center justify-center text-xs disabled:opacity-20 cursor-pointer transition-colors"
+                                  title={lang === 'es' ? 'Mover antes' : 'Move earlier'}
+                                >
+                                  ◀
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveVideo(idx, 'right')}
+                                  disabled={idx === selectedVideos.length - 1}
+                                  className="h-6 w-6 rounded bg-zinc-800 hover:bg-purple-900/50 hover:text-purple-200 text-zinc-300 flex items-center justify-center text-xs disabled:opacity-20 cursor-pointer transition-colors"
+                                  title={lang === 'es' ? 'Mover después' : 'Move later'}
+                                >
+                                  ▶
+                                </button>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => duplicateVideo(idx)}
+                                className="px-2 py-1 rounded bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-[10px] font-medium flex items-center gap-1 cursor-pointer transition-colors"
+                                title={lang === 'es' ? 'Duplicar este clip en la secuencia' : 'Duplicate clip in sequence'}
+                              >
+                                <span>📋</span> {lang === 'es' ? 'Duplicar' : 'Duplicate'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Connector Arrow Between Clips */}
+                          {idx < selectedVideos.length - 1 && (
+                            <div className="flex flex-col items-center justify-center text-zinc-600 px-1">
+                              <span className="text-base font-bold text-purple-400">➔</span>
+                              <span className="text-[9px] uppercase font-mono tracking-wider text-zinc-500">
+                                {lang === 'es' ? 'Unión' : 'Join'}
+                              </span>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    </div>
+                      );
+                    })}
 
-                    <div className="flex items-center gap-1.5 shrink-0">
+                    {/* End Loop Indicator (Bucle Infinito) */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-center justify-center text-zinc-600 px-1">
+                        <span className="text-base font-bold text-purple-400">➔</span>
+                      </div>
+
+                      <div className="w-48 bg-purple-950/30 border border-dashed border-purple-700/50 rounded-xl p-3 flex flex-col items-center justify-center text-center gap-1.5">
+                        <div className="h-7 w-7 rounded-full bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-purple-300 text-sm">
+                          🔁
+                        </div>
+                        <p className="text-[11px] font-bold text-purple-200">
+                          {lang === 'es' ? 'Bucle al Clip #1' : 'Loop to Clip #1'}
+                        </p>
+                        <p className="text-[9px] text-purple-300/70">
+                          {lang === 'es' 
+                            ? 'La secuencia se repite continuamente hasta la duración final.' 
+                            : 'Sequence repeats continuously until final duration.'}
+                        </p>
+                      </div>
+
+                      {/* Quick Add Button */}
                       <button
-                        onClick={() => moveVideo(idx, 'up')}
-                        disabled={idx === 0}
-                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                        title="Mover arriba"
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-24 h-32 rounded-xl border border-dashed border-zinc-800 hover:border-purple-500 bg-zinc-950/40 hover:bg-purple-950/20 text-zinc-500 hover:text-purple-300 flex flex-col items-center justify-center gap-1 text-xs transition-all cursor-pointer"
+                        title={lang === 'es' ? 'Añadir otro clip' : 'Add another clip'}
                       >
-                        ▲
-                      </button>
-                      <button
-                        onClick={() => moveVideo(idx, 'down')}
-                        disabled={idx === selectedVideos.length - 1}
-                        className="p-1.5 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white disabled:opacity-30 cursor-pointer"
-                        title="Mover abajo"
-                      >
-                        ▼
-                      </button>
-                      <button
-                        onClick={() => removeVideo(idx)}
-                        className="p-1.5 rounded hover:bg-red-950/50 text-zinc-400 hover:text-red-400 cursor-pointer ml-1"
-                        title="Eliminar de la lista"
-                      >
-                        ✕
+                        <span className="text-lg">➕</span>
+                        <span className="text-[10px] font-semibold">{lang === 'es' ? 'Añadir' : 'Add'}</span>
                       </button>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            )}
+            ) : null}
 
             {/* Audio Strip / Mute Control */}
             {selectedVideos.length > 0 && (
@@ -735,7 +998,7 @@ export default function VideoLooperStudio({
                 onChange={(e) => setResolution(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500 cursor-pointer"
               >
-                <option value="original">🎯 Original (Conservar resolución nativa sin reescalar)</option>
+                <option value="original">🎯 Original (Conservar resolución y aspecto nativo sin barras negras) [Recomendado]</option>
                 <option value="1080p">📺 1080p Full HD (1920x1080) - Estándar YouTube</option>
                 <option value="4k">🌟 4K Ultra HD (3840x2160) - Máxima Definición</option>
                 <option value="720p">⚡ 720p HD (1280x720) - Rápido / Liviano</option>
@@ -747,16 +1010,17 @@ export default function VideoLooperStudio({
             <div className="space-y-1.5">
               <label className="text-[11px] font-semibold text-zinc-400 flex items-center justify-between">
                 <span>{lang === 'es' ? 'Nitidez y Compresión:' : 'Clarity & Compression:'}</span>
-                <span className="text-[10px] text-emerald-400 font-mono font-bold">Sin artefactos</span>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold">100% Cero Pérdida</span>
               </label>
               <select
                 value={quality}
                 onChange={(e) => setQuality(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500 cursor-pointer"
               >
-                <option value="high">✨ Alta Nitidez Pro (CRF 17 / Sin artefactos de compresión) [Recomendado]</option>
-                <option value="master">💎 Calidad Master / Ultra Estudio (CRF 14 / Máxima fidelidad)</option>
-                <option value="balanced">⚖️ Equilibrado (CRF 21 / Menor tamaño de archivo)</option>
+                <option value="lossless_copy">⚡ Copia Directa 1:1 (Cero Pérdida / 100% Calidad Original / Ultra Rápido) [Recomendado]</option>
+                <option value="master">💎 Calidad Master (CRF 12 / Máxima Nitidez sin macrobloques)</option>
+                <option value="high">✨ Alta Nitidez Pro (CRF 15 / Con optimización para fondos oscuros)</option>
+                <option value="balanced">⚖️ Equilibrado (CRF 18 / Menor tamaño de archivo)</option>
               </select>
             </div>
 
@@ -849,7 +1113,7 @@ export default function VideoLooperStudio({
                     </span>
                     <span>•</span>
                     <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-[10px] text-zinc-300">
-                      {quality === 'master' ? 'CRF 14 Master' : quality === 'balanced' ? 'CRF 21' : 'CRF 17 Pro'}
+                      {quality === 'lossless_copy' ? '⚡ 1:1 Stream Copy' : quality === 'master' ? 'CRF 12 Master' : quality === 'balanced' ? 'CRF 18' : 'CRF 15 Pro'}
                     </span>
                     <span>•</span>
                     <span className={`px-2 py-0.5 rounded font-mono text-[10px] border ${
@@ -873,8 +1137,8 @@ export default function VideoLooperStudio({
                 />
                 <div className="flex items-center justify-between text-[11px] px-1">
                   <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
-                    <span className="text-emerald-400">✓</span> Muestra en alta fidelidad — 
-                    <span className="text-zinc-500 font-mono">{resolution.toUpperCase()} • {quality === 'master' ? 'CRF 14' : quality === 'balanced' ? 'CRF 21' : 'CRF 17'}{muteOriginalAudio ? ' • 🔇' : ''}</span>
+                    <span className="text-emerald-400">✓</span> Muestra lista — 
+                    <span className="text-zinc-500 font-mono">{resolution.toUpperCase()} • {quality === 'lossless_copy' ? '1:1 Stream Copy (Sin compresión)' : quality === 'master' ? 'CRF 12' : quality === 'balanced' ? 'CRF 18' : 'CRF 15'}{muteOriginalAudio ? ' • 🔇' : ''}</span>
                   </span>
                   <div className="flex items-center gap-3">
                     <button

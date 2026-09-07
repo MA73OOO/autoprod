@@ -815,6 +815,7 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
   }, [isGeneratingGlobal, messageQueue]);
 
   const handleAssociateChannel = async (channelId: string | null) => {
+    if (!activeConversationId) return;
     try {
       const res = await fetch(`/api/conversations/${activeConversationId}`, {
         method: 'PATCH',
@@ -822,10 +823,18 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
         body: JSON.stringify({ channelId }),
       });
       if (res.ok) {
-        setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, channelId } : c));
+        const data = await res.json();
+        const savedChannelId = data.conversation?.channelId ?? channelId;
+        setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, channelId: savedChannelId } : c));
         toast.success(lang === 'es' ? 'Canal asociado correctamente' : 'Channel associated successfully');
+        fetchDbChannels();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.error || (lang === 'es' ? 'Error al asociar canal' : 'Error associating channel'));
       }
-    } catch { toast.error('Error al asociar canal'); }
+    } catch {
+      toast.error(lang === 'es' ? 'Error al asociar canal' : 'Error associating channel');
+    }
   };
 
   // ── Render simulator ──

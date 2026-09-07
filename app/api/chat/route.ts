@@ -254,7 +254,9 @@ export async function POST(req: Request) {
         const currentWorkspacePath = (workspacePath && typeof workspacePath === 'string' && workspacePath.trim() !== '')
           ? workspacePath
           : (getWorkspacePath() || 'No configurado');
-        const resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', currentWorkspacePath);
+        let resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', currentWorkspacePath);
+        // Limpiar cualquier residuo de prohibición estricta antigua que forzaba respuestas simplonas de 2 líneas
+        resolvedPrompt = resolvedPrompt.replace(/⛔ REGLA ABSOLUTA — PROHIBICIÓN DE RESPUESTAS TIPO MENÚ[\s\S]*?(?=\n\n|$)/g, '');
         systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + resolvedPrompt;
 
         // Escanear el estado físico actual del workspace en disco en tiempo real
@@ -307,6 +309,47 @@ export async function POST(req: Request) {
 
         systemPrompt += workspaceStructureSnapshot;
 
+        // Resolver canal activo de forma segura (sin relación Prisma context inexistente)
+        let activeChannel: any = null;
+        let activeChannelContext: any = null;
+        if (channelId) {
+          try {
+            activeChannel = await prisma.channel.findFirst({
+              where: {
+                OR: [
+                  { id: channelId },
+                  { name: channelId }
+                ]
+              }
+            });
+          } catch {
+            activeChannel = await prisma.channel.findFirst({
+              where: { name: channelId }
+            }).catch(() => null);
+          }
+        } else if (userId) {
+          const userChannels = await prisma.channel.findMany({
+            where: { userId },
+            take: 2
+          });
+          if (userChannels.length === 1) {
+            activeChannel = userChannels[0];
+          }
+        }
+
+        if (activeChannel) {
+          try {
+            const { data: ctxData } = await supabase
+              .from('channelContext')
+              .select('*')
+              .eq('channelId', activeChannel.id)
+              .maybeSingle();
+            activeChannelContext = ctxData;
+          } catch (sbErr: any) {
+            console.warn('[Supabase channelContext error]:', sbErr?.message);
+          }
+        }
+
         const isAtChannelLimit = !isAdmin && existingChannels.length >= maxChannels;
         const planLimitsDirective = `\n\n=== REGLAS COMERCIALES Y LÍMITES DE SUSCRIPCIÓN DEL USUARIO ===
 - Plan de Suscripción Actual: ${userPlan} (${planConfig.displayName})
@@ -352,6 +395,56 @@ Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extr
 5. Invítalo amablemente a compartirte la URL o @handle de su canal para comenzar la extracción de inmediato.`;
 
         systemPrompt += channelExtractionDirective;
+
+        if (activeChannel) {
+          const channelNiche = activeChannel.niche || activeChannelContext?.title || activeChannel.name;
+          const channelSummary = activeChannelContext?.contextSummary || activeChannelContext?.description || `Canal enfocado en el nicho: ${channelNiche}.`;
+          const channelLocal = activeChannel.localPath || (currentWorkspacePath ? path.join(currentWorkspacePath, activeChannel.name) : `Workspace/${activeChannel.name}`);
+
+          const channelSpecificDirective = `\n\n=== CANAL ACTIVO SELECCIONADO EN EL CHAT: "${activeChannel.name}" ===
+- CANAL ACTIVO: "${activeChannel.name}"
+- NICHO Y TEMÁTICA PERMITIDA: "${channelNiche}"
+- RUTA FÍSICA ASOCIADA: "${channelLocal}"
+- RESUMEN DEL CANAL:
+${channelSummary}
+
+⚠️ REGLA CRÍTICA DE CONTEXTO:
+El usuario ha seleccionado expresamente el canal "${activeChannel.name}".
+1. NUNCA hables de forma genérica ni le preguntes al usuario "¿de cuál de tus canales quieres hablar?" ni menciones los otros canales como si no supieras cuál está seleccionado.
+2. Reconoce directamente que estás operando dentro de "${activeChannel.name}".
+3. Todo el contenido generado (ideas, guiones, hooks, títulos, miniaturas, videos en bucle y carpetas) DEBE pertenecer ESTRICTAMENTE al nicho de "${channelNiche}" para este canal.
+
+=== PRESENTACIÓN DE CAPACIDADES PARA EL CANAL "${activeChannel.name}" ===
+Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", o pida ideas:
+Responde como el **Director y Productor Ejecutivo exclusivo del canal "${activeChannel.name}"**, con una **estructura limpia, ejecutiva y visualmente atractiva** con Markdown profesional:
+
+ESTRUCTURA DE RESPUESTA EXIGIDA PARA "${activeChannel.name}":
+• **Saludo y Enfoque del Canal:**
+  "¡Hola! Estamos trabajando en tu canal **${activeChannel.name}** (Nicho: ${channelNiche}). Como tu Co-Pilot y Director de Producción, mi labor es potenciar el crecimiento y automatizar la creación de contenido para este canal."
+
+• **Pilares de Producción Aplicados a ${activeChannel.name}:**
+  - 🎯 **Estrategia & Ideación para ${activeChannel.name}:** Desarrollo de conceptos ganadores y premisas para el nicho de ${channelNiche}, ganchos psicológicos en los primeros 5 segundos y fórmulas de títulos de alto CTR.
+  - 🎬 **Video Looper Studio (PRO HD):** Producción y repetición de videos en bucle continuo con Copia Directa 1:1 (cero pérdida de nitidez de YouTube), línea de tiempo multiclip interactiva y sincronización con música para fondos de 30 min a 3 horas ideales para ${activeChannel.name}.
+  - 🎨 **Estudio Creativo & Miniaturas IA:** Diseño de miniaturas adaptadas a la identidad visual de ${activeChannel.name}, análisis de imágenes de referencia y generación de portadas con alto CTR.
+  - 📈 **Inteligencia Competitiva de YouTube:** Análisis y minería de canales referentes del nicho (${channelNiche}) para extraer etiquetas ganadoras, patrones de títulos con millones de views y catálogo anti-duplicados para no repetir ideas.
+  - 📁 **Organización del Workspace:** Estructura modular de carpetas en ${channelLocal} (/Guiones, /Miniaturas, /Videos, /InfoCanal).
+
+• **3 Siguientes Pasos Inteligentes para ${activeChannel.name}:**
+  Ofrece 3 opciones creativas y accionables para avanzar de inmediato con este canal (ejemplo: 1. Redactar el guion del próximo video con gancho de alta retención; 2. Analizar un canal referente de ${channelNiche} para minar sus mejores tags; 3. Diseñar la miniatura o fondo en bucle en el Looper Studio).
+
+Cierra preguntando: "¿Por cuál de estas acciones prefieres que arranquemos con ${activeChannel.name} hoy?"`;
+
+          systemPrompt += channelSpecificDirective;
+        } else {
+          const generalCapabilitiesDirective = `\n\n=== DIRECTIVA DE PRESENTACIÓN DE CAPACIDADES (MODO GENERAL / SIN CANAL ESPECÍFICO) ===
+Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", "¿cuáles son tus funciones?", pida orientación o cómo arrancar:
+1. Responde como un **Director y Productor Ejecutivo de Contenido de Élite**, con una **estructura limpia, ejecutiva y visualmente atractiva** con Markdown profesional.
+2. Menciona los canales que tiene disponibles en su workspace (${existingChannels.length > 0 ? existingChannels.join(', ') : 'tus canales'}).
+3. Explica los pilares de producción de AutoProd (Estrategia & Ideación, Video Looper PRO 1:1, Estudio de Miniaturas IA, Inteligencia Competitiva de YouTube, y Organización de Workspace).
+4. Ofrece 3 opciones claras: trabajar en uno de sus canales existentes, analizar un nuevo canal competidor de YouTube, o configurar su espacio de producción.`;
+
+          systemPrompt += generalCapabilitiesDirective;
+        }
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
         const toolNames: string[] = [];
@@ -628,44 +721,6 @@ Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extr
         
       }
 
-      // Inyectar contexto y guardrail estricto de nicho del canal activo
-      let activeChannel: any = null;
-      if (channelId) {
-        activeChannel = await prisma.channel.findUnique({
-          where: { id: channelId },
-          include: { context: true }
-        });
-      } else if (userId) {
-        const userChannels = await prisma.channel.findMany({
-          where: { userId },
-          include: { context: true },
-          take: 2
-        });
-        if (userChannels.length === 1) {
-          activeChannel = userChannels[0];
-        }
-      }
-
-      if (activeChannel) {
-        const channelNiche = activeChannel.niche || activeChannel.context?.title || activeChannel.name;
-        const channelSummary = activeChannel.context?.contextSummary || activeChannel.context?.description || 'Canal temático enfocado en su nicho específico.';
-        const channelLocal = activeChannel.localPath || (workspacePath ? path.join(workspacePath, activeChannel.name) : 'Ruta asignada en workspace');
-
-        systemPrompt += `\n\n=== GUARDRAIL ESTRICTO: CANAL ACTIVO Y DELIMITACIÓN DE NICHO ===
-- CANAL ACTIVO ASIGNADO: "${activeChannel.name}"
-- NICHO Y TEMÁTICA PERMITIDA: "${channelNiche}"
-- RUTA FÍSICA ASOCIADA: "${channelLocal}"
-- CONTEXTO / RESUMEN DEL CANAL:
-${channelSummary}
-
-REGLAS DE OBLIGATORIO CUMPLIMIENTO:
-1. Todo el contenido generado en esta conversación (ideas de video, guiones, títulos, miniaturas, descripciones, hooks, prompts y estructuras de archivos) DEBE pertenecer ESTRICTAMENTE al nicho de "${channelNiche}" del canal "${activeChannel.name}".
-2. Si el usuario te pide crear o planear contenido sobre un tema completamente ajeno o fuera de este nicho (ejemplos: pedir temas de criptomonedas, finanzas o recetas en un canal de vaqueros, o viceversa):
-   - DEBES RECHAZAR CORDIALMENTE la solicitud.
-   - Explícale amablemente: "Actualmente estamos trabajando en el contexto de tu canal '${activeChannel.name}' (Nicho: ${channelNiche}). Para mantener la coherencia algorítmica y cumplir con las políticas de control de canales de tu plan, no está permitido mezclar nichos ajenos en este canal."
-   - Indícale que puede seleccionar otro canal en el menú superior del chat o registrar un nuevo canal en la plataforma (según la disponibilidad de su suscripción: Free 1, Starter 1, Pro 3, Enterprise Ilimitado).
-3. Todas las operaciones de archivos, carpetas o herramientas para este canal deben dirigirse a su carpeta local "${channelLocal}".`;
-      }
 
       // Inyectar directiva de Pensamiento Profundo si está activado
       if (isDeepThinking) {

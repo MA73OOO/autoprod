@@ -43,20 +43,15 @@ def default_workspace_path() -> Path:
     return (Path.home() / "AutoProd" / "youtube").resolve()
 
 def get_temp_render_dir() -> Path:
-    config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
-    if config_path.exists():
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                if "basePath" in config:
-                    temp_dir = Path(config["basePath"]) / "temp_renders"
-                    temp_dir.mkdir(parents=True, exist_ok=True)
-                    return temp_dir.resolve()
-        except Exception:
-            pass
-    temp_dir = Path.home() / "AutoProd" / "temp_renders"
+    """
+    Retorna la ruta de temp_renders ubicada dentro del workspace controlado (youtube/temp_renders)
+    para que sea visible en el explorador de recursos y en la Biblioteca de Recursos.
+    """
+    ws_root = default_workspace_path()
+    temp_dir = ws_root / "temp_renders"
     temp_dir.mkdir(parents=True, exist_ok=True)
     return temp_dir.resolve()
+
 
 def get_ffmpeg_path() -> Path:
     # 1. E:\AutoProdAI\bin\ffmpeg.exe
@@ -281,12 +276,14 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
     try:
         # 1. Validar archivos de video de entrada
         valid_videos: List[Path] = []
+        video_metas: List[Dict[str, Any]] = []
         for vp in req.video_paths:
             v_path = Path(vp)
             if not v_path.is_absolute():
                 v_path = (default_workspace_path() / v_path).resolve()
             if v_path.exists() and v_path.is_file():
                 valid_videos.append(v_path)
+                video_metas.append(probe_video_meta(v_path))
 
         if not valid_videos:
             raise Exception("No se proporcionó ningún archivo de video válido existente.")
@@ -322,22 +319,78 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         # Si es modo previsualización, limitar a máximo 300 segundos (5 minutos)
         if req.is_preview:
             target_duration = min(300.0, target_duration)
-            JOBS[job_id]["message"] = "Renderizando previsualización HD nítida (máx. 5 minutos)..."
+            JOBS[job_id]["message"] = "Renderizando previsualización nítida..."
         else:
-            JOBS[job_id]["message"] = f"Renderizando loop completo en alta resolución ({format_time_hms(target_duration)})..."
+            JOBS[job_id]["message"] = f"Generando bucle de video ({format_time_hms(target_duration)})..."
 
-        # 3. Calcular repeticiones necesarias para cubrir la duración
+        # 3. Ensamblaje de Secuencia de Línea de Tiempo (si hay múltiples clips)
+        master_cycle_file = None
+        effective_loop_videos = valid_videos
+
+        res_map = {
+            "1080p": (1920, 1080),
+            "4k": (3840, 2160),
+            "720p": (1280, 720),
+            "shorts": (1080, 1920),
+        }
+        is_original_res = req.resolution.lower() == "original"
+        if is_original_res and valid_videos:
+            w = video_metas[0].get("width", 1920)
+            h = video_metas[0].get("height", 1080)
+        else:
+            w, h = res_map.get(req.resolution.lower(), (1920, 1080))
+
+        if len(valid_videos) > 1:
+            JOBS[job_id]["message"] = f"Ensamblando {len(valid_videos)} clips en el orden de la línea de tiempo..."
+            master_cycle_file = temp_dir / f"cycle_master_{job_id}.mp4"
+
+            cycle_cmd = [str(ffmpeg), "-nostdin", "-y"]
+            for v in valid_videos:
+                cycle_cmd.extend(["-i", str(v)])
+
+            filter_parts = []
+            for i in range(len(valid_videos)):
+                filter_parts.append(
+                    f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p[v{i}]"
+                )
+
+            concat_inputs = "".join(f"[v{i}]" for i in range(len(valid_videos)))
+            filter_parts.append(f"{concat_inputs}concat=n={len(valid_videos)}:v=1:a=0[outv]")
+
+            cycle_cmd.extend([
+                "-filter_complex", ";".join(filter_parts),
+                "-map", "[outv]",
+                "-an",
+                "-c:v", "libx264",
+                "-preset", "fast" if req.is_preview else "medium",
+                "-crf", "14",
+                "-tune", "film",
+                "-x264-params", "aq-mode=3:aq-strength=1.1",
+                "-threads", str(governor.get_hardware_specs()["safe_threads"]),
+                str(master_cycle_file)
+            ])
+
+            proc_cycle = subprocess.run(cycle_cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
+            if proc_cycle.returncode != 0:
+                raise Exception(f"Fallo al concatenar clips de la línea de tiempo: {proc_cycle.stderr[-500:]}")
+
+            effective_loop_videos = [master_cycle_file]
+            cycle_duration = probe_duration(master_cycle_file)
+            if cycle_duration <= 0.1:
+                cycle_duration = 10.0
+
+        # 4. Calcular repeticiones necesarias para cubrir la duración objetivo
         loops_needed = max(1, math.ceil(target_duration / cycle_duration))
 
         # Crear archivo de texto para concat demuxer de FFmpeg
         video_concat_txt = temp_dir / f"concat_v_{job_id}.txt"
         with open(video_concat_txt, "w", encoding="utf-8") as f:
             for _ in range(loops_needed):
-                for v in valid_videos:
+                for v in effective_loop_videos:
                     clean_p = v.as_posix().replace("'", "'\\''")
                     f.write(f"file '{clean_p}'\n")
 
-        # 4. Preparar concat de audio si existe
+        # 5. Preparar concat de audio si existe
         audio_concat_txt = None
         if audio_files_to_concat:
             audio_concat_txt = temp_dir / f"concat_a_{job_id}.txt"
@@ -346,42 +399,57 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
                     clean_ap = a.as_posix().replace("'", "'\\''")
                     f.write(f"file '{clean_ap}'\n")
 
-        # 5. Configurar resolución y parámetros anti-pixelado con interpolación Lanczos
-        res_map = {
-            "1080p": (1920, 1080),
-            "4k": (3840, 2160),
-            "720p": (1280, 720),
-            "shorts": (1080, 1920),
-        }
-        
-        if req.resolution.lower() == "original" and valid_videos:
-            first_meta = probe_video_meta(valid_videos[0])
-            w, h = first_meta.get("width", 1920), first_meta.get("height", 1080)
+        # 6. Detección Inteligente de Stream Copy (Cero Pérdida 1:1)
+        # Si es un ciclo maestro ensamblado O si es 1 clip con resolución original
+        user_wants_copy = req.quality == "lossless_copy"
+        if master_cycle_file:
+            # El ciclo maestro ya está normalizado y listo para copia directa
+            can_stream_copy = True
         else:
-            w, h = res_map.get(req.resolution.lower(), (1920, 1080))
-            
-        vf_filter = f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+            can_stream_copy = (user_wants_copy or is_original_res)
 
-        # Parámetros de calidad anti-pixelado con perfiles de alta fidelidad (CRF puro sin capping VBV para evitar artefactos)
-        if req.quality == "master":
-            crf = "14"
-            preset = "faster" if req.is_preview else "slow"
-            x264_opts = "aq-mode=2:no-fast-pskip=1"
-        elif req.quality == "balanced":
-            crf = "21"
-            preset = "veryfast" if req.is_preview else "medium"
-            x264_opts = "aq-mode=2"
-        else: # "high" (por defecto)
-            crf = "17"
-            preset = "fast" if req.is_preview else "medium"
-            x264_opts = "aq-mode=2:no-fast-pskip=1"
+        # Limpieza de previsualizadores previos
+        if not req.is_preview:
+            # Al generar el video con tiempo completo, eliminamos cualquier previsualizador generado previamente
+            try:
+                for old_p in temp_dir.glob("preview_*.mp4"):
+                    try:
+                        old_p.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                # También limpiar de carpeta externa si existía previamente
+                config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
+                if config_path.exists():
+                    try:
+                        with open(config_path, "r", encoding="utf-8") as f:
+                            cfg = json.load(f)
+                            if "basePath" in cfg:
+                                ext_temp = Path(cfg["basePath"]) / "temp_renders"
+                                if ext_temp.exists() and ext_temp.resolve() != temp_dir.resolve():
+                                    for old_ext_p in ext_temp.glob("preview_*.mp4"):
+                                        try:
+                                            old_ext_p.unlink(missing_ok=True)
+                                        except Exception:
+                                            pass
+                    except Exception:
+                        pass
+            except Exception as e:
+                print(f"[WARN] Error eliminando previsualizadores previos: {e}")
+        else:
+            # Si se genera una nueva previsualización, limpiar previsualizaciones viejas
+            try:
+                for old_p in temp_dir.glob("preview_*.mp4"):
+                    try:
+                        old_p.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
-        if req.is_preview:
-            crf = "17"
-
-        # 6. Definir archivo de salida
+        # Configurar salida
         if req.is_preview:
             output_file = temp_dir / f"preview_{job_id}.mp4"
+
         else:
             ws_root = default_workspace_path()
             if req.output_channel:
@@ -398,7 +466,7 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
 
         JOBS[job_id]["progress"] = 25
 
-        # 7. Construir comando FFmpeg (con -nostdin para evitar bloqueo de consola)
+        # 6. Construir comando FFmpeg
         cmd = [
             str(ffmpeg),
             "-nostdin",
@@ -415,40 +483,99 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
                 "-i", str(audio_concat_txt)
             ])
 
-        cmd.extend([
-            "-t", str(target_duration),
-            "-vf", vf_filter,
-            "-c:v", "libx264",
-            "-crf", crf,
-            "-preset", preset,
-            "-x264-params", x264_opts,
-            "-pix_fmt", "yuv420p",
-            "-colorspace", "bt709",
-            "-color_primaries", "bt709",
-            "-color_trc", "bt709",
-            "-threads", str(governor.get_hardware_specs()["safe_threads"]),
-        ])
+        cmd.extend(["-t", str(target_duration)])
 
-        # Manejo de audio: sincronización, silenciado o preservación
-        if audio_concat_txt:
-            cmd.extend([
-                "-c:a", "aac",
-                "-b:a", "320k",
-                "-map", "0:v:0",
-                "-map", "1:a:0"
-            ])
-        elif req.mute_original_audio:
-            cmd.extend([
-                "-map", "0:v:0",
-                "-an"
-            ])
+        if can_stream_copy:
+            # ── MODO STREAM COPY (100% CERO PÉRDIDA DE CALIDAD) ──
+            JOBS[job_id]["message"] = "Ejecutando bucle en modo Copia Directa 1:1 (Calidad nativa sin compresión)..."
+            cmd.extend(["-c:v", "copy"])
+
+            if audio_concat_txt:
+                cmd.extend([
+                    "-c:a", "aac",
+                    "-b:a", "320k",
+                    "-map", "0:v:0",
+                    "-map", "1:a:0"
+                ])
+            elif req.mute_original_audio:
+                cmd.extend([
+                    "-map", "0:v:0",
+                    "-an"
+                ])
+            else:
+                cmd.extend([
+                    "-map", "0:v:0",
+                    "-map", "0:a?",
+                    "-c:a", "copy"
+                ])
         else:
+            # ── MODO RE-ENCODE ULTRA FIDELIDAD CON AQ-MODE 3 ──
+            res_map = {
+                "1080p": (1920, 1080),
+                "4k": (3840, 2160),
+                "720p": (1280, 720),
+                "shorts": (1080, 1920),
+            }
+            
+            if is_original_res and valid_videos:
+                first_meta = video_metas[0] if video_metas else probe_video_meta(valid_videos[0])
+                w, h = first_meta.get("width", 1920), first_meta.get("height", 1080)
+                # Si es resolución original, NO forzar pad ni scale destructivo
+                vf_filter = "setsar=1"
+            else:
+                w, h = res_map.get(req.resolution.lower(), (1920, 1080))
+                vf_filter = f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+
+            # Perfiles anti-pixelado con aq-mode=3 (bias hacia escenas oscuras/espaciales) y tune film
+            if req.quality in ("master", "lossless_copy"):
+                crf = "12"
+                preset = "medium" if req.is_preview else "slow"
+                x264_opts = "aq-mode=3:aq-strength=1.2:qcomp=0.8:no-fast-pskip=1"
+            elif req.quality == "balanced":
+                crf = "18"
+                preset = "fast" if req.is_preview else "medium"
+                x264_opts = "aq-mode=3:aq-strength=1.0"
+            else: # "high" (por defecto)
+                crf = "15"
+                preset = "medium"
+                x264_opts = "aq-mode=3:aq-strength=1.1:no-fast-pskip=1"
+
+            if req.is_preview:
+                crf = "15"
+
             cmd.extend([
-                "-map", "0:v:0",
-                "-map", "0:a?",
-                "-c:a", "aac",
-                "-b:a", "192k"
+                "-vf", vf_filter,
+                "-c:v", "libx264",
+                "-tune", "film",
+                "-crf", crf,
+                "-preset", preset,
+                "-x264-params", x264_opts,
+                "-pix_fmt", "yuv420p",
+                "-colorspace", "bt709",
+                "-color_primaries", "bt709",
+                "-color_trc", "bt709",
+                "-threads", str(governor.get_hardware_specs()["safe_threads"]),
             ])
+
+            if audio_concat_txt:
+                cmd.extend([
+                    "-c:a", "aac",
+                    "-b:a", "320k",
+                    "-map", "0:v:0",
+                    "-map", "1:a:0"
+                ])
+            elif req.mute_original_audio:
+                cmd.extend([
+                    "-map", "0:v:0",
+                    "-an"
+                ])
+            else:
+                cmd.extend([
+                    "-map", "0:v:0",
+                    "-map", "0:a?",
+                    "-c:a", "aac",
+                    "-b:a", "256k"
+                ])
 
         cmd.append(str(output_file))
 
@@ -491,6 +618,8 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
                 video_concat_txt.unlink()
             if audio_concat_txt and audio_concat_txt.exists():
                 audio_concat_txt.unlink()
+            if master_cycle_file and master_cycle_file.exists():
+                master_cycle_file.unlink()
         except Exception:
             pass
 

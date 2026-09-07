@@ -24,7 +24,7 @@ echo.
 
 start "" /B cmd /c "cd /d "%CONTROLADOR%" && "%PYTHON%" -m uvicorn main:app --host 127.0.0.1 --port 8000 >> "%CONTROLADOR%\motor.log" 2>&1"
 
-timeout /t 2 /nobreak >nul
+ping 127.0.0.1 -n 3 >nul
 
 powershell -Command "try { $r = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/status' -TimeoutSec 3 -UseBasicParsing; Write-Host ' [OK] Motor iniciado correctamente en http://127.0.0.1:8000' } catch { Write-Host ' [WARN] Motor arrancando... revisa motor.log si no responde en 10s.' }"
 
