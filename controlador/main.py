@@ -4,7 +4,7 @@ import threading
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import workspace, chat, ollama_manager
+from routers import workspace, chat, ollama_manager, video_looper
 
 app = FastAPI(
     title="AutoProd Local Controlador",
@@ -31,6 +31,7 @@ app.add_middleware(
 app.include_router(workspace.router)
 app.include_router(chat.router)
 app.include_router(ollama_manager.router)
+app.include_router(video_looper.router)
 
 @app.get("/status")
 def get_status():

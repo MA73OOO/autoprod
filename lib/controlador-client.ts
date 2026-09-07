@@ -195,4 +195,111 @@ export class ControladorClient {
       throw error;
     }
   }
+
+  /**
+   * Inspecciona las propiedades de un archivo de video o audio
+   */
+  static async inspectMedia(filePath: string): Promise<any> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/video/inspect_media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_path: filePath }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error inspeccionando medio');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: inspectMedia failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Escanea una carpeta en busca de canciones y calcula la duración total
+   */
+  static async scanAudioFolder(folderPath: string): Promise<any> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/video/scan_audio_folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folder_path: folderPath }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error escaneando carpeta de audio');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: scanAudioFolder failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Inicia el renderizado de un loop de video (previsualización o export completo)
+   */
+  static async createVideoLoop(params: {
+    videoPaths: string[];
+    durationMode?: 'custom' | 'audio_folder';
+    targetDurationSeconds?: number;
+    audioFolderPath?: string | null;
+    resolution?: string;
+    quality?: string;
+    isPreview?: boolean;
+    outputChannel?: string | null;
+    outputFilename?: string | null;
+  }): Promise<{ job_id: string; status: string; is_preview: boolean; message: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/video/create_loop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_paths: params.videoPaths,
+          duration_mode: params.durationMode || 'custom',
+          target_duration_seconds: params.targetDurationSeconds || 300,
+          audio_folder_path: params.audioFolderPath || null,
+          resolution: params.resolution || '1080p',
+          quality: params.quality || 'high',
+          is_preview: params.isPreview ?? false,
+          output_channel: params.outputChannel || null,
+          output_filename: params.outputFilename || null,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error iniciando loop de video');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: createVideoLoop failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Consulta el estado y progreso de un job de renderizado
+   */
+  static async getVideoJobStatus(jobId: string): Promise<any> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/video/status/${encodeURIComponent(jobId)}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Error consultando estado del render');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: getVideoJobStatus failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Retorna la URL directa para streaming de la previsualización
+   */
+  static getPreviewVideoUrl(jobId: string): string {
+    return `${getControladorUrl()}/video/preview/${encodeURIComponent(jobId)}`;
+  }
 }

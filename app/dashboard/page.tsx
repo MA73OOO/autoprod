@@ -13,6 +13,7 @@ import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
 import ConversationSidebar from '@/components/dashboard/ConversationSidebar';
 import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
+import VideoLooperStudio from '@/components/dashboard/VideoLooperStudio';
 import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
@@ -189,7 +190,7 @@ export default function Dashboard() {
   };
 
   // ── Navigation State ──
-  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper'>('home');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeEditorPath, setActiveEditorPath] = useState<string | null>(null);
 
@@ -815,6 +816,7 @@ export default function Dashboard() {
               setActiveEditorPath(path);
               // Do NOT change activeView, just set the path to open the right panel
             }}
+            onOpenLooper={() => setActiveView('looper')}
           />
         </aside>
 
@@ -824,10 +826,26 @@ export default function Dashboard() {
           className="w-[3px] hover:w-[5px] hover:bg-purple-500/40 active:bg-purple-500 cursor-col-resize h-full transition-all shrink-0 bg-zinc-800/40 relative z-30"
         />
 
-        {/* Center — Launchpad or Chat */}
+        {/* Center — Launchpad, Looper or Chat */}
         <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden relative">
           {activeView === 'home' ? (
-            <Launchpad lang={lang} onSelect={handleNewConversationWithRole} />
+            <Launchpad
+              lang={lang}
+              onSelect={handleNewConversationWithRole}
+              onSelectLooper={() => setActiveView('looper')}
+            />
+          ) : activeView === 'looper' ? (
+            <VideoLooperStudio
+              lang={lang}
+              channels={channels}
+              workspacePath={workspacePath}
+              onBack={() => setActiveView('home')}
+              onRefreshWorkspace={() => {
+                if (workspacePath) {
+                  loadWorkspaceTree(workspacePath);
+                }
+              }}
+            />
           ) : (
             <ChatPanel
               lang={lang}

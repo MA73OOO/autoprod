@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 interface Props {
   lang: Language;
   onSelect: (role: 'channel' | 'video' | 'script' | 'prompt') => void;
+  onSelectLooper?: () => void;
 }
 
 interface Card {
@@ -59,7 +60,7 @@ const ACTIVE_CARDS: Card[] = [
   },
 ];
 
-export default function Launchpad({ lang, onSelect }: Props) {
+export default function Launchpad({ lang, onSelect, onSelectLooper }: Props) {
   return (
     <div className="h-full overflow-y-auto minimal-scrollbar p-6 flex flex-col justify-center items-center w-full gap-6">
       {/* Header */}
@@ -125,25 +126,25 @@ export default function Launchpad({ lang, onSelect }: Props) {
           </div>
         </button>
 
-        {/* Edición Automática — Pronto */}
+        {/* Crear Loop (Video Looper) */}
         <button
-          onClick={() => toast.info(lang === 'es' ? 'Edición automática próximamente...' : 'Automatic editing coming soon...')}
-          className="h-44 text-left bg-[#18181b]/40 border border-zinc-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-purple-500/30 hover:bg-[#18181b]/60 transition-all group shadow-lg cursor-pointer opacity-75 hover:opacity-100 relative overflow-hidden"
+          onClick={onSelectLooper}
+          className="h-44 text-left bg-[#18181b]/60 border border-purple-800/40 hover:border-purple-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-[#18181b] transition-all group shadow-lg cursor-pointer relative overflow-hidden"
         >
-          <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] font-bold rounded-full uppercase tracking-wider">
-            {lang === 'es' ? 'Pronto' : 'Soon'}
+          <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-bold rounded-full uppercase tracking-wider">
+            {lang === 'es' ? 'NUEVO' : 'NEW'}
           </div>
-          <div className="h-11 w-11 rounded-xl bg-purple-600/5 border border-purple-500/10 flex items-center justify-center text-xl text-purple-400/80 group-hover:scale-110 transition-transform">
-            🐍
+          <div className="h-11 w-11 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-xl text-purple-400 group-hover:scale-110 transition-transform">
+            🔁
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-zinc-300 group-hover:text-white transition-colors">
-              {lang === 'es' ? 'Edición Automática' : 'Automatic Editing'}
+            <h3 className="text-sm font-bold text-zinc-100 group-hover:text-purple-300 transition-colors">
+              {lang === 'es' ? 'Crear Loop (Video Looper)' : 'Create Loop (Video Looper)'}
             </h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
               {lang === 'es'
-                ? 'Compila y edita tus videos de forma automatizada uniendo música, ambientes y miniaturas locales.'
-                : 'Automatically compile and edit your videos by joining audio, ambient tracks, and local miniatures.'}
+                ? 'Concatena videos en bucle continuo de alta fidelidad con duración personalizada o sincronizada con música.'
+                : 'Concatenate videos in continuous high fidelity loop synced with songs or custom time.'}
             </p>
           </div>
         </button>

@@ -22,12 +22,28 @@ export default function FileTree({ node, level = 0, onAddNode, onOpenFile }: Fil
   const nameLower = node.name.toLowerCase();
   const isMarkdown = !isDir && (nameLower.endsWith('.md') || nameLower.endsWith('.txt'));
   const isImage = !isDir && (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp') || nameLower.endsWith('.gif'));
+  const isVideo = !isDir && (nameLower.endsWith('.mp4') || nameLower.endsWith('.mov') || nameLower.endsWith('.mkv') || nameLower.endsWith('.webm') || nameLower.endsWith('.avi'));
+  const isAudio = !isDir && (nameLower.endsWith('.mp3') || nameLower.endsWith('.wav') || nameLower.endsWith('.aac') || nameLower.endsWith('.m4a') || nameLower.endsWith('.flac') || nameLower.endsWith('.ogg'));
   const isPreviewable = isMarkdown || isImage;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.stopPropagation();
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      name: node.name,
+      path: node.path,
+      type: node.type,
+      isVideo,
+      isAudio
+    }));
+    e.dataTransfer.setData('text/plain', node.path);
+  };
 
   return (
     <div className="text-sm">
       <div 
-        className={`flex items-center group py-1 px-2 rounded ${isPreviewable ? 'cursor-pointer hover:bg-zinc-800/80 hover:text-indigo-400' : isDir ? 'cursor-pointer hover:bg-zinc-800/50' : 'cursor-default'} transition-colors ${level === 0 ? 'font-semibold text-zinc-200' : 'text-zinc-400'}`}
+        draggable={true}
+        onDragStart={handleDragStart}
+        className={`flex items-center group py-1 px-2 rounded cursor-grab active:cursor-grabbing select-none ${isPreviewable ? 'hover:bg-zinc-800/80 hover:text-indigo-400' : isDir ? 'hover:bg-zinc-800/50' : 'hover:bg-zinc-800/40'} transition-colors ${level === 0 ? 'font-semibold text-zinc-200' : 'text-zinc-400'}`}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
         onClick={() => {
           if (isDir) setIsOpen(!isOpen);
@@ -35,7 +51,7 @@ export default function FileTree({ node, level = 0, onAddNode, onOpenFile }: Fil
         }}
       >
         <span className="w-4 inline-block opacity-70 text-[10px]">
-          {isDir ? (isOpen ? '▼' : '▶') : isMarkdown ? '📝' : isImage ? '🖼️' : '📄'}
+          {isDir ? (isOpen ? '▼' : '▶') : isMarkdown ? '📝' : isImage ? '🖼️' : isVideo ? '🎬' : isAudio ? '🎵' : '📄'}
         </span>
         <span className="ml-1 truncate flex-1">{node.name}</span>
         

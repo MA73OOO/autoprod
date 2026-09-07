@@ -11,7 +11,7 @@ interface Props {
   lang: Language;
   conversations: Conversation[];
   activeConversationId: string | null;
-  activeView: 'home' | 'chat';
+  activeView: 'home' | 'chat' | 'editor' | 'looper';
   workspacePath: string | null;
   workspaceTree: FileNode[];
   motorStatus: boolean;
@@ -22,6 +22,7 @@ interface Props {
   onAddNode: (parentPath: string, type: 'channel' | 'video') => void;
   onOpenFile?: (path: string) => void;
   onRefreshWorkspace?: () => void;
+  onOpenLooper?: () => void;
 }
 
 export default function ConversationSidebar({
@@ -39,6 +40,7 @@ export default function ConversationSidebar({
   onAddNode,
   onOpenFile,
   onRefreshWorkspace,
+  onOpenLooper,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -180,6 +182,26 @@ export default function ConversationSidebar({
         >
           💬 {lang === 'es' ? 'Nueva Conversación' : 'New Conversation'}
         </button>
+
+        {/* Video Looper Studio Button */}
+        {onOpenLooper && (
+          <button
+            onClick={onOpenLooper}
+            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer shrink-0 ${
+              activeView === 'looper'
+                ? 'bg-purple-950/70 border-purple-500 text-purple-200 shadow-sm shadow-purple-500/20'
+                : 'bg-zinc-900/60 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>🔁</span>
+              <span>{lang === 'es' ? 'Video Looper Studio' : 'Video Looper Studio'}</span>
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold font-mono">
+              HD
+            </span>
+          </button>
+        )}
 
         {/* Conversations History */}
         <div className="space-y-2 shrink-0">

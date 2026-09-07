@@ -22,6 +22,7 @@ Antes de modificar cualquier parte del sistema, **DEBES** leer el `.md` correspo
 Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear una nueva funcionalidad**, DEBES documentarla aquí creando una subcarpeta y añadiéndola a esta lista.
 
 - 🤖 **[Agentic Orchestrator](file:///e:/autoprod/docs/features/agentic_orchestrator/README.md):** Cómo Gemini delega tareas usando Function Calling hacia el Motor de Python.
+- 🔁 **[Video Looper Studio](file:///e:/autoprod/docs/features/video_looper/README.md):** Creación de loops de video con sincronización de música, calidad anti-pixelado y previsualizador de 5 minutos.
 - ⚙️ **[Local Motor (FastAPI)](file:///e:/autoprod/docs/features/local_motor/README.md):** Cómo el backend de Python interactúa físicamente con el disco duro del usuario.
 - 📁 **[Folder CRUD](file:///e:/autoprod/docs/features/folder_crud/README.md):** Gestión agéntica y multiplataforma de carpetas y canales en el workspace local.
 - 🔐 **[Auth Guard & JWT](file:///e:/autoprod/docs/features/auth_guard/README.md):** Sistema SSR de doble verificación para sesiones de Supabase.
