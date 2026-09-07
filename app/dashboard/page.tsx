@@ -15,6 +15,8 @@ import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
 import VideoLooperStudio from '@/components/dashboard/VideoLooperStudio';
 import { VideoSubtitlesStudio } from '@/components/dashboard/VideoSubtitlesStudio';
+import AssetLibraryView from '@/components/dashboard/AssetLibraryView';
+import ImageStudio from '@/components/dashboard/ImageStudio';
 import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
@@ -213,7 +215,7 @@ export default function Dashboard() {
   };
 
   // ── Navigation State ──
-  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper' | 'subtitles'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper' | 'subtitles' | 'assets' | 'images'>('home');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeEditorPath, setActiveEditorPath] = useState<string | null>(null);
 
@@ -892,6 +894,8 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
             }}
             onOpenLooper={() => setActiveView('looper')}
             onOpenSubtitles={() => setActiveView('subtitles')}
+            onOpenAssets={() => setActiveView('assets')}
+            onOpenImages={() => setActiveView('images')}
           />
         </aside>
 
@@ -901,7 +905,7 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
           className="w-[3px] hover:w-[5px] hover:bg-purple-500/40 active:bg-purple-500 cursor-col-resize h-full transition-all shrink-0 bg-zinc-800/40 relative z-30"
         />
 
-        {/* Center — Launchpad, Looper, Subtitles or Chat */}
+        {/* Center — Launchpad, Looper, Subtitles, Assets, Images or Chat */}
         <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden relative">
           {activeView === 'home' ? (
             <Launchpad
@@ -909,6 +913,8 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
               onSelect={handleNewConversationWithRole}
               onSelectLooper={() => setActiveView('looper')}
               onSelectSubtitles={() => setActiveView('subtitles')}
+              onSelectAssets={() => setActiveView('assets')}
+              onSelectImages={() => setActiveView('images')}
             />
           ) : activeView === 'looper' ? (
             <VideoLooperStudio
@@ -925,6 +931,25 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
           ) : activeView === 'subtitles' ? (
             <VideoSubtitlesStudio
               onBackToDashboard={() => setActiveView('home')}
+            />
+          ) : activeView === 'assets' ? (
+            <AssetLibraryView
+              lang={lang}
+              channels={channels}
+              workspacePath={workspacePath}
+              motorStatus={motorStatus}
+              onBackToDashboard={() => setActiveView('home')}
+              onOpenLooper={() => setActiveView('looper')}
+              onOpenSubtitles={() => setActiveView('subtitles')}
+              onOpenImageStudio={() => setActiveView('images')}
+            />
+          ) : activeView === 'images' ? (
+            <ImageStudio
+              lang={lang}
+              channels={channels}
+              workspacePath={workspacePath}
+              onBackToDashboard={() => setActiveView('home')}
+              onOpenAssets={() => setActiveView('assets')}
             />
           ) : (
             <ChatPanel

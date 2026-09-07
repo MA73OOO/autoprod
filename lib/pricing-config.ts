@@ -12,6 +12,7 @@ export interface PlanConfig {
   maxVideosPerChannel: number;
   canRenderInCloud: boolean;
   hasAdvancedTemplates: boolean;
+  canDownloadLocalMotor: boolean; // Gating de descarga e instalación del motor local
   whisperCloudMinutes: number;
   badge?: string;
   features: string[];
@@ -31,13 +32,14 @@ export const PLANS_CONFIG: Record<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE', Pla
     maxVideosPerChannel: 5,
     canRenderInCloud: false,
     hasAdvancedTemplates: false,
+    canDownloadLocalMotor: false,
     whisperCloudMinutes: 0,
     features: [
       '50 créditos iniciales de cortesía',
       '1 Canal de YouTube para pruebas',
       'AutoProd Brain™ (Copiloto de Prueba - 1 crédito/acción)',
-      'Subtitulado Whisper Local básico',
-      'Video Looper hasta 720p (10 min)',
+      '❌ Sin descarga de Motor Local (Solo en planes de pago)',
+      'Video Looper Web hasta 720p (10 min)',
       'Soporte por documentación',
     ],
   },
@@ -51,14 +53,16 @@ export const PLANS_CONFIG: Record<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE', Pla
     maxVideosPerChannel: 50,
     canRenderInCloud: true,
     hasAdvancedTemplates: false,
+    canDownloadLocalMotor: true,
     whisperCloudMinutes: 60,
     badge: 'Ideal Creadores',
     features: [
       'AutoProd Brain™ (Cerebro Autónomo 24/7): 100% GRATIS e ILIMITADO',
+      '⚡ Descarga del Motor Local AutoProd (Render GPU/CPU offline en tu PC)',
       '1 Canal de YouTube Profesional (Totalmente automatizado)',
       'Bolsa mensual de 1,800 créditos de IA para modelos pesados y render',
       'Video Looper Studio hasta 1080p (1 hora)',
-      'Whisper Local GPU/CPU + 60 min Cloud Whisper',
+      'Whisper Local GPU/CPU sin límite + 60 min Cloud Whisper',
       'Exportación SRT / ASS compatible con CapCut',
       'Subida manual guiada a YouTube API v3',
       'Soporte estándar por correo',
@@ -74,10 +78,12 @@ export const PLANS_CONFIG: Record<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE', Pla
     maxVideosPerChannel: 200,
     canRenderInCloud: true,
     hasAdvancedTemplates: true,
+    canDownloadLocalMotor: true,
     whisperCloudMinutes: 180,
     badge: '🔥 MÁS POPULAR',
     features: [
       'AutoProd Brain™ (Cerebro Autónomo 24/7): 100% GRATIS e ILIMITADO',
+      '⚡ Motor Local AutoProd Completo: Aceleración GPU CUDA y procesamiento local',
       'Hasta 3 Canales de YouTube simultáneos (Multi-nicho)',
       'Bolsa mensual de 2,700 créditos de IA para modelos pesados y render',
       'Video Looper Studio 4K (3 horas) + Batch Looper',
@@ -98,10 +104,12 @@ export const PLANS_CONFIG: Record<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE', Pla
     maxVideosPerChannel: 9999,
     canRenderInCloud: true,
     hasAdvancedTemplates: true,
+    canDownloadLocalMotor: true,
     whisperCloudMinutes: 500,
     badge: '👑 MÁXIMA POTENCIA',
     features: [
       'AutoProd Brain™ (Cerebro Autónomo 24/7): 100% GRATIS e ILIMITADO',
+      '⚡ Motor Local AutoProd Enterprise: Rendimiento extremo y render sin compresión',
       'Canales de YouTube ILIMITADOS (Redes de automatización masiva)',
       'Bolsa mensual de 4,500 créditos de IA para modelos pesados y render',
       'Video Looper 4K 60fps sin compresión + Pre-render background',

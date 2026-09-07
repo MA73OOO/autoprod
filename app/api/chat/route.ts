@@ -6,7 +6,7 @@ import { openai, createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
-import { isOrchestratorFreeForUser } from '@/lib/pricing-config';
+import { isOrchestratorFreeForUser, PLANS_CONFIG } from '@/lib/pricing-config';
 import { getWorkspacePath } from '@/harness/setup/detector';
 import path from 'path';
 import fs from 'fs';
@@ -64,11 +64,12 @@ export async function POST(req: Request) {
           select: {
             name: true,
             email: true,
+            role: true,
             openaiVaultId: true,
             geminiVaultId: true,
             anthropicVaultId: true,
             subscription: {
-              include: { plan: true }
+              include: { plan: { include: { limits: true } } }
             }
           }
         });
@@ -76,6 +77,12 @@ export async function POST(req: Request) {
         console.warn('Failed to retrieve user settings', e);
       }
     }
+
+    const userPlan = (userRecord?.subscription?.plan?.name as 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE') || 'FREE';
+    const planConfig = PLANS_CONFIG[userPlan] || PLANS_CONFIG.FREE;
+    const maxChannels = userRecord?.subscription?.plan?.limits?.maxChannels ?? planConfig.maxChannels;
+    const isAdmin = userRecord?.role === 'ADMIN';
+    const existingChannels: string[] = [];
 
 
     let apiKey = '';

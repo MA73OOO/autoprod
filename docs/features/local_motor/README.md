@@ -15,5 +15,10 @@ Está construido en Python utilizando el framework web `FastAPI`.
 - `controlador/routers/ollama.py` -> Endpoints para la instalación automática y control del modelo local Ollama.
 - `main.py` -> Archivo de inicio del servidor FastAPI (usando uvicorn).
 
+## 🔒 Licenciamiento y Acceso por Niveles
+La descarga e instalación automatizada del Motor Local es un **beneficio exclusivo para suscriptores de planes pagos (Starter $70, Pro $100, Enterprise $150)**:
+- **Plan Free (Prueba Gratuita):** Bloqueado tanto en frontend (`UserSettingsModal.tsx`) como en backend (`/api/setup/install` devuelve HTTP 403 `requiresUpgrade: true`).
+- **Starter / Pro / Enterprise:** Desbloqueo total para instalación del helper de Python, dependencias (FFmpeg, yt-dlp, Whisper) y acceso a aceleración CUDA/GPU en la máquina local.
+
 ## 🎯 Propósito
 Evitar las limitaciones del navegador. Como AutoProd es un software SaaS web (Next.js), el navegador por seguridad bloquea el acceso directo a los archivos locales del usuario. El Motor Local elimina esta restricción, permitiendo que la IA web "hackee" la brecha e instancie cambios directamente en la PC del usuario a Costo de Servidor $0.

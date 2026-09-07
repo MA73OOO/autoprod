@@ -4,21 +4,25 @@
 Esta funcionalidad implementa el sistema integral de monetización, suscripciones y economía de tokens de AutoProd:
 
 1. **Niveles de Suscripción (Tiers Comerciales):**
-   - **Prueba Gratuita (FREE):** $0 USD, 50 créditos iniciales de cortesía, 1 canal de YouTube para pruebas, subtitulado Whisper local. AutoProd Brain™ descuenta 1 crédito por interacción como medida anti-abuso.
-   - **Starter ($70 USD/mes):** Diseñado para creadores profesionales enfocados. **1 Canal de YouTube Profesional**, Looper 1080p, 60 min de Whisper Cloud y una bolsa mensual de **1,800 créditos de IA netos** ($20 de presupuesto menos 10% de comisión AutoProd).
-   - **Pro ($100 USD/mes - 🔥 Más Popular):** Diseñado para productores multi-nicho y agencias. **Hasta 3 Canales de YouTube simultáneos**, Looper 4K (3 hrs) + Batch, Modo Carpeta Canciones, Memoria Vectorial y bolsa mensual de **2,700 créditos de IA netos** ($30 de presupuesto menos 10% de comisión).
-   - **Enterprise ($150 USD/mes - 👑 VIP):** Potencia máxima sin restricciones. **Canales de YouTube ILIMITADOS**, Looper 4K 60fps sin compresión, 500 min Whisper Cloud, soporte prioritario 1 a 1 y bolsa mensual de **4,500 créditos de IA netos** ($50 de presupuesto menos 10% de comisión).
+   - **Prueba Gratuita (FREE):** $0 USD, 50 créditos iniciales de cortesía, 1 canal de YouTube para pruebas, Video Looper Web básico hasta 720p. **Sin descarga del Motor Local (exclusivo de planes pagos)**. AutoProd Brain™ descuenta 1 crédito por interacción como medida anti-abuso.
+   - **Starter ($70 USD/mes):** Diseñado para creadores profesionales enfocados. **1 Canal de YouTube Profesional**, **Descarga del Motor Local AutoProd** (procesamiento GPU/CPU offline en PC y Whisper local ilimitado), Looper 1080p, 60 min de Whisper Cloud y una bolsa mensual de **1,800 créditos de IA netos** ($20 de presupuesto menos 10% de comisión AutoProd).
+   - **Pro ($100 USD/mes - 🔥 Más Popular):** Diseñado para productores multi-nicho y agencias. **Hasta 3 Canales de YouTube simultáneos**, **Motor Local Completo con aceleración CUDA/GPU**, Looper 4K (3 hrs) + Batch, Modo Carpeta Canciones, Memoria Vectorial y bolsa mensual de **2,700 créditos de IA netos** ($30 de presupuesto menos 10% de comisión).
+   - **Enterprise ($150 USD/mes - 👑 VIP):** Potencia máxima sin restricciones. **Canales de YouTube ILIMITADOS**, **Motor Local Enterprise** (rendimiento extremo sin compresión), Looper 4K 60fps, 500 min Whisper Cloud, soporte prioritario 1 a 1 y bolsa mensual de **4,500 créditos de IA netos** ($50 de presupuesto menos 10% de comisión).
 
-2. **Regla de Negocio del Orquestador (AutoProd Brain™):**
+2. **Beneficio y Licenciamiento del Motor Local:**
+   - La descarga e instalación automatizada del **Motor Local (FastAPI Python en localhost:8000)** está estrictamente bloqueada para el plan gratuito a nivel de backend (`/api/setup/install`) y frontend (`UserSettingsModal.tsx`).
+   - Requiere como mínimo una suscripción activa a partir del Plan Starter ($70 USD), sirviendo como uno de los mayores incentivos de conversión por permitir procesamiento ilimitado en la GPU/CPU del usuario a costo $0 de servidor.
+
+3. **Regla de Negocio del Orquestador (AutoProd Brain™):**
    - Para todos los planes de pago (Starter, Pro, Enterprise), el copiloto autónomo **AutoProd Brain™** (impulsado por `gpt-4o-mini`) es **100% GRATIS e ILIMITADO** (0 créditos descontados). AutoProd asume el costo de API (~$0.75 - $1.00 USD por usuario intensivo al mes), garantizando un margen de ganancia neto superior al 98%.
    - Para usuarios gratuitos (Free Trial), AutoProd Brain™ descuenta 1 crédito por mensaje para evitar bots y agotamiento abusivo de infraestructura.
 
-3. **Economía de Tokens y Modelos Pesados:**
+4. **Economía de Tokens y Modelos Pesados:**
    - 1 USD equivale a 100 créditos AutoProd (1 crédito = $0.01 USD).
    - El saldo del Wallet se reserva estrictamente para llamadas a modelos pesados (GPT-4o, Claude 3.5 Sonnet, Gemini Pro), minutos de transcripción Whisper Cloud y renderizado en la nube.
    - Las tarifas de cada modelo o servicio se configuran de forma dinámica en la tabla `ServicePricing` y son administrables desde el panel de `/admin`.
 
-4. **Pasarela Dual (Internacional + Local Nequi):**
+5. **Pasarela Dual (Internacional + Local Nequi):**
    - **Lemon Squeezy:** Generación de checkouts seguros (`/api/payments/checkout`) y recepción de webhooks con firma HMAC SHA-256 (`/api/webhooks/lemonsqueezy`) para renovación automática y acreditación de saldo.
    - **Activación Manual Nequi / Bancolombia / Daviplata:** Modal integrado para usuarios de Colombia y Latinoamérica con enlace directo a WhatsApp para comprobantes y botón de activación manual en `/admin` que registra la transacción en `PaymentLedger` y actualiza `UserSubscription` y `Wallet` atómicamente.
 

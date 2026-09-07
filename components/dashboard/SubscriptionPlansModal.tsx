@@ -171,6 +171,10 @@ export default function SubscriptionPlansModal({
                         <span>🧠 AutoProd Brain™:</span>
                         <span>{isFree ? '1 crédito / acción' : '100% GRATIS'}</span>
                       </div>
+                      <div className={`flex justify-between font-semibold ${isFree ? 'text-zinc-500' : 'text-purple-300'}`}>
+                        <span>⚙️ Motor Local (GPU/PC):</span>
+                        <span>{isFree ? '🔒 No disponible' : '⚡ Desbloqueado'}</span>
+                      </div>
                       <div className="flex justify-between text-zinc-400">
                         <span>🪙 Bolsa de Tokens:</span>
                         <span className="text-white font-bold">{credits.toLocaleString()} pts {isFree ? '(Prueba)' : `(~$${netTokens} USD)`}</span>
@@ -181,12 +185,31 @@ export default function SubscriptionPlansModal({
                   {/* Feature List */}
                   <div className="space-y-2 mb-5 text-xs text-zinc-300 flex-1">
                     <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Incluye:</p>
-                    {plan.features.map((feat, i) => (
-                      <div key={i} className="flex items-start gap-1.5">
-                        <span className="text-purple-400 text-xs mt-0.5 shrink-0">✓</span>
-                        <span className="leading-snug text-zinc-300 text-[11px] sm:text-xs">{feat}</span>
-                      </div>
-                    ))}
+                    {plan.features.map((feat, i) => {
+                      const isExcluded = feat.startsWith('❌');
+                      const isHighlight = feat.startsWith('⚡');
+                      const cleanFeat = isExcluded ? feat.replace(/^❌\s*/, '') : isHighlight ? feat.replace(/^⚡\s*/, '') : feat;
+                      return (
+                        <div key={i} className="flex items-start gap-1.5">
+                          {isExcluded ? (
+                            <span className="text-red-400/80 text-xs mt-0.5 shrink-0 font-bold">✗</span>
+                          ) : isHighlight ? (
+                            <span className="text-amber-400 text-xs mt-0.5 shrink-0 font-bold">⚡</span>
+                          ) : (
+                            <span className="text-purple-400 text-xs mt-0.5 shrink-0">✓</span>
+                          )}
+                          <span className={`leading-snug text-[11px] sm:text-xs ${
+                            isExcluded 
+                              ? 'text-zinc-500 line-through' 
+                              : isHighlight 
+                              ? 'text-zinc-100 font-semibold' 
+                              : 'text-zinc-300'
+                          }`}>
+                            {cleanFeat}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Action Buttons */}
@@ -202,7 +225,7 @@ export default function SubscriptionPlansModal({
                           <span>{isCurrent ? (lang === 'es' ? 'Tu Plan Actual' : 'Your Current Plan') : (lang === 'es' ? 'Nivel Básico Gratuito' : 'Free Basic Tier')}</span>
                         </div>
                         <p className="text-[10px] text-zinc-500 text-center">
-                          {isCurrent ? (lang === 'es' ? 'Sube a Starter o Pro para IA ilimitada' : 'Upgrade to Starter or Pro for unlimited AI') : ''}
+                          {isCurrent ? (lang === 'es' ? 'Sube a Starter o Pro para desbloquear el Motor Local' : 'Upgrade to Starter or Pro to unlock Local Motor') : ''}
                         </p>
                       </div>
                     ) : (
@@ -244,16 +267,22 @@ export default function SubscriptionPlansModal({
             })}
           </div>
 
-          {/* Economics & Anti-abuse note */}
-          <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4 text-xs text-zinc-400 space-y-2">
-            <div className="flex items-center gap-2 text-zinc-200 font-bold">
-              <span>💡</span>
-              <span>¿Cómo funciona la economía de Tokens y Créditos AutoProd?</span>
+          {/* Economics & Motor Local Note */}
+          <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-4 text-xs text-zinc-400 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-zinc-200 font-bold">
+                <span>💡</span>
+                <span>Economía de Tokens, AutoProd Brain™ y Motor Local</span>
+              </div>
+              <span className="text-[10px] text-purple-400 font-semibold px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20">
+                Arquitectura Híbrida Web + Local
+              </span>
             </div>
             <p className="leading-relaxed text-[11px]">
-              Al contratar cualquier plan de pago (Starter, Pro o Enterprise), AutoProd absorbe en su totalidad el costo del orquestador <strong className="text-white">gpt-4o-mini</strong> (0 créditos descontados). 
-              La bolsa asignada (1,800, 2,700 o 4,500 créditos) se reserva para procesos intensivos que decidas ejecutar: generación de miniaturas, transcripciones de horas completas con Whisper, o llamadas a modelos de razonamiento como GPT-4o o Claude 3.5 Sonnet.
-              En el plan Free de prueba, se descuenta 1 crédito por interacción con el orquestador de tus 50 créditos iniciales como política anti-abuso.
+              <strong className="text-white">⚙️ Motor Local (Beneficio exclusivo a partir de Starter $70):</strong> Te permite instalar el helper local de Python en tu PC, aprovechando tu tarjeta gráfica (GPU/CPU) para procesar subtítulos Whisper ilimitados y renderizar video a costo $0 de servidor. En la prueba gratuita, el motor local no está disponible para descarga.
+            </p>
+            <p className="leading-relaxed text-[11px]">
+              <strong className="text-white">🧠 AutoProd Brain™ (Cerebro Autónomo 24/7):</strong> En todos los planes de pago, las llamadas a gpt-4o-mini para orquestar canales y redactar guiones son 100% gratuitas e ilimitadas. Tu bolsa mensual (1,800, 2,700 o 4,500 créditos) queda reservada íntegramente para procesos de alta demanda (modelos pesados, imágenes y renders cloud).
             </p>
           </div>
         </div>

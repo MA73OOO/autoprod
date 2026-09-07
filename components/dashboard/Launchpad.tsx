@@ -8,6 +8,8 @@ interface Props {
   onSelect: (role: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel') => void;
   onSelectLooper?: () => void;
   onSelectSubtitles?: () => void;
+  onSelectAssets?: () => void;
+  onSelectImages?: () => void;
 }
 
 interface Card {
@@ -70,7 +72,14 @@ const ACTIVE_CARDS: Card[] = [
   },
 ];
 
-export default function Launchpad({ lang, onSelect, onSelectLooper, onSelectSubtitles }: Props) {
+export default function Launchpad({
+  lang,
+  onSelect,
+  onSelectLooper,
+  onSelectSubtitles,
+  onSelectAssets,
+  onSelectImages,
+}: Props) {
   return (
     <div className="h-full overflow-y-auto minimal-scrollbar p-6 flex flex-col justify-center items-center w-full gap-6">
       {/* Header */}
@@ -112,6 +121,52 @@ export default function Launchpad({ lang, onSelect, onSelectLooper, onSelectSubt
             </div>
           </button>
         ))}
+
+        {/* Creador de Imágenes & Miniaturas */}
+        <button
+          onClick={onSelectImages}
+          className="h-44 text-left bg-[#18181b]/60 border border-purple-800/40 hover:border-purple-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-[#18181b] transition-all group shadow-lg cursor-pointer relative overflow-hidden"
+        >
+          <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[9px] font-bold rounded-full uppercase tracking-wider">
+            DALL-E 3
+          </div>
+          <div className="h-11 w-11 rounded-xl bg-purple-600/10 border border-purple-500/20 flex items-center justify-center text-xl text-purple-400 group-hover:scale-110 transition-transform">
+            🎨
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-zinc-100 group-hover:text-purple-300 transition-colors">
+              {lang === 'es' ? 'Crear Imágenes & Miniaturas' : 'Create Images & Thumbnails'}
+            </h3>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              {lang === 'es'
+                ? 'Crea miniaturas y artes de video analizando imágenes de referencia con IA o mediante cuestionario guiado.'
+                : 'Create thumbnails and video art analyzing reference images or via guided questions.'}
+            </p>
+          </div>
+        </button>
+
+        {/* Biblioteca de Recursos (CRUD) */}
+        <button
+          onClick={onSelectAssets}
+          className="h-44 text-left bg-[#18181b]/60 border border-indigo-800/40 hover:border-indigo-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-[#18181b] transition-all group shadow-lg cursor-pointer relative overflow-hidden"
+        >
+          <div className="absolute top-3 right-3 px-2 py-0.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 text-[9px] font-bold rounded-full uppercase tracking-wider">
+            CRUD
+          </div>
+          <div className="h-11 w-11 rounded-xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-xl text-indigo-400 group-hover:scale-110 transition-transform">
+            🗃️
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-zinc-100 group-hover:text-indigo-300 transition-colors">
+              {lang === 'es' ? 'Biblioteca de Recursos' : 'Asset Resource Library'}
+            </h3>
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
+              {lang === 'es'
+                ? 'Administra tus imágenes, subtítulos y videos procesados con control de almacenamiento local y en la nube.'
+                : 'Manage your images, subtitles, and processed videos with local and cloud storage controls.'}
+            </p>
+          </div>
+        </button>
 
         {/* Subtitular Video — Whisper Studio */}
         <button

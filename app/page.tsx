@@ -259,13 +259,13 @@ export default function Home() {
                     <span className="text-purple-400">✓</span>
                     <span>50 créditos de bienvenida</span>
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-300">
-                    <span className="text-purple-400">✓</span>
-                    <span>Subtitulado Whisper Local</span>
+                  <div className="flex items-center gap-2 text-zinc-500 line-through">
+                    <span className="text-red-400/80 font-bold">✗</span>
+                    <span>Descarga de Motor Local (Solo planes pagos)</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Video Looper 720p (10 min)</span>
+                    <span>Video Looper Web (hasta 720p)</span>
                   </div>
                   <div className="flex items-center gap-2 text-amber-400/80 text-[11px]">
                     <span>•</span>
@@ -302,17 +302,21 @@ export default function Home() {
                 </div>
                 <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
                   <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-100 font-semibold">
+                    <span className="text-amber-400 font-bold">⚡</span>
+                    <span><strong>Descarga de Motor Local</strong> (GPU/CPU en PC)</span>
+                  </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
                     <span><strong>1 Canal de YouTube</strong> Profesional</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Video Looper 1080p (1 hora)</span>
+                    <span>Video Looper Studio 1080p (1 hora)</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>60 min Cloud Whisper</span>
+                    <span>Whisper Local ilimitado + 60m Cloud</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
@@ -356,6 +360,10 @@ export default function Home() {
                 </div>
                 <div className="space-y-2 text-xs text-zinc-300 mb-6 border-t border-zinc-800 pt-4">
                   <p className="text-[10px] font-bold text-zinc-400 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-100 font-semibold">
+                    <span className="text-amber-400 font-bold">⚡</span>
+                    <span><strong>Motor Local Completo</strong> (Aceleración GPU CUDA)</span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
                     <span><strong>Hasta 3 Canales simultáneos</strong> (Multi-nicho)</span>
@@ -411,6 +419,10 @@ export default function Home() {
                 </div>
                 <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
                   <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-100 font-semibold">
+                    <span className="text-amber-400 font-bold">⚡</span>
+                    <span><strong>Motor Local Enterprise</strong> (Render masivo)</span>
+                  </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
                     <span><strong>Canales de YouTube ILIMITADOS</strong></span>

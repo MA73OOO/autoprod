@@ -11,7 +11,7 @@ interface Props {
   lang: Language;
   conversations: Conversation[];
   activeConversationId: string | null;
-  activeView: 'home' | 'chat' | 'editor' | 'looper';
+  activeView: 'home' | 'chat' | 'editor' | 'looper' | 'subtitles' | 'assets' | 'images';
   workspacePath: string | null;
   workspaceTree: FileNode[];
   motorStatus: boolean;
@@ -24,6 +24,8 @@ interface Props {
   onRefreshWorkspace?: () => void;
   onOpenLooper?: () => void;
   onOpenSubtitles?: () => void;
+  onOpenAssets?: () => void;
+  onOpenImages?: () => void;
 }
 
 export default function ConversationSidebar({
@@ -43,6 +45,8 @@ export default function ConversationSidebar({
   onRefreshWorkspace,
   onOpenLooper,
   onOpenSubtitles,
+  onOpenAssets,
+  onOpenImages,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -201,6 +205,46 @@ export default function ConversationSidebar({
             </span>
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold font-mono">
               HD
+            </span>
+          </button>
+        )}
+
+        {/* Image Creator Studio Button */}
+        {onOpenImages && (
+          <button
+            onClick={onOpenImages}
+            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer shrink-0 ${
+              activeView === 'images'
+                ? 'bg-purple-950/70 border-purple-500 text-purple-200 shadow-sm shadow-purple-500/20'
+                : 'bg-zinc-900/60 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>🎨</span>
+              <span>{lang === 'es' ? 'Creador de Imágenes' : 'AI Image Studio'}</span>
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold font-mono">
+              DALL-E
+            </span>
+          </button>
+        )}
+
+        {/* Asset Library Button */}
+        {onOpenAssets && (
+          <button
+            onClick={onOpenAssets}
+            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer shrink-0 ${
+              activeView === 'assets'
+                ? 'bg-indigo-950/70 border-indigo-500 text-indigo-200 shadow-sm shadow-indigo-500/20'
+                : 'bg-zinc-900/60 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>🗃️</span>
+              <span>{lang === 'es' ? 'Biblioteca de Recursos' : 'Asset Library'}</span>
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-bold font-mono">
+              CRUD
             </span>
           </button>
         )}
