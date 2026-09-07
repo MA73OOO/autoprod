@@ -202,11 +202,36 @@ class CreateLoopRequest(BaseModel):
     is_preview: bool = False                      # Si es true, limita a max 5 min y usa preset veryfast
     mute_original_audio: bool = False             # Si es true, silencia/elimina el audio del video original
     output_channel: Optional[str] = None          # Nombre de canal de destino opcional
+    output_folder_path: Optional[str] = None      # Ruta exacta de la carpeta de destino (ej: FinanzasReales/video1/Videos)
     output_filename: Optional[str] = None         # Nombre de archivo deseado
 
 # ──────────────────────────────────────────────
 # Endpoints
 # ──────────────────────────────────────────────
+
+@router.get("/video_folders")
+def get_video_folders():
+    """Retorna una lista de carpetas de videos disponibles en el workspace."""
+    ws_root = default_workspace_path()
+    folders = []
+    if not ws_root.exists():
+        return {"folders": []}
+    
+    for root, dirs, _ in os.walk(ws_root):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in {"node_modules", ".git", "__pycache__"}]
+        for d in dirs:
+            if d.lower() in ("videos", "video"):
+                full_p = Path(root) / d
+                try:
+                    rel = full_p.relative_to(ws_root).as_posix()
+                except Exception:
+                    rel = full_p.name
+                folders.append({
+                    "name": rel,
+                    "path": full_p.resolve().as_posix()
+                })
+    return {"folders": folders}
+
 
 @router.post("/inspect_media")
 def inspect_media(req: InspectMediaRequest):
@@ -408,61 +433,56 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         else:
             can_stream_copy = (user_wants_copy or is_original_res)
 
-        # Limpieza de previsualizadores previos
-        if not req.is_preview:
-            # Al generar el video con tiempo completo, eliminamos cualquier previsualizador generado previamente
-            try:
-                for old_p in temp_dir.glob("preview_*.mp4"):
-                    try:
-                        old_p.unlink(missing_ok=True)
-                    except Exception:
-                        pass
-                # También limpiar de carpeta externa si existía previamente
-                config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
-                if config_path.exists():
-                    try:
-                        with open(config_path, "r", encoding="utf-8") as f:
-                            cfg = json.load(f)
-                            if "basePath" in cfg:
-                                ext_temp = Path(cfg["basePath"]) / "temp_renders"
-                                if ext_temp.exists() and ext_temp.resolve() != temp_dir.resolve():
-                                    for old_ext_p in ext_temp.glob("preview_*.mp4"):
-                                        try:
-                                            old_ext_p.unlink(missing_ok=True)
-                                        except Exception:
-                                            pass
-                    except Exception:
-                        pass
-            except Exception as e:
-                print(f"[WARN] Error eliminando previsualizadores previos: {e}")
-        else:
-            # Si se genera una nueva previsualización, limpiar previsualizaciones viejas
-            try:
-                for old_p in temp_dir.glob("preview_*.mp4"):
-                    try:
-                        old_p.unlink(missing_ok=True)
-                    except Exception:
-                        pass
-            except Exception:
-                pass
+        # 1. Determinar carpeta de destino exacta del usuario
+        ws_root = default_workspace_path()
+        target_out_dir = None
 
-        # Configurar salida
-        if req.is_preview:
-            output_file = temp_dir / f"preview_{job_id}.mp4"
-
+        if req.output_folder_path and req.output_folder_path.strip():
+            target_out_dir = Path(req.output_folder_path.strip())
+            if not target_out_dir.is_absolute():
+                target_out_dir = (ws_root / target_out_dir).resolve()
+            else:
+                target_out_dir = target_out_dir.resolve()
+        elif req.output_channel:
+            channel_dir = ws_root / req.output_channel
+            target_out_dir = channel_dir / "Videos" if (channel_dir / "Videos").exists() else channel_dir
         else:
-            ws_root = default_workspace_path()
-            if req.output_channel:
-                channel_dir = ws_root / req.output_channel
-                target_out_dir = channel_dir / "Videos" if (channel_dir / "Videos").exists() else channel_dir
+            # Si no se pasó ruta, intentar deducir desde el primer clip
+            if valid_videos:
+                first_parent = valid_videos[0].parent
+                if "videos" in first_parent.name.lower():
+                    target_out_dir = first_parent
+                elif (first_parent / "Videos").exists():
+                    target_out_dir = first_parent / "Videos"
+                else:
+                    target_out_dir = first_parent
             else:
                 target_out_dir = ws_root
 
-            target_out_dir.mkdir(parents=True, exist_ok=True)
+        target_out_dir.mkdir(parents=True, exist_ok=True)
+
+        # 2. Configurar salida y eliminación del previsualizador al renderizar completo
+        if req.is_preview:
+            # Previsualizador guardado directamente en la carpeta destino como preview_loop.mp4
+            output_file = target_out_dir / "preview_loop.mp4"
+        else:
+            # Al generar el video final con tiempo completo: ELIMINAR el previsualizador antes de renderizar
+            try:
+                preview_file = target_out_dir / "preview_loop.mp4"
+                if preview_file.exists():
+                    preview_file.unlink(missing_ok=True)
+                for old_p in target_out_dir.glob("preview_*.mp4"):
+                    old_p.unlink(missing_ok=True)
+                for old_temp_p in temp_dir.glob("preview_*.mp4"):
+                    old_temp_p.unlink(missing_ok=True)
+            except Exception as e:
+                print(f"[WARN] Error eliminando previsualizador previo: {e}")
+
             fname = req.output_filename or f"loop_{int(time.time())}.mp4"
             if not fname.endswith(".mp4"):
                 fname += ".mp4"
             output_file = target_out_dir / fname
+
 
         JOBS[job_id]["progress"] = 25
 

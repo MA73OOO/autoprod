@@ -18,9 +18,9 @@ Sistema de control y gobierno de canales que garantiza:
 | `prisma/schema.prisma` | Campos `localPath String?` y `niche String?` en model `Channel` |
 | `src/prisma/contract.prisma` | Idem |
 | `scripts/migrate_channel_paths.ts` | Script `ALTER TABLE channel ADD COLUMN IF NOT EXISTS "localPath"/"niche"` ejecutado |
-| `app/api/channels/route.ts` | `GET` incluye `context` + `videos`; `POST` valida límite por plan y crea/actualiza canal con `localPath` y `niche` |
+| `app/api/channels/route.ts` | `GET` combina canales de Prisma con `channelContext` de Supabase (sin relación Prisma inválida); `POST` valida límite por plan y crea/actualiza canal con `localPath` y `niche` |
 | `app/api/tools/extraer_canal_youtube/route.ts` | Guarda `localPath` y `niche` al importar canal YouTube |
-| `app/api/chat/route.ts` | Inyecta guardrail estricto de nicho en `systemPrompt` usando canal activo (`channelId`) |
+| `app/api/chat/route.ts` | Resuelve `channelId` (UUID o nombre de carpeta), vincula contexto semántico de Supabase, e inyecta guardrail estricto de nicho y presentación ejecutiva personalizada para el canal activo |
 | `app/api/conversations/[id]/route.ts` | `PATCH` resuelve `channelId` como UUID o nombre (lookup + autocreate) |
 | `components/dashboard/ChatPanel.tsx` | Barra permanente de `Canal Activo:` con dropdown, badge de nicho, ruta y estado de guardrail |
 | `components/dashboard/types.ts` | `Channel` interface + `localPath`, `niche`, `context` |

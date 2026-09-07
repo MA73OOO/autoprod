@@ -180,8 +180,10 @@ export default function ChatPanel({
     );
   }
 
-  const activeChannelObj = channels.find(c => c.id === activeConversation?.channelId);
-
+  const activeChannelObj = channels.find(c => 
+    c.id === activeConversation?.channelId || 
+    c.name.toLowerCase() === activeConversation?.channelId?.toLowerCase()
+  );
   return (
     <div className="flex-1 flex flex-col relative h-full">
       {/* Messages log */}
@@ -265,7 +267,7 @@ export default function ChatPanel({
                 📺 <span className="hidden sm:inline">{lang === 'es' ? 'Canal:' : 'Channel:'}</span>
               </span>
               <select
-                value={activeConversation?.channelId || ''}
+                value={activeChannelObj ? activeChannelObj.id : (activeConversation?.channelId || '')}
                 onChange={(e) => onAssociateChannel(e.target.value || null)}
                 className="bg-zinc-800 border border-zinc-700 text-xs font-medium text-zinc-200 rounded px-2 py-0.5 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500/50 cursor-pointer max-w-[170px] sm:max-w-[210px] truncate"
               >

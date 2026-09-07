@@ -313,19 +313,30 @@ export async function POST(req: Request) {
         let activeChannel: any = null;
         let activeChannelContext: any = null;
         if (channelId) {
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channelId);
           try {
-            activeChannel = await prisma.channel.findFirst({
-              where: {
-                OR: [
-                  { id: channelId },
-                  { name: channelId }
-                ]
-              }
-            });
-          } catch {
-            activeChannel = await prisma.channel.findFirst({
-              where: { name: channelId }
-            }).catch(() => null);
+            if (isUuid) {
+              activeChannel = await prisma.channel.findFirst({
+                where: { id: channelId }
+              });
+            }
+            if (!activeChannel) {
+              activeChannel = await prisma.channel.findFirst({
+                where: { name: { equals: channelId, mode: 'insensitive' } }
+              });
+            }
+          } catch (findErr) {
+            console.warn('[Channel lookup error]:', findErr);
+          }
+
+          // Si no está en BD aún pero es una carpeta seleccionada en workspace:
+          if (!activeChannel && typeof channelId === 'string' && channelId.trim()) {
+            activeChannel = {
+              id: channelId,
+              name: channelId,
+              niche: channelId,
+              localPath: currentWorkspacePath ? path.join(currentWorkspacePath, channelId) : null
+            };
           }
         } else if (userId) {
           const userChannels = await prisma.channel.findMany({

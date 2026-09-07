@@ -254,6 +254,7 @@ export class ControladorClient {
     isPreview?: boolean;
     muteOriginalAudio?: boolean;
     outputChannel?: string | null;
+    outputFolderPath?: string | null;
     outputFilename?: string | null;
   }): Promise<{ job_id: string; status: string; is_preview: boolean; message: string }> {
     try {
@@ -270,6 +271,7 @@ export class ControladorClient {
           is_preview: params.isPreview ?? false,
           mute_original_audio: params.muteOriginalAudio ?? false,
           output_channel: params.outputChannel || null,
+          output_folder_path: params.outputFolderPath || null,
           output_filename: params.outputFilename || null,
         }),
       });
@@ -283,6 +285,21 @@ export class ControladorClient {
       throw error;
     }
   }
+
+  /**
+   * Obtiene la lista de carpetas de video disponibles en el workspace
+   */
+  static async getVideoFolders(): Promise<Array<{ name: string; path: string }>> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/video/video_folders`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.folders || [];
+    } catch {
+      return [];
+    }
+  }
+
 
   /**
    * Consulta el estado y progreso de un job de renderizado

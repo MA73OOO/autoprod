@@ -27,12 +27,14 @@ flowchart TD
 
 | Endpoint | Método | Parámetros Clave | Descripción |
 |---|:---:|---|---|
+| `/video/video_folders` | `GET` | Ninguno | Retorna la lista de carpetas `Videos` de cada proyecto y canal en el workspace. |
 | `/video/inspect_media` | `POST` | `{ file_path: string }` | Ejecuta `ffprobe` para extraer resolución, FPS, duración exacta, códec y detección booleana de pista de audio (`has_audio`). |
 | `/video/scan_audio_folder` | `POST` | `{ folder_path: string }` | Escanea recursivamente archivos de audio, suma duraciones y devuelve tiempo formateado `HH:MM:SS`. |
-| `/video/create_loop` | `POST` | `{ video_files, audio_folder, duration, resolution, quality, mute_original_audio, is_preview }` | Construye archivos concat, aplica filtros FFmpeg silenciosos (`CREATE_NO_WINDOW`), gestión de audio y exporta el `.mp4`. |
+| `/video/create_loop` | `POST` | `{ video_paths, duration_mode, target_duration_seconds, audio_folder_path, resolution, quality, mute_original_audio, is_preview, output_folder_path, output_filename }` | Construye el bucle, guarda en la carpeta seleccionada (previsualizador `preview_loop.mp4` o video final). Elimina el preview al renderizar completo. |
 | `/video/preview/{job_id}` | `GET` | `job_id` en path | Emite el stream de video resultante mediante `FileResponse` para el `<video>` HTML5 del estudio. |
 | `/video/job_status/{job_id}` | `GET` | `job_id` en path | Consulta el estado del render (`processing`, `completed`, `error`) con porcentaje dinámico calculado por `progress_ticker`. |
 | `/workspace/raw` | `GET` | `path: string` | Sirve cualquier archivo multimedia local (video/audio/imagen) por streaming HTTP con MIME type detectado para el inspector lateral. |
+
 
 ---
 
