@@ -345,11 +345,19 @@ export default function Dashboard() {
     }
   };
 
-  const handleNewConversationWithRole = async (roleType: 'channel' | 'video' | 'script' | 'prompt') => {
-    const nameMap: Record<string, string> = { channel: 'crear_canal', video: 'crear_video', script: 'crear_guion', prompt: 'crear_prompt' };
+  const handleNewConversationWithRole = async (roleType: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel') => {
+    const nameMap: Record<string, string> = { channel: 'crear_canal', video: 'crear_video', script: 'crear_guion', prompt: 'crear_prompt', import_channel: 'extraer_canal_youtube' };
     const template = promptTemplates.find(p => p.name === nameMap[roleType]);
 
     const FALLBACKS: Record<string, { title: { es: string; en: string }; systemPrompt: string; welcomeText: { es: string; en: string } }> = {
+      import_channel: {
+        title: { es: 'Extraer Canal 📥', en: 'Extract Channel 📥' },
+        systemPrompt: 'Eres un analista experto de YouTube en AutoProd. Tu tarea es extraer la información completa de un canal existente usando la herramienta extraer_canal_youtube, procesar su histórico de videos, etiquetas ganadoras y organizar la producción evitando duplicar ideas.',
+        welcomeText: { 
+          es: '¡Hola! Proporciona la URL o @handle de tu canal de YouTube (ejemplo: https://youtube.com/@micanal) para extraer su historial, analizar etiquetas comprobadas y generar la carpeta de contexto en tu workspace.', 
+          en: 'Hello! Provide your YouTube channel URL or @handle to extract past videos, analyze winning tags and create context folders in your workspace.' 
+        },
+      },
       channel: {
         title: { es: 'Crear Canal 📺', en: 'Create Channel 📺' },
         systemPrompt: 'Eres un especialista en optimización y configuración de canales de YouTube.',

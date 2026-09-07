@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
-import { generateText, tool as aiTool, jsonSchema } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { generateText, tool as aiTool, jsonSchema, embed } from 'ai';
+import { openai, createOpenAI } from '@ai-sdk/openai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
+import { isOrchestratorFreeForUser } from '@/lib/pricing-config';
 import { getWorkspacePath } from '@/harness/setup/detector';
 import path from 'path';
 import fs from 'fs';
@@ -54,18 +55,28 @@ export async function POST(req: Request) {
     const { data: userData } = await supabaseServer.auth.getUser();
     const userId = userData?.user?.id;
 
-    let userRecord = null;
+    let userRecord: any = null;
 
     if (userId) {
       try {
         userRecord = await prisma.user.findUnique({
           where: { id: userId },
-          select: { name: true, email: true, openaiVaultId: true, geminiVaultId: true, anthropicVaultId: true }
+          select: {
+            name: true,
+            email: true,
+            openaiVaultId: true,
+            geminiVaultId: true,
+            anthropicVaultId: true,
+            subscription: {
+              include: { plan: true }
+            }
+          }
         });
       } catch (e: any) {
         console.warn('Failed to retrieve user settings', e);
       }
     }
+
 
     let apiKey = '';
 
@@ -112,57 +123,80 @@ export async function POST(req: Request) {
       }
     }
     
-    let requiredCredits = 1; // Default fallback
+    let requiredCredits = 0;
     let usedSystemKey = false;
     let userWalletId: string | null = null;
+    const userPlanName = userRecord?.subscription?.plan?.name || 'FREE';
 
     if (!apiKey) {
       // 2. EL USUARIO NO TIENE BYOK: Pasamos directo a las Llaves Maestras del Sistema (Admin)
       usedSystemKey = true;
 
-      // Calcular costo dinámico
-      try {
-        const pricing = await prisma.servicePricing.findUnique({
-          where: {
-            serviceType_modelName: {
-              serviceType: 'CHAT',
-              modelName: model || 'default'
+      // Evaluar si es orquestador gratuito para este plan
+      const isFree = isOrchestratorFreeForUser(userPlanName, model);
+
+      if (isFree) {
+        requiredCredits = 0; // Gratuito para usuarios de pago en gpt-4o-mini
+      } else if (userPlanName === 'FREE' && (!model || model === 'default' || model === 'gpt-4o-mini')) {
+        requiredCredits = 1; // Para usuarios FREE, gpt-4o-mini cuesta 1 crédito de sus 50 tokens de prueba
+      } else {
+        // Modelos avanzados o de pago
+        try {
+          const pricing = await prisma.servicePricing.findUnique({
+            where: {
+              serviceType_modelName: {
+                serviceType: 'CHAT',
+                modelName: model || 'default'
+              }
             }
+          });
+          if (pricing && pricing.isActive) {
+            requiredCredits = pricing.costPerUnit;
+          } else {
+            requiredCredits = 1;
           }
-        });
-        if (pricing && pricing.isActive) {
-          requiredCredits = pricing.costPerUnit;
+        } catch (e) {
+          console.warn('Error reading service pricing, defaulting to 1', e);
+          requiredCredits = 1;
         }
-      } catch (e) {
-        console.warn('Error reading service pricing, defaulting to 1', e);
       }
 
-      // Verificar saldo
+      // Verificar saldo si la acción cuesta créditos
       if (userId) {
         try {
           let wallet = await prisma.wallet.findUnique({ where: { userId } });
-          // Auto-crear wallet si no existe (para cuentas antiguas)
+          // Auto-crear wallet si no existe (con 50 créditos iniciales de cortesía)
           if (!wallet) {
-            wallet = await prisma.wallet.create({ data: { userId, balance: 10 } }); // 10 créditos gratis de cortesía
-          }
-          if (wallet.balance < requiredCredits) {
-             return NextResponse.json({ 
-               error: `Créditos insuficientes. Necesitas ${requiredCredits} crédito(s) para usar este modelo. Por favor recarga tu saldo o configura tu API Key personal (BYOK).`
-             }, { status: 402 }); 
+            wallet = await prisma.wallet.create({ data: { userId, balance: 50 } });
           }
           userWalletId = wallet.id;
+
+          if (requiredCredits > 0 && wallet.balance < requiredCredits) {
+            if (userPlanName === 'FREE') {
+              return NextResponse.json({
+                error: `Has agotado tus 50 créditos de prueba gratuita. Para continuar usando el orquestador ilimitado y acceder a todas las herramientas de AutoProd, suscríbete a Starter ($70), Pro ($100) o Enterprise ($150).`,
+                requiresUpgrade: true
+              }, { status: 402 });
+            } else {
+              return NextResponse.json({
+                error: `Créditos insuficientes (${wallet.balance} disponibles, necesitas ${requiredCredits}). Por favor recarga tu saldo o mejora tu plan para continuar.`,
+                requiresUpgrade: true
+              }, { status: 402 });
+            }
+          }
         } catch(e) {
           console.warn('Error checking wallet', e);
         }
       }
 
-      if (!confirmCreditUsage) {
-        // Detenemos la ejecución y le avisamos al frontend que pregunte al usuario
+      // Solo pedir confirmación si tiene costo en créditos y el usuario no ha confirmado
+      if (requiredCredits > 0 && !confirmCreditUsage) {
         return NextResponse.json({ 
           requiresConfirmation: true, 
           message: `Esta acción consumirá ${requiredCredits} crédito(s) de la plataforma. ¿Deseas continuar?`
-        }, { status: 402 }); // 402 Payment Required
+        }, { status: 402 });
       }
+
 
       // Si ya confirmó, buscamos la llave en SystemSettings -> Vault
       try {
@@ -291,6 +325,13 @@ export async function POST(req: Request) {
                     else if (payload.channel_name) payload.base_path = payload.channel_name;
                     else if (payload.folder_name && (dbTool.name === 'listar_directorio' || dbTool.name === 'listar_directorio_plano')) {
                       payload.base_path = payload.folder_name;
+                    }
+                  }
+
+                  // Normalización para extraer_canal_youtube
+                  if (dbTool.name === 'extraer_canal_youtube') {
+                    if (!payload.url_canal && (payload.url || payload.canal_url || payload.channel_url || payload.canal || payload.channel || payload.handle || payload.link)) {
+                      payload.url_canal = payload.url || payload.canal_url || payload.channel_url || payload.canal || payload.channel || payload.handle || payload.link;
                     }
                   }
 
@@ -491,6 +532,71 @@ export async function POST(req: Request) {
 - Si vas a ejecutar herramientas para crear canales, videos o archivos, asegúrate de planificar la estructura de carpetas y archivos con máxima precisión antes de invocar la herramienta.
 - Brinda una respuesta estructurada, profunda y de alto impacto para el creador.`;
       }
+
+      // Inyectar contexto semántico vectorial de canales importados (pgvector)
+      if (userId) {
+        try {
+          const lastUserMessage = [...messages].reverse().find((m: any) => m.role === 'user');
+          const userQueryText = typeof lastUserMessage?.content === 'string' 
+            ? lastUserMessage.content 
+            : (Array.isArray(lastUserMessage?.content) ? JSON.stringify(lastUserMessage.content) : '');
+
+          if (userQueryText && userQueryText.trim().length > 3) {
+            let oaiKey = process.env.OPENAI_API_KEY;
+            if (!oaiKey && userRecord?.openaiVaultId) {
+              const { data: sData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: userRecord.openaiVaultId });
+              if (sData) oaiKey = typeof sData === 'string' ? sData : sData.get_decrypted_secret || sData;
+            }
+            if (!oaiKey) {
+              const { data: rpcK } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
+              if (rpcK && typeof rpcK === 'string') oaiKey = rpcK;
+            }
+
+            if (oaiKey) {
+              const { embedding } = await embed({
+                model: createOpenAI({ apiKey: oaiKey }).embedding('text-embedding-3-small'),
+                value: userQueryText.slice(0, 1000),
+              });
+
+              const { data: matchedChannels, error: matchErr } = await supabase.rpc('match_channel_contexts', {
+                query_embedding: `[${embedding.join(',')}]`,
+                match_threshold: 0.45,
+                match_count: 2,
+                p_user_id: userId,
+              });
+
+              if (!matchErr && Array.isArray(matchedChannels) && matchedChannels.length > 0) {
+                for (const mc of matchedChannels) {
+                  let antiDupSection = '';
+                  if (Array.isArray(mc.topics_covered) && mc.topics_covered.length > 0) {
+                    const topTitles = mc.topics_covered.slice(0, 15).map((t: any) => `• "${t.title}"`).join('\n');
+                    antiDupSection = `\n🚫 TEMAS Y TÍTULOS YA TRATADOS EN ESTE CANAL (REGLA ESTRICTA: NO DUPLICAR NI REPETIR ESTAS IDEAS):\n${topTitles}`;
+                  }
+
+                  let bestTagsSection = '';
+                  if (Array.isArray(mc.best_tags) && mc.best_tags.length > 0) {
+                    const tagNames = mc.best_tags.slice(0, 10).map((t: any) => `"${t.tag}" (${t.avgViews?.toLocaleString()} vistas prom.)`).join(', ');
+                    bestTagsSection = `\n🏷️ ETIQUETAS GANADORAS RECOMENDADAS PARA ESTE CANAL:\n${tagNames}`;
+                  }
+
+                  systemPrompt += `\n\n=== CANAL HISTÓRICO RELEVANTE DETECTADO (SIMILITUD SEMÁNTICA: ${Math.round((mc.similarity || 0) * 100)}%) ===
+Canal: "${mc.title}" (${mc.handle || 'Sin handle'})
+Identidad y Resumen: ${mc.context_summary}
+${bestTagsSection}
+${antiDupSection}
+DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
+- El usuario se está refiriendo o su consulta se alinea con este canal.
+- Prohibido repetir los títulos o conceptos ya realizados listados arriba.
+- Utiliza las etiquetas ganadoras comprobadas para optimizar la propuesta.
+- Propón enfoques frescos, ángulos complementarios y estructuras de alto CTR.`;
+                }
+              }
+            }
+          }
+        } catch (vectorErr: any) {
+          console.warn('[Vector Context Retrieval]:', vectorErr?.message);
+        }
+      }
       
     } catch (e) {
       console.warn("Fallo al cargar Orquestador de BD", e);
@@ -577,7 +683,7 @@ export async function POST(req: Request) {
             prisma.creditConsumption.create({
               data: {
                 walletId: userWalletId,
-                creditsUsed: -requiredCredits,
+                creditsUsed: requiredCredits,
                 serviceType: 'CHAT',
                 modelName: model || 'unknown',
                 description: `Chat interactivo con ${model || 'unknown'}`

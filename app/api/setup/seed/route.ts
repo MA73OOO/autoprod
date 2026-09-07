@@ -242,6 +242,35 @@ export async function GET() {
       }
     });
 
+    const toolExtraerCanal = await prisma.tool.upsert({
+      where: { name: 'extraer_canal_youtube' },
+      update: {
+        description: 'Extrae la información completa de un canal de YouTube usando su URL o @handle. Analiza los videos previos, extrae etiquetas ganadoras (tags), genera el catálogo de temas ya cubiertos para no duplicar ideas, indexa el vector de contexto en la base de datos y crea la carpeta InfoCanal en el disco del usuario con Contexto_canal.md, Metricas_canal.md e Historial_canal.md.',
+        schema: {
+          type: 'object',
+          properties: {
+            url_canal: { type: 'string', description: 'URL completa o @handle del canal de YouTube (ej: "https://www.youtube.com/@PawsAndPillows" o "@PawsAndPillows").' },
+            max_videos: { type: 'number', description: 'Cantidad máxima de videos a extraer y analizar (por defecto: 50).' }
+          },
+          required: ['url_canal']
+        }
+      },
+      create: {
+        name: 'extraer_canal_youtube',
+        description: 'Extrae la información completa de un canal de YouTube usando su URL o @handle. Analiza los videos previos, extrae etiquetas ganadoras (tags), genera el catálogo de temas ya cubiertos para no duplicar ideas, indexa el vector de contexto en la base de datos y crea la carpeta InfoCanal en el disco del usuario con Contexto_canal.md, Metricas_canal.md e Historial_canal.md.',
+        apiEndpoint: 'http://localhost:3000/api/tools/extraer_canal_youtube',
+        method: 'POST',
+        schema: {
+          type: 'object',
+          properties: {
+            url_canal: { type: 'string', description: 'URL completa o @handle del canal de YouTube (ej: "https://www.youtube.com/@PawsAndPillows" o "@PawsAndPillows").' },
+            max_videos: { type: 'number', description: 'Cantidad máxima de videos a extraer y analizar (por defecto: 50).' }
+          },
+          required: ['url_canal']
+        }
+      }
+    });
+
     const orchestratorSystemPrompt = `Eres AutoProd, un asistente de IA especializado en la producción de contenido para YouTube.
 
 CONTEXTO DE TRABAJO Y WORKSPACE:
@@ -284,6 +313,7 @@ REGLAS:
         toolVerificarEstado,
         toolGenerarInfoCanal,
         toolGenerarMetadatosSubida,
+        toolExtraerCanal,
       ];
 
       for (const tool of allTools) {

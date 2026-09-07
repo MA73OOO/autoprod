@@ -5,13 +5,13 @@ import { toast } from 'sonner';
 
 interface Props {
   lang: Language;
-  onSelect: (role: 'channel' | 'video' | 'script' | 'prompt') => void;
+  onSelect: (role: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel') => void;
   onSelectLooper?: () => void;
   onSelectSubtitles?: () => void;
 }
 
 interface Card {
-  role: 'channel' | 'video' | 'script' | 'prompt';
+  role: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel';
   icon: string;
   labelEs: string;
   labelEn: string;
@@ -23,6 +23,15 @@ interface Card {
 }
 
 const ACTIVE_CARDS: Card[] = [
+  {
+    role: 'import_channel',
+    icon: '📥',
+    labelEs: 'Extraer Canal',
+    labelEn: 'Extract Channel',
+    descEs: 'Extrae un canal existente de YouTube con API v3 para analizar etiquetas y evitar duplicar ideas.',
+    descEn: 'Extract an existing YouTube channel with API v3 to analyze tags and avoid duplicate ideas.',
+    color: 'indigo',
+  },
   {
     role: 'channel',
     icon: '📺',

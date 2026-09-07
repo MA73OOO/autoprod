@@ -63,6 +63,11 @@ export default function ChatPanel({
   const [timerStart, setTimerStart] = useState<number | null>(null);
 
   const PROMPT_TEMPLATES: Record<string, string> = {
+    import_channel: `[Extracción y Análisis de Canal de YouTube]
+• URL o Handle del canal (ej. https://youtube.com/@micanal o @micanal): 
+• Cantidad de videos a analizar (por defecto 50): 50
+• Objetivo principal (analizar tags ganadoras, métricas y generar inventario anti-duplicados): `,
+
     channel: `[Configuración de Nuevo Canal de YouTube]
 • Nombre del canal: 
 • Nicho o temática (ej. Finanzas Personales, Misterio, Gaming, Tutoriales Tech): 
@@ -281,6 +286,14 @@ export default function ChatPanel({
             <span className="text-[11px] font-medium text-zinc-500 mr-1 flex items-center gap-1 select-none">
               📝 {lang === 'es' ? 'Plantillas:' : 'Templates:'}
             </span>
+            <button
+              type="button"
+              onClick={() => handleInsertTemplate('import_channel')}
+              className="text-xs bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300 border border-emerald-800/40 hover:border-emerald-600/60 px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+              title={lang === 'es' ? 'Cargar plantilla para extraer un canal de YouTube' : 'Load template to extract a YouTube channel'}
+            >
+              📥 {lang === 'es' ? 'Extraer Canal' : 'Extract Channel'}
+            </button>
             <button
               type="button"
               onClick={() => handleInsertTemplate('channel')}

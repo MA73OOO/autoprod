@@ -28,6 +28,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear u
 - 📁 **[Folder CRUD](file:///e:/autoprod/docs/features/folder_crud/README.md):** Gestión agéntica y multiplataforma de carpetas y canales en el workspace local.
 - 🔐 **[Auth Guard & JWT](file:///e:/autoprod/docs/features/auth_guard/README.md):** Sistema SSR de doble verificación para sesiones de Supabase.
 - 📊 **[Token Tracker](file:///e:/autoprod/docs/features/token_tracker/README.md):** Sistema asíncrono para el rastreo de consumo de tokens por usuario.
+- 📺 **[YouTube Channel Extractor](file:///e:/autoprod/docs/features/youtube_channel_extractor/README.md):** Extracción con YouTube Data API v3, contexto local anti-duplicados y persistencia vectorial con pgvector.
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.

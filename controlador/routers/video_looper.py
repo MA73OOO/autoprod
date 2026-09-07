@@ -9,6 +9,12 @@ import math
 import threading
 from pathlib import Path
 from typing import List, Optional, Dict, Any
+
+# Garantizar que el directorio raíz del controlador esté en sys.path
+_controlador_dir = str(Path(__file__).resolve().parent.parent)
+if _controlador_dir not in sys.path:
+    sys.path.insert(0, _controlador_dir)
+
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel

@@ -28,7 +28,8 @@ export async function POST() {
               }
             }
           }
-        }
+        },
+        wallet: true
       }
     });
 
@@ -47,13 +48,64 @@ export async function POST() {
         include: {
           subscription: {
             include: { plan: { include: { limits: true } } }
+          },
+          wallet: true
+        }
+      });
+    }
+
+    // Ensure User has a Wallet (50 free trial credits for new users)
+    let wallet = user.wallet;
+    if (!wallet) {
+      wallet = await db.wallet.create({
+        data: {
+          userId: user.id,
+          balance: 50 // 50 tokens iniciales de cortesía para pruebas
+        }
+      });
+    }
+
+    // Ensure User has a Subscription (fallback to FREE if not exists)
+    let subscription = user.subscription;
+    if (!subscription) {
+      let freePlan = await db.plan.findUnique({
+        where: { name: 'FREE' }
+      });
+
+      if (!freePlan) {
+        freePlan = await db.plan.create({
+          data: {
+            name: 'FREE',
+            limits: {
+              create: {
+                maxChannels: 1,
+                maxVideosPerChannel: 5,
+                canRenderInCloud: false,
+                hasAdvancedTemplates: false,
+                maxMonthlyRenderMinutes: 0
+              }
+            }
+          }
+        });
+      }
+
+      subscription = await db.userSubscription.create({
+        data: {
+          userId: user.id,
+          planId: freePlan.id,
+          status: 'active'
+        },
+        include: {
+          plan: {
+            include: { limits: true }
           }
         }
       });
     }
 
-    // Calcular límites (fallback a 1 canal si no tiene plan limits configurado)
-    const maxChannels = user.subscription?.plan?.limits?.maxChannels ?? 1;
+    // Calcular límites
+    const maxChannels = subscription?.plan?.limits?.maxChannels ?? 1;
+    const planName = subscription?.plan?.name ?? 'FREE';
 
     return NextResponse.json({
       success: true,
@@ -63,7 +115,11 @@ export async function POST() {
         email: user.email,
         name: user.name,
         role: user.role,
-        maxChannels: maxChannels
+        plan: planName,
+        planStatus: subscription.status,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        maxChannels: maxChannels,
+        creditsBalance: wallet.balance
       }
     });
   } catch (err: any) {
@@ -74,3 +130,4 @@ export async function POST() {
     );
   }
 }
+
