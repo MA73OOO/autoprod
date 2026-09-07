@@ -4,7 +4,8 @@ import threading
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import workspace, chat, ollama_manager, video_looper
+from routers import workspace, chat, ollama_manager, video_looper, subtitles
+from hardware import governor
 
 app = FastAPI(
     title="AutoProd Local Controlador",
@@ -32,10 +33,16 @@ app.include_router(workspace.router)
 app.include_router(chat.router)
 app.include_router(ollama_manager.router)
 app.include_router(video_looper.router)
+app.include_router(subtitles.router)
 
 @app.get("/status")
 def get_status():
     return {"status": "online", "message": "Motor local conectado correctamente."}
+
+@app.get("/system/hardware")
+def get_system_hardware():
+    """Retorna las especificaciones de hardware y el estado de concurrencia del equipo."""
+    return governor.get_hardware_specs()
 
 @app.post("/shutdown")
 def shutdown_server():

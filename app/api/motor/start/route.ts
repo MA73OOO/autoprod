@@ -11,18 +11,13 @@ export async function POST(req: NextRequest) {
     const cwd = path.join(process.cwd(), 'controlador');
 
     const localBin = getLocalBinPath();
-
-    if (!localBin) {
-      return NextResponse.json(
-        { success: false, error: 'AutoProd no está instalado. Ve a Configuración (Engranaje) > Sistema > Instalar Motor para configurarlo.' },
-        { status: 400 }
-      );
-    }
+    const workspacePython = path.join(process.cwd(), '.autoprod', 'python', 'python.exe');
 
     let pythonCmd = 'python';
 
-    // Si existe el bin local y el python.exe adentro, usar ese
-    if (localBin) {
+    if (fs.existsSync(workspacePython)) {
+      pythonCmd = workspacePython;
+    } else if (localBin) {
       const winPython = path.join(localBin, 'python.exe');
       const macPython = path.join(localBin, 'python3');
       if (fs.existsSync(winPython)) {
@@ -30,6 +25,11 @@ export async function POST(req: NextRequest) {
       } else if (fs.existsSync(macPython)) {
         pythonCmd = macPython;
       }
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'AutoProd no está instalado. Ve a Configuración (Engranaje) > Sistema > Instalar Motor para configurarlo.' },
+        { status: 400 }
+      );
     }
 
     // Spawn the python process detached so it runs in the background

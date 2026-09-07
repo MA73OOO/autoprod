@@ -12,6 +12,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+from hardware import governor
 
 router = APIRouter(
     prefix="/video",
@@ -408,6 +409,7 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
             "-crf", crf,
             "-preset", preset,
             "-pix_fmt", "yuv420p",
+            "-threads", str(governor.get_hardware_specs()["safe_threads"]),
             "-b:v", b_v,
             "-maxrate", maxrate,
             "-bufsize", bufsize
@@ -466,6 +468,8 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         JOBS[job_id]["status"] = "error"
         JOBS[job_id]["error"] = str(e)
         JOBS[job_id]["message"] = f"Error en renderizado: {str(e)}"
+    finally:
+        governor.release_job_slot(job_id)
 
 @router.post("/create_loop")
 def create_loop(req: CreateLoopRequest, background_tasks: BackgroundTasks):
@@ -474,11 +478,17 @@ def create_loop(req: CreateLoopRequest, background_tasks: BackgroundTasks):
     Soporta modo previsualización (máx 5 min) y modo completo.
     """
     job_id = str(uuid.uuid4())
+    slot_acquired = governor.acquire_job_slot(job_id, "video_loop", {
+        "is_preview": req.is_preview,
+        "resolution": req.resolution
+    })
+
+    initial_msg = "Iniciando renderizado..." if slot_acquired else "En cola: esperando que finalice otra tarea pesada..."
     JOBS[job_id] = {
         "id": job_id,
         "status": "queued",
         "progress": 0,
-        "message": "En cola para renderizar...",
+        "message": initial_msg,
         "output_path": None,
         "is_preview": req.is_preview,
         "created_at": time.time()
@@ -489,9 +499,10 @@ def create_loop(req: CreateLoopRequest, background_tasks: BackgroundTasks):
 
     return {
         "job_id": job_id,
-        "status": "queued",
+        "status": "processing" if slot_acquired else "queued",
+        "slot_acquired": slot_acquired,
         "is_preview": req.is_preview,
-        "message": "Renderizado iniciado en segundo plano."
+        "message": initial_msg
     }
 
 @router.get("/status/{job_id}")

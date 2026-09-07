@@ -7,6 +7,7 @@ interface Props {
   lang: Language;
   onSelect: (role: 'channel' | 'video' | 'script' | 'prompt') => void;
   onSelectLooper?: () => void;
+  onSelectSubtitles?: () => void;
 }
 
 interface Card {
@@ -60,7 +61,7 @@ const ACTIVE_CARDS: Card[] = [
   },
 ];
 
-export default function Launchpad({ lang, onSelect, onSelectLooper }: Props) {
+export default function Launchpad({ lang, onSelect, onSelectLooper, onSelectSubtitles }: Props) {
   return (
     <div className="h-full overflow-y-auto minimal-scrollbar p-6 flex flex-col justify-center items-center w-full gap-6">
       {/* Header */}
@@ -76,7 +77,7 @@ export default function Launchpad({ lang, onSelect, onSelectLooper }: Props) {
       </div>
 
       {/* Grid */}
-      <div className="grid grid-cols-2 gap-3 w-full max-w-2xl">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl w-full">
 
         {/* Active cards */}
         {ACTIVE_CARDS.map(card => (
@@ -103,25 +104,25 @@ export default function Launchpad({ lang, onSelect, onSelectLooper }: Props) {
           </button>
         ))}
 
-        {/* Subtitular Video — PRO */}
+        {/* Subtitular Video — Whisper Studio */}
         <button
-          onClick={() => toast.info(lang === 'es' ? 'Subtitulado automático próximamente...' : 'Auto subtitles coming soon...')}
-          className="h-44 text-left bg-[#18181b]/40 border border-zinc-800/80 rounded-2xl p-5 flex flex-col justify-between hover:border-purple-500/30 hover:bg-[#18181b]/60 transition-all group shadow-lg cursor-pointer opacity-75 hover:opacity-100 relative overflow-hidden"
+          onClick={onSelectSubtitles ? onSelectSubtitles : () => toast.info(lang === 'es' ? 'Subtitulado automático' : 'Auto subtitles')}
+          className="h-44 text-left bg-[#18181b]/60 border border-emerald-800/40 hover:border-emerald-500/80 rounded-2xl p-5 flex flex-col justify-between hover:bg-[#18181b] transition-all group shadow-lg cursor-pointer relative overflow-hidden"
         >
-          <div className="absolute top-3 right-3 px-2 py-0.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] font-bold rounded-full uppercase tracking-wider">
-            PRO
+          <div className="absolute top-3 right-3 px-2 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[9px] font-bold rounded-full uppercase tracking-wider">
+            WHISPER IA
           </div>
-          <div className="h-11 w-11 rounded-xl bg-purple-600/5 border border-purple-500/10 flex items-center justify-center text-xl text-purple-400/80 group-hover:scale-110 transition-transform">
+          <div className="h-11 w-11 rounded-xl bg-emerald-600/10 border border-emerald-500/20 flex items-center justify-center text-xl text-emerald-400 group-hover:scale-110 transition-transform">
             🎧
           </div>
           <div className="space-y-1">
-            <h3 className="text-sm font-bold text-zinc-300 group-hover:text-white transition-colors">
-              {lang === 'es' ? 'Subtitular Video' : 'Subtitle Video'}
+            <h3 className="text-sm font-bold text-zinc-100 group-hover:text-white transition-colors">
+              {lang === 'es' ? 'Subtitular Video / Canciones' : 'Subtitle Video & Songs'}
             </h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed">
+            <p className="text-[11px] text-zinc-400 leading-relaxed">
               {lang === 'es'
-                ? 'Genera subtítulos sincronizados con VAD + Whisper y exporta .srt/.vtt listos para YouTube.'
-                : 'Generate synced subtitles with VAD + Whisper and export .srt/.vtt ready for YouTube.'}
+                ? 'Subtitula videos o carpetas completas de canciones con Whisper API ultrarrápido y control de CPU/GPU.'
+                : 'Subtitle videos or songs folders with ultrafast Whisper API and CPU/GPU throttling.'}
             </p>
           </div>
         </button>

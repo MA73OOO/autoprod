@@ -302,4 +302,220 @@ export class ControladorClient {
   static getPreviewVideoUrl(jobId: string): string {
     return `${getControladorUrl()}/video/preview/${encodeURIComponent(jobId)}`;
   }
+
+  // ──────────────────────────────────────────────
+  // Gestión de Hardware & Subtítulos (Whisper)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Consulta las especificaciones de hardware y el estado de la cola en tiempo real
+   */
+  static async getHardwareInfo(): Promise<HardwareSpecs> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/system/hardware`);
+      if (!response.ok) {
+        throw new Error('No se pudo obtener información del hardware');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: getHardwareInfo failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Estima la duración y el tiempo de procesamiento de subtítulos para el modal previo
+   */
+  static async estimateSubtitles(params: {
+    targetType: 'video' | 'songs_folder';
+    path: string;
+    engine?: string;
+  }): Promise<SubtitlesEstimateResponse> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/subtitles/estimate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_type: params.targetType,
+          path: params.path,
+          engine: params.engine || 'openai_api',
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error calculando estimación de subtítulos');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: estimateSubtitles failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Inicia el trabajo de subtitulado (video o lote de canciones)
+   */
+  static async generateSubtitles(params: {
+    targetType: 'video' | 'songs_folder';
+    path: string;
+    channelName?: string;
+    engine?: string;
+    language?: string;
+    formats?: string[];
+    burnToVideo?: boolean;
+  }): Promise<{ job_id: string; status: string; slot_acquired: boolean; message: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/subtitles/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target_type: params.targetType,
+          path: params.path,
+          channel_name: params.channelName || null,
+          engine: params.engine || 'openai_api',
+          language: params.language || 'es',
+          formats: params.formats || ['.srt', '.vtt', '.json'],
+          burn_to_video: params.burnToVideo ?? false,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error iniciando generación de subtítulos');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: generateSubtitles failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Consulta el progreso y estado en tiempo real del trabajo de subtitulado
+   */
+  static async getSubtitlesJobStatus(jobId: string): Promise<SubtitlesJobStatus> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/subtitles/status/${encodeURIComponent(jobId)}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error consultando estado de subtítulos');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: getSubtitlesJobStatus failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene el contenido de un archivo de subtítulo para previsualizar/editar
+   */
+  static async previewSubtitleFile(path: string): Promise<{ path: string; name: string; content: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/subtitles/preview_file?path=${encodeURIComponent(path)}`);
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error leyendo archivo de subtítulo');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: previewSubtitleFile failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Guarda cambios realizados en el archivo de subtítulo
+   */
+  static async saveSubtitleFile(path: string, content: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/subtitles/save_file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path, content }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error guardando archivo de subtítulo');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: saveSubtitleFile failed', error);
+      throw error;
+    }
+  }
+}
+
+// ──────────────────────────────────────────────
+// Tipos de Hardware & Subtítulos
+// ──────────────────────────────────────────────
+
+export interface HardwareSpecs {
+  cpu_cores: number;
+  safe_threads: number;
+  total_ram_gb: number;
+  avail_ram_gb: number;
+  memory_load_percent: number;
+  gpu_name: string;
+  has_gpu: boolean;
+  has_cuda: boolean;
+  power_level: 'high' | 'medium' | 'low';
+  is_busy: boolean;
+  active_job: any;
+  queue_length: number;
+}
+
+export interface EngineEstimate {
+  estimated_seconds: number;
+  formatted: string;
+  cpu_impact: string;
+  speed_multiplier: string;
+  recommended?: boolean;
+  supported?: boolean;
+}
+
+export interface SubtitlesEstimateResponse {
+  target_type: 'video' | 'songs_folder';
+  path: string;
+  total_files: number;
+  files: Array<{ name: string; duration_seconds: number; duration_formatted: string }>;
+  total_duration_seconds: number;
+  total_duration_formatted: string;
+  hardware_specs: HardwareSpecs;
+  estimate: {
+    media_duration_seconds: number;
+    media_duration_formatted: string;
+    engine_estimates: {
+      openai_api: EngineEstimate;
+      local_gpu: EngineEstimate;
+      local_cpu: EngineEstimate;
+    };
+    selected_engine: string;
+    selected_estimate: string;
+    power_warning: string;
+    charger_warning: string;
+  };
+}
+
+export interface SubtitleResultItem {
+  file_name: string;
+  srt_path: string;
+  vtt_path: string;
+  json_path: string;
+  segments_count: number;
+  text_snippet: string;
+}
+
+export interface SubtitlesJobStatus {
+  id: string;
+  status: 'queued' | 'processing' | 'completed' | 'error';
+  progress: number;
+  message: string;
+  current_track: string;
+  total_tracks: number;
+  processed_tracks: number;
+  results: SubtitleResultItem[];
+  output_folder?: string;
+  subtitled_video_path?: string;
+  burn_warning?: string;
+  error?: string;
 }

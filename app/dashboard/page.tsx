@@ -14,6 +14,7 @@ import ConversationSidebar from '@/components/dashboard/ConversationSidebar';
 import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
 import VideoLooperStudio from '@/components/dashboard/VideoLooperStudio';
+import { VideoSubtitlesStudio } from '@/components/dashboard/VideoSubtitlesStudio';
 import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
@@ -190,7 +191,7 @@ export default function Dashboard() {
   };
 
   // ── Navigation State ──
-  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper' | 'subtitles'>('home');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeEditorPath, setActiveEditorPath] = useState<string | null>(null);
 
@@ -817,6 +818,7 @@ export default function Dashboard() {
               // Do NOT change activeView, just set the path to open the right panel
             }}
             onOpenLooper={() => setActiveView('looper')}
+            onOpenSubtitles={() => setActiveView('subtitles')}
           />
         </aside>
 
@@ -826,13 +828,14 @@ export default function Dashboard() {
           className="w-[3px] hover:w-[5px] hover:bg-purple-500/40 active:bg-purple-500 cursor-col-resize h-full transition-all shrink-0 bg-zinc-800/40 relative z-30"
         />
 
-        {/* Center — Launchpad, Looper or Chat */}
+        {/* Center — Launchpad, Looper, Subtitles or Chat */}
         <main className="flex-1 flex flex-col bg-[#121214] overflow-hidden relative">
           {activeView === 'home' ? (
             <Launchpad
               lang={lang}
               onSelect={handleNewConversationWithRole}
               onSelectLooper={() => setActiveView('looper')}
+              onSelectSubtitles={() => setActiveView('subtitles')}
             />
           ) : activeView === 'looper' ? (
             <VideoLooperStudio
@@ -845,6 +848,10 @@ export default function Dashboard() {
                   loadWorkspaceTree(workspacePath);
                 }
               }}
+            />
+          ) : activeView === 'subtitles' ? (
+            <VideoSubtitlesStudio
+              onBackToDashboard={() => setActiveView('home')}
             />
           ) : (
             <ChatPanel

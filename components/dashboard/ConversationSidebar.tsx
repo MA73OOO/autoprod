@@ -23,6 +23,7 @@ interface Props {
   onOpenFile?: (path: string) => void;
   onRefreshWorkspace?: () => void;
   onOpenLooper?: () => void;
+  onOpenSubtitles?: () => void;
 }
 
 export default function ConversationSidebar({
@@ -41,6 +42,7 @@ export default function ConversationSidebar({
   onOpenFile,
   onRefreshWorkspace,
   onOpenLooper,
+  onOpenSubtitles,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -199,6 +201,26 @@ export default function ConversationSidebar({
             </span>
             <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold font-mono">
               HD
+            </span>
+          </button>
+        )}
+
+        {/* Whisper Subtitles Studio Button */}
+        {onOpenSubtitles && (
+          <button
+            onClick={onOpenSubtitles}
+            className={`w-full py-2 px-3 rounded-lg text-xs font-semibold border transition-all flex items-center justify-between cursor-pointer shrink-0 ${
+              activeView === 'subtitles'
+                ? 'bg-emerald-950/70 border-emerald-500 text-emerald-200 shadow-sm shadow-emerald-500/20'
+                : 'bg-zinc-900/60 hover:bg-zinc-800/80 border-zinc-800 text-zinc-300 hover:text-white'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span>🎧</span>
+              <span>{lang === 'es' ? 'Subtitulador IA' : 'AI Subtitles'}</span>
+            </span>
+            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold font-mono">
+              WHISPER
             </span>
           </button>
         )}
