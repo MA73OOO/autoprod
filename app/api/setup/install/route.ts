@@ -3,6 +3,8 @@ import { setupEmitter } from '../stream/route';
 import { detectDependencies, getWorkspacePath, getLocalBinPath } from '@/harness/setup/detector';
 import { downloadFile } from '@/harness/setup/downloader';
 import { installBinary, installPipPackage } from '@/harness/setup/installer';
+import { createClient } from '@/lib/supabase/server';
+import { db as prisma } from '@/src/prisma/db';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
@@ -10,6 +12,26 @@ import fsSync from 'fs';
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Validar que el usuario tenga un plan de pago (Starter, Pro, Enterprise)
+    const supabase = await createClient();
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+
+    if (supabaseUser) {
+      const userRecord = await prisma.user.findUnique({
+        where: { id: supabaseUser.id },
+        include: { subscription: { include: { plan: true } } }
+      });
+
+      const userPlan = userRecord?.subscription?.plan?.name || 'FREE';
+      if (userPlan === 'FREE' && userRecord?.role !== 'ADMIN') {
+        return NextResponse.json({
+          success: false,
+          requiresUpgrade: true,
+          error: 'La descarga e instalación del Motor Local es un beneficio exclusivo para planes de pago (Starter, Pro, Enterprise). Actualiza tu plan para desbloquear el motor.'
+        }, { status: 403 });
+      }
+    }
+
     const body = await req.json().catch(() => ({}));
     if (body.basePath) {
       const configPath = path.join(process.cwd(), '.autoprod-config.json');

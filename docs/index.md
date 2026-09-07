@@ -29,6 +29,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear u
 - 🔐 **[Auth Guard & JWT](file:///e:/autoprod/docs/features/auth_guard/README.md):** Sistema SSR de doble verificación para sesiones de Supabase.
 - 📊 **[Token Tracker](file:///e:/autoprod/docs/features/token_tracker/README.md):** Sistema asíncrono para el rastreo de consumo de tokens por usuario.
 - 📺 **[YouTube Channel Extractor](file:///e:/autoprod/docs/features/youtube_channel_extractor/README.md):** Extracción con YouTube Data API v3, contexto local anti-duplicados y persistencia vectorial con pgvector.
+- 💳 **[Subscriptions, Billing & Token Economics](file:///e:/autoprod/docs/features/subscriptions_and_billing/README.md):** Sistema de monetización, planes ($70, $100, $150 USD), orquestador gpt-4o-mini gratuito, Lemon Squeezy y activación manual por Nequi.
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.

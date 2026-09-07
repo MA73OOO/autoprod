@@ -2,18 +2,24 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { Language } from "../translations";
 import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
 import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
+import { PLANS_CONFIG, calculatePlanCredits } from '@/lib/pricing-config';
 
 interface UserAdmin {
   id: string;
   name: string;
   email: string;
   role: 'USER' | 'ADMIN';
-  plan: 'FREE' | 'PRO' | 'ENTERPRISE';
+  plan: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
   status: 'ACTIVE' | 'SUSPENDED';
+  balance?: number;
+  currentPeriodEnd?: string | null;
+  recentPayments?: any[];
 }
+
 
 interface AccessKey {
   id: string;
@@ -147,12 +153,181 @@ export default function AdminDashboard() {
   const t = adminTranslations[lang];
 
   // 1. Users State
-  const [users, setUsers] = useState<UserAdmin[]>([
-    { id: 'u1', name: 'Mateo Orangél', email: 'mateo@autoprod.io', role: 'ADMIN', plan: 'ENTERPRISE', status: 'ACTIVE' },
-    { id: 'u2', name: 'Juan Pérez', email: 'juan@gmail.com', role: 'USER', plan: 'PRO', status: 'ACTIVE' },
-    { id: 'u3', name: 'Sofia Rodríguez', email: 'sofia@demo.com', role: 'USER', plan: 'FREE', status: 'ACTIVE' },
-    { id: 'u4', name: 'Carlos López', email: 'carlos@blocked.com', role: 'USER', plan: 'FREE', status: 'SUSPENDED' },
-  ]);
+  const [users, setUsers] = useState<UserAdmin[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      const data = await res.json();
+      if (data.users) setUsers(data.users);
+    } catch (error) {
+      console.error("Failed to load users", error);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'users') {
+      fetchUsers();
+    }
+  }, [activeTab]);
+
+  // 1.5 Manual Subscription State (Nequi, Daviplata, etc.)
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [manualUser, setManualUser] = useState<UserAdmin | null>(null);
+  const [manualForm, setManualForm] = useState({
+    planName: 'PRO' as 'STARTER' | 'PRO' | 'ENTERPRISE',
+    months: 1,
+    paymentMethod: 'NEQUI' as 'NEQUI' | 'DAVIPLATA' | 'BANCOLOMBIA' | 'EFECTIVO',
+    referenceId: '',
+    customCredits: 2700,
+    amountUsd: 100,
+    notes: ''
+  });
+
+  const handleOpenManualModal = (u?: UserAdmin) => {
+    if (u) {
+      setManualUser(u);
+    } else if (users.length > 0) {
+      setManualUser(users[0]);
+    }
+    setManualForm({
+      planName: 'PRO',
+      months: 1,
+      paymentMethod: 'NEQUI',
+      referenceId: '',
+      customCredits: 2700,
+      amountUsd: 100,
+      notes: ''
+    });
+    setIsManualModalOpen(true);
+  };
+
+  const handlePlanChangeInManual = (pName: 'STARTER' | 'PRO' | 'ENTERPRISE') => {
+    const pConfig = PLANS_CONFIG[pName];
+    const { creditsToGrant } = calculatePlanCredits(pConfig.tokenBudgetUsd);
+    setManualForm(prev => ({
+      ...prev,
+      planName: pName,
+      amountUsd: pConfig.priceUsd * prev.months,
+      customCredits: creditsToGrant * prev.months
+    }));
+  };
+
+  const handleMonthsChangeInManual = (m: number) => {
+    const pConfig = PLANS_CONFIG[manualForm.planName];
+    const { creditsToGrant } = calculatePlanCredits(pConfig.tokenBudgetUsd);
+    setManualForm(prev => ({
+      ...prev,
+      months: m,
+      amountUsd: pConfig.priceUsd * m,
+      customCredits: creditsToGrant * m
+    }));
+  };
+
+  const handleSaveManualSubscription = async () => {
+    if (!manualUser) return;
+    try {
+      const res = await fetch('/api/admin/users/manual-subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: manualUser.id,
+          planName: manualForm.planName,
+          months: manualForm.months,
+          paymentMethod: manualForm.paymentMethod,
+          referenceId: manualForm.referenceId,
+          customCredits: Number(manualForm.customCredits),
+          amountUsd: Number(manualForm.amountUsd),
+          notes: manualForm.notes
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(data.message || 'Suscripción manual activada exitosamente');
+        setIsManualModalOpen(false);
+        fetchUsers();
+        if (activeTab === 'ledger') fetchLedger();
+      } else {
+        toast.error(data.error || 'Error al activar suscripción');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Error de conexión');
+    }
+  };
+
+  // Pricing & Ledger State
+  const [pricings, setPricings] = useState<any[]>([]);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
+  const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
+  const [pricingForm, setPricingForm] = useState({ serviceType: 'CHAT', modelName: '', costPerUnit: 1, unitType: 'PER_REQUEST' });
+
+  const fetchPricings = async () => {
+    setIsLoadingPricing(true);
+    try {
+      const res = await fetch('/api/admin/pricing');
+      const data = await res.json();
+      if (data.pricings) setPricings(data.pricings);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingPricing(false);
+    }
+  };
+
+  const handleSavePricing = async () => {
+    try {
+      const res = await fetch('/api/admin/pricing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceType: pricingForm.serviceType,
+          modelName: pricingForm.modelName,
+          costPerUnit: Number(pricingForm.costPerUnit),
+          unitType: pricingForm.unitType,
+          isActive: true
+        })
+      });
+      if (res.ok) {
+        toast.success("Tarifa guardada con éxito");
+        setIsPricingModalOpen(false);
+        fetchPricings();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Error al guardar tarifa");
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  const [ledgerData, setLedgerData] = useState<any | null>(null);
+  const [isLoadingLedger, setIsLoadingLedger] = useState(false);
+
+  const fetchLedger = async () => {
+    setIsLoadingLedger(true);
+    try {
+      const res = await fetch('/api/admin/ledger');
+      const data = await res.json();
+      if (data.success) setLedgerData(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoadingLedger(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'pricing') fetchPricings();
+    if (activeTab === 'ledger') fetchLedger();
+  }, [activeTab]);
 
   // 2. Access Keys State
   const [accessKeys, setAccessKeys] = useState<AccessKey[]>([
@@ -468,13 +643,24 @@ export default function AdminDashboard() {
 
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
             <div className="p-4 border-b border-zinc-900 flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white">{t.tabUsers}</h3>
-              <button 
-                onClick={() => setIsCreateUserOpen(true)}
-                className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-colors"
-              >
-                + {t.newUser}
-              </button>
+              <div>
+                <h3 className="text-sm font-bold text-white">{t.tabUsers}</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Usuarios registrados en base de datos con planes y balances de tokens.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => handleOpenManualModal()}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-90 text-black font-extrabold rounded-lg text-xs shadow-md transition-opacity flex items-center gap-1.5"
+                >
+                  ⚡ Activar Pago Manual (Nequi)
+                </button>
+                <button 
+                  onClick={() => setIsCreateUserOpen(true)}
+                  className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-bold transition-colors"
+                >
+                  + {t.newUser}
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -484,12 +670,21 @@ export default function AdminDashboard() {
                     <th className="p-4">Email</th>
                     <th className="p-4">{t.role}</th>
                     <th className="p-4">{t.plan}</th>
+                    <th className="p-4">🪙 Tokens / Saldo</th>
                     <th className="p-4">{t.status}</th>
                     <th className="p-4 text-right">{t.actions}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {isLoadingUsers ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-zinc-500">Cargando usuarios de la base de datos...</td>
+                    </tr>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-zinc-500">No hay usuarios registrados aún.</td>
+                    </tr>
+                  ) : users.map(u => (
                     <tr key={u.id} className="border-b border-zinc-900 hover:bg-zinc-900/30 transition-colors">
                       <td className="p-4 font-semibold text-white">{u.name}</td>
                       <td className="p-4 text-zinc-400">{u.email}</td>
@@ -502,11 +697,16 @@ export default function AdminDashboard() {
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          u.plan === 'ENTERPRISE' ? 'bg-blue-500/10 text-blue-400' :
-                          u.plan === 'PRO' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-zinc-800 text-zinc-500'
+                          u.plan === 'ENTERPRISE' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                          u.plan === 'PRO' ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30' :
+                          u.plan === 'STARTER' ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30' :
+                          'bg-zinc-800 text-zinc-400'
                         }`}>
                           {u.plan}
                         </span>
+                      </td>
+                      <td className="p-4 font-mono font-bold text-amber-300">
+                        🪙 {(u.balance ?? 0).toLocaleString()}
                       </td>
                       <td className="p-4">
                         <span className={`h-2 w-2 rounded-full inline-block mr-1.5 ${
@@ -515,6 +715,13 @@ export default function AdminDashboard() {
                         {u.status === 'ACTIVE' ? t.active : t.suspended}
                       </td>
                       <td className="p-4 text-right space-x-2">
+                        <button 
+                          onClick={() => handleOpenManualModal(u)}
+                          className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded font-bold transition-colors"
+                          title="Activar plan o recargar tokens por Nequi/Daviplata"
+                        >
+                          ⚡ Nequi
+                        </button>
                         <button 
                           onClick={() => { setSelectedUser(u); setIsEditUserOpen(true); }}
                           className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded font-semibold transition-colors"
@@ -544,6 +751,7 @@ export default function AdminDashboard() {
           </div>
           </div>
         )}
+
 
         {/* Tab 2: Access Keys List & Generator */}
         {activeTab === 'keys' && (
@@ -745,20 +953,140 @@ export default function AdminDashboard() {
 
       {/* Tab 4: Pricing & Capacities */}
       {activeTab === 'pricing' && (
-        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214]">
+        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214] space-y-6">
+          
+          {/* Card: Economía y Comisiones de Planes */}
+          <div className="bg-zinc-950 border border-zinc-900 rounded-xl p-6 shadow-xl">
+            <div className="flex justify-between items-center border-b border-zinc-900 pb-4 mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span>🧮</span> Economía de Planes & Retención de Comisiones
+                </h3>
+                <p className="text-[11px] text-zinc-400 mt-1">
+                  Paridad: <b>1 USD = 100 Créditos AutoProd</b> (1 crédito = $0.01 USD). Comisión de plataforma: <span className="text-amber-400 font-bold">10%</span>.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-bold">
+                Comisión AutoProd: 10%
+              </span>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-900/50">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-amber-400">🚀 Starter ($70 USD)</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">1,800 tokens netos</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-zinc-400">
+                  <p>• Software AutoProd: <b className="text-white">$50 USD</b></p>
+                  <p>• Bolsa Bruta IA: <b className="text-white">$20 USD</b></p>
+                  <p>• Comisión AutoProd (10%): <b className="text-emerald-400">+$2 USD</b></p>
+                  <p className="text-white font-semibold pt-1 border-t border-zinc-800">
+                    Ganancia Total: <span className="text-emerald-400">$52 USD</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-950/10">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-indigo-400">⚡ Pro ($100 USD)</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">2,700 tokens netos</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-zinc-400">
+                  <p>• Software AutoProd: <b className="text-white">$70 USD</b></p>
+                  <p>• Bolsa Bruta IA: <b className="text-white">$30 USD</b></p>
+                  <p>• Comisión AutoProd (10%): <b className="text-emerald-400">+$3 USD</b></p>
+                  <p className="text-white font-semibold pt-1 border-t border-zinc-800">
+                    Ganancia Total: <span className="text-emerald-400">$73 USD</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-blue-500/30 bg-blue-950/10">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold text-blue-400">👑 Enterprise ($150 USD)</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">4,500 tokens netos</span>
+                </div>
+                <div className="space-y-1 text-[11px] text-zinc-400">
+                  <p>• Software AutoProd: <b className="text-white">$100 USD</b></p>
+                  <p>• Bolsa Bruta IA: <b className="text-white">$50 USD</b></p>
+                  <p>• Comisión AutoProd (10%): <b className="text-emerald-400">+$5 USD</b></p>
+                  <p className="text-white font-semibold pt-1 border-t border-zinc-800">
+                    Ganancia Total: <span className="text-emerald-400">$105 USD</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabla de Tarifas por Modelo / Herramienta */}
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
             <div className="p-4 border-b border-zinc-900 flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-bold text-white">{t.tabPricing}</h3>
-                <p className="text-[10px] text-zinc-500 mt-1">Controla cuánto cuesta usar cada modelo (Créditos).</p>
+                <h3 className="text-sm font-bold text-white">Tarifas Dinámicas de Modelos & Tools (`ServicePricing`)</h3>
+                <p className="text-[10px] text-zinc-500 mt-0.5">Define cuántos créditos cuesta cada acción cuando el usuario no utiliza BYOK.</p>
               </div>
-              <button className="px-3 py-1.5 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 rounded text-xs font-bold transition-colors">
+              <button 
+                onClick={() => setIsPricingModalOpen(true)}
+                className="px-3.5 py-1.5 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 rounded-lg text-xs font-bold transition-colors"
+              >
                 + Nueva Tarifa
               </button>
             </div>
-            <div className="p-8 text-center text-zinc-500 text-sm">
-              <span className="text-2xl mb-2 block">🚧</span>
-              Vista en construcción. Conectando con la tabla <b>ServicePricing</b>...
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-900 text-zinc-500 font-semibold bg-zinc-950">
+                    <th className="p-4">Tipo</th>
+                    <th className="p-4">Modelo / Herramienta</th>
+                    <th className="p-4">Costo en Créditos</th>
+                    <th className="p-4">Unidad</th>
+                    <th className="p-4">Estado</th>
+                    <th className="p-4 text-right">Regla Especial</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoadingPricing ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-zinc-500">Cargando tarifas...</td>
+                    </tr>
+                  ) : pricings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-zinc-500">No hay tarifas configuradas aún.</td>
+                    </tr>
+                  ) : pricings.map((p) => {
+                    const isMini = p.modelName === 'gpt-4o-mini';
+                    return (
+                      <tr key={p.id} className="border-b border-zinc-900 hover:bg-zinc-900/30 transition-colors">
+                        <td className="p-4 font-mono font-bold text-zinc-400">{p.serviceType}</td>
+                        <td className="p-4 font-semibold text-white">
+                          {p.modelName}
+                          {isMini && (
+                            <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              Orquestador Base
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 font-bold text-amber-300">
+                          {isMini ? '0 créditos (Pago) / 1 crédito (Free)' : `${p.costPerUnit} créditos`}
+                        </td>
+                        <td className="p-4 text-zinc-400 font-mono text-[10px]">{p.unitType}</td>
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            p.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                          }`}>
+                            {p.isActive ? 'ACTIVO' : 'PAUSADO'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right text-zinc-500 text-[11px]">
+                          {isMini ? 'Absorbido por AutoProd en planes de pago' : 'Deducción en tiempo real'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -766,19 +1094,83 @@ export default function AdminDashboard() {
 
       {/* Tab 5: Ledger */}
       {activeTab === 'ledger' && (
-        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214]">
+        <div className="flex-1 overflow-y-auto minimal-scrollbar p-6 bg-[#121214] space-y-6">
+          
+          {/* Métricas Resumen */}
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/60">
+              <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Ingresos Brutos</p>
+              <p className="text-2xl font-bold text-emerald-400 mt-1">
+                ${(ledgerData?.metrics?.totalIncomeUsd ?? 0).toLocaleString()} USD
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-1">{ledgerData?.metrics?.totalPaymentsCount ?? 0} pagos registrados</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-950/10">
+              <p className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Comisiones Retenidas</p>
+              <p className="text-2xl font-bold text-amber-300 mt-1">
+                ${(ledgerData?.metrics?.estimatedCommissionsUsd ?? 0).toFixed(2)} USD
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-1">10% de margen retenido en tokens</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-indigo-500/30 bg-indigo-950/10">
+              <p className="text-[10px] uppercase font-bold text-indigo-400 tracking-wider">Tokens Consumidos</p>
+              <p className="text-2xl font-bold text-indigo-300 mt-1">
+                🪙 {(ledgerData?.metrics?.totalCreditsUsed ?? 0).toLocaleString()}
+              </p>
+              <p className="text-[10px] text-zinc-500 mt-1">{ledgerData?.metrics?.totalConsumptionsCount ?? 0} peticiones ejecutadas</p>
+            </div>
+
+            <div className="p-4 rounded-xl border border-zinc-800 bg-zinc-950/60">
+              <p className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Modo de Pago</p>
+              <p className="text-sm font-bold text-white mt-1">Nequi / Bancos & Lemon Squeezy</p>
+              <p className="text-[10px] text-emerald-400 mt-1">Bancarización lista</p>
+            </div>
+          </div>
+
+          {/* Tabla de Pagos Recientes */}
           <div className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden shadow-xl">
             <div className="p-4 border-b border-zinc-900">
-              <h3 className="text-sm font-bold text-white">{t.tabLedger}</h3>
-              <p className="text-[10px] text-zinc-500 mt-1">Registro de entradas de dinero (Lemon Squeezy) y salidas (Consumo de IA).</p>
+              <h3 className="text-sm font-bold text-white">Historial del Libro Mayor (Entradas de Dinero)</h3>
+              <p className="text-[10px] text-zinc-500 mt-0.5">Registro de pagos recibidos vía Lemon Squeezy, Nequi y transferencias.</p>
             </div>
-            <div className="p-8 text-center text-zinc-500 text-sm">
-              <span className="text-2xl mb-2 block">📊</span>
-              Vista en construcción. Conectando con <b>PaymentLedger</b> y <b>CreditConsumption</b>...
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-900 text-zinc-500 font-semibold bg-zinc-950">
+                    <th className="p-4">Usuario</th>
+                    <th className="p-4">Monto USD</th>
+                    <th className="p-4">Método</th>
+                    <th className="p-4">Comprobante / Referencia</th>
+                    <th className="p-4">Descripción</th>
+                    <th className="p-4 text-right">Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoadingLedger ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-zinc-500">Cargando libro mayor...</td></tr>
+                  ) : !ledgerData?.payments || ledgerData.payments.length === 0 ? (
+                    <tr><td colSpan={6} className="p-8 text-center text-zinc-500">No hay pagos registrados aún.</td></tr>
+                  ) : ledgerData.payments.map((pm: any) => (
+                    <tr key={pm.id} className="border-b border-zinc-900 hover:bg-zinc-900/30 transition-colors">
+                      <td className="p-4 font-semibold text-white">{pm.user?.email || 'Usuario'}</td>
+                      <td className="p-4 font-bold text-emerald-400">${pm.amountUsd} USD</td>
+                      <td className="p-4 font-mono text-[10px] text-amber-300">{pm.paymentType}</td>
+                      <td className="p-4 font-mono text-[11px] text-zinc-400">{pm.referenceId || '-'}</td>
+                      <td className="p-4 text-zinc-300 max-w-[280px] truncate" title={pm.description}>{pm.description || '-'}</td>
+                      <td className="p-4 text-right text-zinc-500 font-mono text-[10px]">
+                        {new Date(pm.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       )}
+
 
       {/* Modal 1: Edit User Plan */}
       {isEditUserOpen && selectedUser && (
@@ -800,8 +1192,9 @@ export default function AdminDashboard() {
                   className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white font-bold focus:outline-none focus:border-purple-500"
                 >
                   <option value="FREE">FREE</option>
-                  <option value="PRO">PRO</option>
-                  <option value="ENTERPRISE">ENTERPRISE</option>
+                  <option value="STARTER">STARTER ($70)</option>
+                  <option value="PRO">PRO ($100)</option>
+                  <option value="ENTERPRISE">ENTERPRISE ($150)</option>
                 </select>
               </div>
             </div>
@@ -861,8 +1254,9 @@ export default function AdminDashboard() {
                   className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none focus:border-purple-500"
                 >
                   <option value="FREE">FREE</option>
-                  <option value="PRO">PRO</option>
-                  <option value="ENTERPRISE">ENTERPRISE</option>
+                  <option value="STARTER">STARTER ($70)</option>
+                  <option value="PRO">PRO ($100)</option>
+                  <option value="ENTERPRISE">ENTERPRISE ($150)</option>
                 </select>
               </div>
 
@@ -984,6 +1378,220 @@ export default function AdminDashboard() {
                 className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-lg shadow-indigo-500/20 text-xs"
               >
                 Guardar Herramienta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2.7: Manual Subscription Activation (Nequi, Daviplata, etc.) */}
+      {isManualModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-[#121214] border border-zinc-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
+            <div className="p-4 border-b border-zinc-900 flex justify-between items-center bg-zinc-950">
+              <h3 className="font-bold text-white text-sm flex items-center gap-2">
+                <span className="text-amber-400 text-base">⚡</span> Activar Suscripción Manual (Nequi / Bancos)
+              </h3>
+              <button onClick={() => setIsManualModalOpen(false)} className="text-zinc-500 hover:text-white">✕</button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs overflow-y-auto max-h-[80vh]">
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold">Usuario Seleccionado</label>
+                <select
+                  value={manualUser?.id || ''}
+                  onChange={(e) => {
+                    const found = users.find(u => u.id === e.target.value);
+                    if (found) setManualUser(found);
+                  }}
+                  className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-white font-semibold focus:outline-none focus:border-amber-500"
+                >
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.name} ({u.email}) - Plan actual: {u.plan}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Plan a Otorgar *</label>
+                  <select
+                    value={manualForm.planName}
+                    onChange={(e) => handlePlanChangeInManual(e.target.value as any)}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-white font-bold focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="STARTER">STARTER ($70 USD)</option>
+                    <option value="PRO">PRO ($100 USD)</option>
+                    <option value="ENTERPRISE">ENTERPRISE ($150 USD)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Duración (Meses)</label>
+                  <select
+                    value={manualForm.months}
+                    onChange={(e) => handleMonthsChangeInManual(Number(e.target.value))}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-white font-bold focus:outline-none focus:border-amber-500"
+                  >
+                    <option value={1}>1 Mes (30 días)</option>
+                    <option value={3}>3 Meses (Trimestral)</option>
+                    <option value={6}>6 Meses (Semestral)</option>
+                    <option value={12}>12 Meses (1 Año)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Créditos de IA a Acreditar</label>
+                  <input
+                    type="number"
+                    value={manualForm.customCredits}
+                    onChange={(e) => setManualForm({ ...manualForm, customCredits: Number(e.target.value) })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-amber-300 font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                  <p className="text-[10px] text-zinc-500 mt-1">Calculado con comisión del 10%.</p>
+                </div>
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Monto Pagado (USD)</label>
+                  <input
+                    type="number"
+                    value={manualForm.amountUsd}
+                    onChange={(e) => setManualForm({ ...manualForm, amountUsd: Number(e.target.value) })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-emerald-400 font-mono font-bold focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Método de Pago *</label>
+                  <select
+                    value={manualForm.paymentMethod}
+                    onChange={(e) => setManualForm({ ...manualForm, paymentMethod: e.target.value as any })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-white font-semibold focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="NEQUI">Nequi (Colombia)</option>
+                    <option value="DAVIPLATA">Daviplata (Colombia)</option>
+                    <option value="BANCOLOMBIA">Bancolombia</option>
+                    <option value="EFECTIVO">Efectivo / Mano</option>
+                    <option value="TRANSFERENCIA">Transferencia Internacional</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-zinc-400 block mb-1 font-semibold">Comprobante / Referencia *</label>
+                  <input
+                    type="text"
+                    placeholder="ej: M948291 o # WhatsApp"
+                    value={manualForm.referenceId}
+                    onChange={(e) => setManualForm({ ...manualForm, referenceId: e.target.value })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-white font-mono focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1 font-semibold">Notas / Observaciones</label>
+                <input
+                  type="text"
+                  placeholder="ej: Pago verificado vía WhatsApp, adjuntó captura"
+                  value={manualForm.notes}
+                  onChange={(e) => setManualForm({ ...manualForm, notes: e.target.value })}
+                  className="w-full bg-[#18181b] border border-zinc-800 rounded-lg p-2.5 text-zinc-300 focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-[11px] leading-relaxed">
+                💡 Al confirmar, el usuario pasará automáticamente a plan <b>{manualForm.planName}</b> por <b>{manualForm.months} mes(es)</b>, recibirá <b>{manualForm.customCredits} créditos</b> en su billetera y se registrará la transacción en el Libro Mayor.
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-zinc-900 flex justify-end gap-2 bg-zinc-950">
+              <button
+                onClick={() => setIsManualModalOpen(false)}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg font-semibold text-xs transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveManualSubscription}
+                className="px-5 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:opacity-95 text-black font-extrabold rounded-lg text-xs shadow-lg shadow-amber-500/20 transition-opacity"
+              >
+                ⚡ Confirmar y Activar Suscripción
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2.8: Nueva Tarifa en ServicePricing */}
+      {isPricingModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+          <div className="bg-[#121214] border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col p-6 space-y-4">
+            <h3 className="font-bold text-white text-sm border-b border-zinc-900 pb-2">Nueva Tarifa de Servicio</h3>
+            
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-zinc-400 block mb-1">Tipo de Servicio</label>
+                <select
+                  value={pricingForm.serviceType}
+                  onChange={(e) => setPricingForm({ ...pricingForm, serviceType: e.target.value })}
+                  className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white font-bold"
+                >
+                  <option value="CHAT">CHAT</option>
+                  <option value="TOOL">TOOL</option>
+                  <option value="IMAGE">IMAGE</option>
+                  <option value="VIDEO">VIDEO</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-zinc-400 block mb-1">Nombre del Modelo / Tool</label>
+                <input
+                  type="text"
+                  placeholder="ej: gpt-4o, whisper-cloud"
+                  value={pricingForm.modelName}
+                  onChange={(e) => setPricingForm({ ...pricingForm, modelName: e.target.value })}
+                  className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-zinc-400 block mb-1">Costo en Créditos</label>
+                  <input
+                    type="number"
+                    value={pricingForm.costPerUnit}
+                    onChange={(e) => setPricingForm({ ...pricingForm, costPerUnit: Number(e.target.value) })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-amber-300 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-zinc-400 block mb-1">Tipo de Unidad</label>
+                  <select
+                    value={pricingForm.unitType}
+                    onChange={(e) => setPricingForm({ ...pricingForm, unitType: e.target.value })}
+                    className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white"
+                  >
+                    <option value="PER_REQUEST">PER_REQUEST</option>
+                    <option value="PER_MINUTE">PER_MINUTE</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 text-xs pt-2 border-t border-zinc-900">
+              <button
+                onClick={() => setIsPricingModalOpen(false)}
+                className="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded font-semibold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSavePricing}
+                disabled={!pricingForm.modelName}
+                className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded transition-colors disabled:opacity-50"
+              >
+                Guardar Tarifa
               </button>
             </div>
           </div>

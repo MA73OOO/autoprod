@@ -443,6 +443,116 @@ export class ControladorClient {
       throw error;
     }
   }
+
+  /**
+   * Guarda un archivo binario (ej. imagen base64 de DALL-E) físicamente en el workspace local
+   */
+  static async saveBinaryFile(params: {
+    base64Data: string;
+    fileName: string;
+    channelName?: string | null;
+    subfolder?: string;
+    targetPath?: string | null;
+  }): Promise<{ status: string; path: string; name: string; format: string; sizeBytes: number }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/save_binary_file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          base64_data: params.base64Data,
+          file_name: params.fileName,
+          channel_name: params.channelName || null,
+          subfolder: params.subfolder || 'Miniaturas',
+          target_path: params.targetPath || null,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error guardando archivo binario en disco local');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: saveBinaryFile failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Elimina un archivo físico específico del workspace
+   */
+  static async deleteFile(path: string): Promise<{ status: string; message: string; deleted_path: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/delete_file`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error eliminando archivo físico');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: deleteFile failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Abre el explorador de archivos nativo de Windows / macOS / Linux en la carpeta del archivo
+   */
+  static async openFolder(path: string): Promise<{ status: string; opened: string }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/open_folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error abriendo carpeta en explorador');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: openFolder failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Escanea las carpetas de un canal o ruta en busca de archivos multimedia (imágenes, subtítulos, videos, audios)
+   */
+  static async scanMedia(params: {
+    channelName?: string | null;
+    targetPath?: string | null;
+  }): Promise<{ status: string; target_path: string; channel: string; count: number; files: Array<{
+    name: string;
+    format: string;
+    type: string;
+    localPath: string;
+    relativePath: string;
+    sizeBytes: number;
+    modifiedAt: string;
+  }> }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/scan_media`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          channel_name: params.channelName || null,
+          target_path: params.targetPath || null,
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error escaneando medios locales');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: scanMedia failed', error);
+      throw error;
+    }
+  }
 }
 
 // ──────────────────────────────────────────────

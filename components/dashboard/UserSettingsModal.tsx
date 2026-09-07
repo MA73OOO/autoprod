@@ -10,10 +10,12 @@ interface UserSettingsModalProps {
   lang: Language;
   user: { name: string; email: string } | null;
   isAdminMode?: boolean;
+  onOpenPlans?: () => void;
 }
 
-export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdminMode = false }: UserSettingsModalProps) {
+export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdminMode = false, onOpenPlans }: UserSettingsModalProps) {
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'ai' | 'system' | 'commands' | 'profile' | 'billing' | 'password'>('general');
+  const [subscriptionInfo, setSubscriptionInfo] = useState<{ planName: string; credits: number; currentPeriodEnd?: string } | null>(null);
   const t = translations[lang];
   const [detectedClis, setDetectedClis] = useState<any[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
@@ -39,8 +41,21 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
   };
 
   useEffect(() => {
-    if (activeSettingsTab === 'system') {
-      checkSystemStatus();
+    if (activeSettingsTab === 'system' || activeSettingsTab === 'billing') {
+      if (activeSettingsTab === 'system') {
+        checkSystemStatus();
+      }
+      fetch('/api/user/wallet')
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data) {
+            setSubscriptionInfo(prev => ({
+              planName: data.planName || prev?.planName || 'FREE',
+              credits: data.balance ?? 0,
+            }));
+          }
+        })
+        .catch(() => {});
     }
   }, [activeSettingsTab]);
 
@@ -354,9 +369,42 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
           {/* System Tab */}
           {activeSettingsTab === 'system' && (
             <div className="space-y-4">
-              <h4 className="text-sm font-bold text-white border-b border-zinc-800 pb-2">
-                {lang === 'es' ? 'Estado del Sistema' : 'System Status'}
-              </h4>
+              <div className="border-b border-zinc-800 pb-2 flex items-center justify-between">
+                <h4 className="text-sm font-bold text-white">
+                  {lang === 'es' ? 'Estado del Sistema & Motor Local' : 'System Status & Local Motor'}
+                </h4>
+                {subscriptionInfo?.planName === 'FREE' && !isAdminMode && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold">
+                    🔒 Exclusivo Planes de Pago
+                  </span>
+                )}
+              </div>
+
+              {subscriptionInfo?.planName === 'FREE' && !isAdminMode && (
+                <div className="bg-gradient-to-r from-purple-950/40 via-zinc-900 to-indigo-950/40 border border-purple-500/30 rounded-xl p-4 text-xs space-y-2.5 shadow-md">
+                  <div className="flex items-center gap-2 text-purple-300 font-bold">
+                    <span className="text-base">⚡</span>
+                    <span>{lang === 'es' ? 'Descarga del Motor Local Exclusiva para Suscriptores' : 'Local Motor Download Exclusive to Subscribers'}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-300 leading-relaxed">
+                    {lang === 'es'
+                      ? 'La descarga e instalación del Motor Local (Helper FastAPI, aceleración por GPU, Whisper sin límite de minutos y control físico de archivos) es un beneficio exclusivo a partir del Plan Starter ($70 USD).'
+                      : 'Downloading and installing the Local Motor (FastAPI Helper, local GPU acceleration, unlimited local Whisper, and physical disk file tools) is exclusive to Starter ($70 USD) and above.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      if (onOpenPlans) onOpenPlans();
+                    }}
+                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 text-white font-bold rounded-lg text-xs transition-opacity flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span>⚡</span>
+                    <span>{lang === 'es' ? 'Ver Planes y Desbloquear Motor Local' : 'View Plans & Unlock Local Motor'}</span>
+                  </button>
+                </div>
+              )}
+
               <p className="text-xs text-zinc-400">
                 {lang === 'es'
                   ? 'Gestiona las dependencias locales necesarias (Python, FFmpeg, Whisper, yt-dlp).'
@@ -397,8 +445,12 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     />
                     <button
                       type="button"
-                      disabled={isPickingPath}
+                      disabled={isPickingPath || (subscriptionInfo?.planName === 'FREE' && !isAdminMode)}
                       onClick={async () => {
+                        if (subscriptionInfo?.planName === 'FREE' && !isAdminMode) {
+                          toast.error(lang === 'es' ? 'La instalación del motor local requiere un plan de pago.' : 'Local motor installation requires a paid plan.');
+                          return;
+                        }
                         setIsPickingPath(true);
                         try {
                           const res = await fetch('/api/setup/pick-folder');
@@ -426,8 +478,16 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 </div>
 
                 <button
-                  disabled={isInstalling || (!installPath && !(systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed')))}
+                  disabled={isInstalling || (subscriptionInfo?.planName === 'FREE' && !isAdminMode) || (!installPath && !(systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed')))}
                   onClick={async () => {
+                    if (subscriptionInfo?.planName === 'FREE' && !isAdminMode) {
+                      toast.error(lang === 'es' ? 'Beneficio exclusivo de planes de pago.' : 'Exclusive to paid plans.');
+                      if (onOpenPlans) {
+                        onClose();
+                        onOpenPlans();
+                      }
+                      return;
+                    }
                     setIsInstalling(true);
                     setInstallLogs([]);
                     try {
@@ -574,28 +634,39 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
               <div className="bg-[#18181b] border border-zinc-800 rounded-xl p-4 space-y-3 text-xs">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="font-bold text-white">
-                      {lang === 'es' ? 'Plan Actual: Gratuito' : 'Current Plan: Free'}
+                    <p className="font-bold text-white flex items-center gap-2">
+                      <span>{lang === 'es' ? 'Plan Actual:' : 'Current Plan:'}</span>
+                      <span className="text-purple-400 uppercase font-extrabold tracking-wide">
+                        {subscriptionInfo?.planName || 'FREE'}
+                      </span>
                     </p>
-                    <p className="text-[10px] text-zinc-500">
-                      {lang === 'es' ? 'Límite de 5 canales integrados' : 'Up to 5 integrated channels'}
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      🪙 Saldo: <strong className="text-amber-300">{(subscriptionInfo?.credits ?? 0).toLocaleString()}</strong> créditos AutoProd
                     </p>
                   </div>
-                  <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-semibold border border-emerald-500/20 text-[10px]">
-                    $0 / USD
+                  <span className="px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 font-bold border border-purple-500/30 text-[10px]">
+                    {subscriptionInfo?.planName === 'ENTERPRISE' ? '$150/mes' : subscriptionInfo?.planName === 'PRO' ? '$100/mes' : subscriptionInfo?.planName === 'STARTER' ? '$70/mes' : '$0 USD'}
                   </span>
                 </div>
                 <div className="border-t border-zinc-800 pt-3">
-                  <p className="text-zinc-400 mb-2 leading-relaxed">
+                  <p className="text-zinc-400 mb-3 leading-relaxed">
                     {lang === 'es'
-                      ? 'Sube de nivel para conectar canales ilimitados, renderizar más rápido en la nube (opcional) y obtener prompts inteligentes avanzados.'
-                      : 'Upgrade to connect unlimited channels, render faster in the cloud (optional), and unlock advanced smart prompts.'}
+                      ? 'Desbloquea orquestación ilimitada con gpt-4o-mini sin costo de tokens, canales ilimitados, Video Looper 4K y bolsa de créditos para Whisper y modelos avanzados.'
+                      : 'Unlock unlimited gpt-4o-mini orchestration at 0 token cost, multiple channels, 4K Video Looper, and monthly token credits for Whisper and heavy models.'}
                   </p>
                   <button
-                    onClick={() => toast.info(lang === 'es' ? 'Próximamente...' : 'Coming Soon...')}
-                    className="w-full py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 rounded font-bold text-white transition-opacity cursor-pointer"
+                    onClick={() => {
+                      if (onOpenPlans) {
+                        onClose();
+                        onOpenPlans();
+                      } else {
+                        toast.info(lang === 'es' ? 'Abriendo planes...' : 'Opening plans...');
+                      }
+                    }}
+                    className="w-full py-2.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 rounded-xl font-bold text-white transition-opacity cursor-pointer shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2"
                   >
-                    {lang === 'es' ? 'Actualizar a Pro' : 'Upgrade to Pro'}
+                    <span>⚡</span>
+                    <span>{lang === 'es' ? 'Ver Planes & Actualizar Suscripción' : 'View Plans & Upgrade Subscription'}</span>
                   </button>
                 </div>
               </div>

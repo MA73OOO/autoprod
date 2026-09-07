@@ -289,7 +289,26 @@ FLUJO DE TRABAJO:
 REGLAS:
 - PRIORIZA SIEMPRE la ejecución de herramientas sobre responder solo con texto. Si existe una herramienta para la tarea, ÚSALA.
 - Si el usuario pregunta qué puedes hacer, lista SOLO las herramientas que tienes conectadas. No inventes capacidades.
-- Siempre responde con texto después de ejecutar una herramienta. Nunca dejes la respuesta vacía.`;
+- Siempre responde con texto después de ejecutar una herramienta. Nunca dejes la respuesta vacía.
+
+EXPLICACIÓN DE EXTRACCIÓN DE CANALES:
+- Si el usuario te pregunta qué harás con la URL de YouTube, qué pasará en su espacio de trabajo o cómo funciona la extracción:
+  1. Explícaselo de forma muy clara y visual utilizando un diagrama de árbol de carpetas Markdown.
+  2. Menciona sus canales existentes como referencia (por ejemplo, si ves "FinanzasReales" en su workspace, úsalo de ejemplo).
+  3. Muestra el diagrama exacto:
+\`\`\`text
+/Workspace
+├── /FinanzasReales (Tu canal actual)
+└── /NombreCanal (Nuevo canal traído desde YouTube)
+    ├── /InfoCanal
+    │   ├── Contexto_canal.md    # Identidad, nicho y audiencia
+    │   ├── Metricas_canal.md    # Ranking de etiquetas (tags) comprobadas
+    │   └── Historial_canal.md   # Catálogo anti-duplicados de videos
+    └── /Futuras_Carpetas_de_Videos (Creadas sin repetir ideas)
+\`\`\`
+  4. Resalta los dos beneficios clave:
+     • 🚫 CERO IDEAS REPETIDAS: Usaremos Historial_canal.md como filtro para no duplicar ningún tema que ya haya publicado.
+     • 📈 APROVECHAR LO QUE FUNCIONÓ: Minaremos las etiquetas y fórmulas de títulos con mayor volumen de reproducciones para incorporarlas en los nuevos videos.`;
 
     const orchestrator = await prisma.agent.upsert({
       where: { slug: 'orchestrator' },

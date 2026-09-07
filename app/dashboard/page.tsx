@@ -21,6 +21,7 @@ import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
 import CreditCounter from '@/components/dashboard/CreditCounter';
 import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
+import SubscriptionPlansModal from '@/components/dashboard/SubscriptionPlansModal';
 
 import { Conversation, Message } from '@/components/dashboard/types';
 import { FileNode } from '@/components/dashboard/FileTree';
@@ -57,6 +58,9 @@ export default function Dashboard() {
   // ── Auth & profile ──
   const [userProfile, setUserProfile] = useState<{ name: string; email: string; role: string; maxChannels: number } | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isPlansModalOpen, setIsPlansModalOpen] = useState(false);
+  const [currentPlanName, setCurrentPlanName] = useState<string>('FREE');
+  const [currentCredits, setCurrentCredits] = useState<number | null>(null);
 
   // ── Workspace State ──
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
@@ -164,9 +168,27 @@ export default function Dashboard() {
         if (res.ok && active) {
           const syncData = await res.json();
           role = syncData?.role ?? 'USER';
-          maxChannels = syncData?.user?.maxChannels ?? 1;
+          maxChannels = syncData?.maxChannels ?? syncData?.user?.maxChannels ?? 1;
+          const plan = syncData?.planName ?? syncData?.plan?.name ?? syncData?.user?.plan ?? 'FREE';
+          const creds = syncData?.creditsBalance ?? syncData?.wallet?.balance ?? syncData?.user?.creditsBalance ?? 50;
+          setCurrentPlanName(plan);
+          setCurrentCredits(creds);
         }
       } catch { /* non-fatal */ }
+
+      // Detectar confirmación de pago Lemon Squeezy
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
+          toast.success('¡Suscripción confirmada!', {
+            description: 'Tu plan y bolsa de tokens han sido actualizados con éxito.',
+            duration: 6000,
+          });
+          // Limpiar query param de la URL sin recargar
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      }
+
       if (active) {
         setUserProfile({
           name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuario',
@@ -352,10 +374,44 @@ export default function Dashboard() {
     const FALLBACKS: Record<string, { title: { es: string; en: string }; systemPrompt: string; welcomeText: { es: string; en: string } }> = {
       import_channel: {
         title: { es: 'Extraer Canal 📥', en: 'Extract Channel 📥' },
-        systemPrompt: 'Eres un analista experto de YouTube en AutoProd. Tu tarea es extraer la información completa de un canal existente usando la herramienta extraer_canal_youtube, procesar su histórico de videos, etiquetas ganadoras y organizar la producción evitando duplicar ideas.',
+        systemPrompt: 'Eres un analista y productor experto de YouTube en AutoProd. Cuando el usuario te proporcione una URL o @handle de un canal, ejecuta extraer_canal_youtube. Si te pregunta qué harás o cómo funciona, explícaselo detalladamente con el diagrama de árbol de carpetas de su workspace, mencionando sus canales existentes (ej: FinanzasReales) y cómo se creará la nueva carpeta NombreCanal con InfoCanal para no duplicar ideas y aprovechar las etiquetas ganadoras.',
         welcomeText: { 
-          es: '¡Hola! Proporciona la URL o @handle de tu canal de YouTube (ejemplo: https://youtube.com/@micanal) para extraer su historial, analizar etiquetas comprobadas y generar la carpeta de contexto en tu workspace.', 
-          en: 'Hello! Provide your YouTube channel URL or @handle to extract past videos, analyze winning tags and create context folders in your workspace.' 
+          es: `¡Hola! Conecta tu canal existente de YouTube a AutoProd. 🚀
+
+Al proporcionarme la URL o @handle de tu canal (ejemplo: \`https://youtube.com/@micanal\` o \`@micanal\`), extraeremos toda la data oficial de YouTube y crearemos una nueva carpeta de canal en tu workspace:
+
+\`\`\`text
+/Workspace
+├── /FinanzasReales (Tu canal existente)
+└── /NombreCanal (Nuevo canal extraído de YouTube)
+    ├── /InfoCanal
+    │   ├── Contexto_canal.md    # Identidad, nicho y audiencia
+    │   ├── Metricas_canal.md    # Ranking de etiquetas ganadoras
+    │   └── Historial_canal.md   # Catálogo anti-duplicados de videos
+    └── /Futuras_Carpetas_de_Videos (Creadas sin repetir ideas)
+\`\`\`
+
+**Beneficios clave:**
+• 🚫 **Cero ideas repetidas:** Sabremos con exactitud qué títulos ya publicaste para nunca duplicar contenido.
+• 📈 **Data comprobada:** Reutilizaremos las etiquetas (tags) con mayor promedio de reproducciones para maximizar el alcance.
+
+👉 **Pega aquí la URL o @handle de tu canal para comenzar:**`, 
+          en: `Hello! Connect your existing YouTube channel to AutoProd. 🚀
+
+Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\` or \`@mychannel\`) to extract past videos, tags and build your channel context:
+
+\`\`\`text
+/Workspace
+├── /FinanzasReales (Existing channel)
+└── /ChannelName (Newly extracted from YouTube)
+    ├── /InfoCanal
+    │   ├── Contexto_canal.md    # Niche & audience profile
+    │   ├── Metricas_canal.md    # Winning tags ranking
+    │   └── Historial_canal.md   # Anti-duplication catalog
+    └── /Future_Video_Folders    # Created without repeating ideas
+\`\`\`
+
+👉 **Paste your channel URL or @handle here to start:**` 
         },
       },
       channel: {
@@ -536,10 +592,18 @@ export default function Dashboard() {
           });
 
           if (res.status === 402) {
+            const errorData = await res.json().catch(() => ({}));
             setIsGeneratingGlobal(false);
             setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
-            setPendingChatMessage({ customText: textToSend, agentSlug });
-            setIsCreditModalOpen(true);
+            if (errorData.requiresUpgrade) {
+              toast.error(errorData.error || 'Saldo de créditos insuficiente. Actualiza tu plan para continuar.', {
+                duration: 5000,
+              });
+              setIsPlansModalOpen(true);
+            } else {
+              setPendingChatMessage({ customText: textToSend, agentSlug });
+              setIsCreditModalOpen(true);
+            }
             return;
           }
 
@@ -774,13 +838,14 @@ export default function Dashboard() {
           </button>
 
           <div className="flex items-center gap-3 text-xs relative">
-            <CreditCounter />
+            <CreditCounter onClick={() => setIsPlansModalOpen(true)} planName={currentPlanName} />
             <span className="text-zinc-400 border-l border-zinc-700 pl-3">{userProfile?.email || 'demo@autoprod.io'}</span>
 
             <ProfileDropdown 
               userProfile={userProfile} 
               lang={lang} 
               onOpenSettings={() => setIsSettingsModalOpen(true)} 
+              onOpenPlans={() => setIsPlansModalOpen(true)}
             />
           </div>
         </div>
@@ -992,6 +1057,17 @@ export default function Dashboard() {
         lang={lang}
         user={userProfile ? { name: userProfile.name, email: userProfile.email } : null}
         onClose={() => setIsSettingsModalOpen(false)}
+        onOpenPlans={() => setIsPlansModalOpen(true)}
+      />
+
+      {/* Subscription Plans & Token Economics Modal */}
+      <SubscriptionPlansModal
+        isOpen={isPlansModalOpen}
+        onClose={() => setIsPlansModalOpen(false)}
+        currentPlanName={currentPlanName}
+        currentCredits={currentCredits}
+        userEmail={userProfile?.email}
+        lang={lang}
       />
 
       {/* Profile/Workspace Setup Modals */}

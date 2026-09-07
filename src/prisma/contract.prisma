@@ -24,6 +24,7 @@ namespace public {
     apiKeys       ApiKey[]          // Llaves API de IA (Normalizado)
     channels      Channel[]
     conversations Conversation[]
+    assets        Asset[]
     createdAt     TimestamptzString @default(now())
   }
 
@@ -78,8 +79,8 @@ namespace public {
 
   model Plan {
     id            Uuid               @id @default(uuid())
-    name          String             @unique // "FREE", "PRO", "ENTERPRISE"
-    priceId       String?            // Stripe Price ID
+    name          String             @unique // "FREE", "STARTER", "PRO", "ENTERPRISE"
+    priceId       String?            // Stripe / Lemon Squeezy Variant ID
     subscriptions UserSubscription[]
     limits        PlanLimit?
   }
@@ -103,6 +104,7 @@ namespace public {
     user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
     videos           Video[]
     conversations    Conversation[]
+    assets           Asset[]
     
     // Integración de YouTube API
     youtubeChannelId String?        @unique
@@ -112,6 +114,25 @@ namespace public {
     profilePicture   String?        
     
     createdAt        TimestamptzString @default(now())
+  }
+
+  // 6b. Biblioteca Unificada de Recursos
+  model Asset {
+    id          Uuid              @id @default(uuid())
+    userId      Uuid
+    user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+    channelId   Uuid?
+    channel     Channel?          @relation(fields: [channelId], references: [id], onDelete: SetNull)
+    name        String
+    type        String            // "IMAGE" | "THUMBNAIL" | "SUBTITLE" | "VIDEO" | "AUDIO" | "OTHER"
+    format      String            // "png", "jpg", "srt", "vtt", "mp4", "mp3", etc.
+    prompt      String?
+    storageUrl  String?
+    localPath   String?
+    sizeBytes   BigInt            @default(0)
+    metadata    Json?
+    createdAt   TimestamptzString @default(now())
+    updatedAt   temporal.updatedAtString()
   }
 
   // 7. Videos (Antes: Project)

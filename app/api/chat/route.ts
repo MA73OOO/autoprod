@@ -282,6 +282,28 @@ export async function POST(req: Request) {
         }
 
         systemPrompt += workspaceStructureSnapshot;
+
+        const channelExtractionDirective = `\n\n--- INSTRUCCIÓN PARA EXPLICAR EXTRACCIÓN DE CANALES ---
+Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extracción de un canal o qué pasará en su espacio de trabajo:
+1. Explícale de forma muy clara, profesional y amigable usando un diagrama de árbol de carpetas Markdown.
+2. Menciona sus canales existentes como referencia (por ejemplo, si ves "FinanzasReales" en su workspace actual, úsalo como ejemplo directo).
+3. Muestra el diagrama de cómo quedará su workspace:
+\`\`\`text
+/Workspace
+├── /FinanzasReales (Tu canal actual)
+└── /NombreCanal (Nuevo canal traído desde YouTube)
+    ├── /InfoCanal
+    │   ├── Contexto_canal.md    # Identidad, nicho, tono y audiencia
+    │   ├── Metricas_canal.md    # Ranking de etiquetas (tags) ganadoras
+    │   └── Historial_canal.md   # Catálogo anti-duplicación de videos
+    └── /Futuras_Carpetas_de_Videos (Creadas sin repetir ideas)
+\`\`\`
+4. Resalta los dos beneficios clave para el creador:
+   • 🚫 CERO IDEAS DUPLICADAS: Analizaremos todos los videos publicados para que las nuevas carpetas que creemos en AutoProd exploren ángulos frescos y nunca repitan un tema ya realizado.
+   • 📈 APROVECHAR LO QUE YA FUNCIONÓ: Minaremos las etiquetas (tags) y fórmulas de títulos con mayor volumen de reproducciones para incorporarlas en los nuevos videos.
+5. Invítalo amablemente a compartirte la URL o @handle de su canal para comenzar la extracción de inmediato.`;
+
+        systemPrompt += channelExtractionDirective;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
         const toolNames: string[] = [];

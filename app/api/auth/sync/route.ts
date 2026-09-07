@@ -63,6 +63,12 @@ export async function POST() {
           balance: 50 // 50 tokens iniciales de cortesía para pruebas
         }
       });
+    } else if (wallet.balance < 50 && (!user.subscription || user.subscription.plan.name === 'FREE')) {
+      // Actualizar a los 50 créditos de cortesía si tenía menos por el seed legacy
+      wallet = await db.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: 50 }
+      });
     }
 
     // Ensure User has a Subscription (fallback to FREE if not exists)
@@ -110,6 +116,12 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       role: user.role,
+      plan: { name: planName },
+      planName: planName,
+      planStatus: subscription.status,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      wallet: { balance: wallet.balance },
+      creditsBalance: wallet.balance,
       user: {
         id: user.id,
         email: user.email,

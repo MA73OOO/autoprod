@@ -11,10 +11,11 @@ interface ProfileDropdownProps {
   userProfile: { name: string; email: string; role: string } | null;
   lang: Language;
   onOpenSettings: () => void;
+  onOpenPlans?: () => void;
   isAdminPage?: boolean;
 }
 
-export default function ProfileDropdown({ userProfile, lang, onOpenSettings, isAdminPage = false }: ProfileDropdownProps) {
+export default function ProfileDropdown({ userProfile, lang, onOpenSettings, onOpenPlans, isAdminPage = false }: ProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -46,7 +47,7 @@ export default function ProfileDropdown({ userProfile, lang, onOpenSettings, isA
       )}
 
       {isOpen && (
-        <div className="absolute right-0 top-10 w-52 rounded-lg bg-[#18181b] border border-zinc-800 p-2 shadow-2xl z-50 text-xs">
+        <div className="absolute right-0 top-10 w-56 rounded-lg bg-[#18181b] border border-zinc-800 p-2 shadow-2xl z-50 text-xs">
           <div className="px-3 py-2 border-b border-zinc-800 mb-1">
             <div className="flex items-center justify-between">
               <p className="font-bold text-white">{t.myAccount || 'Mi Cuenta'}</p>
@@ -67,6 +68,15 @@ export default function ProfileDropdown({ userProfile, lang, onOpenSettings, isA
             <Link href="/dashboard" onClick={() => setIsOpen(false)} className="w-full text-left px-3 py-2 hover:bg-zinc-800 rounded transition-colors text-zinc-300 hover:text-white flex items-center gap-2">
               🛡️ {lang === 'es' ? 'Volver a Consola' : 'Back to Console'}
             </Link>
+          )}
+
+          {onOpenPlans && (
+            <button 
+              onClick={() => { onOpenPlans(); setIsOpen(false); }} 
+              className="w-full text-left px-3 py-2 hover:bg-purple-500/10 text-purple-300 hover:text-purple-200 rounded transition-colors flex items-center gap-2 font-medium"
+            >
+              ⚡ {lang === 'es' ? 'Planes & Suscripción' : 'Plans & Subscription'}
+            </button>
           )}
 
           <button 

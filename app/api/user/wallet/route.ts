@@ -12,18 +12,114 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let wallet = await prisma.wallet.findUnique({
-      where: { userId }
+    // Buscar o asegurar usuario y su suscripción en Prisma
+    let user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        subscription: {
+          include: {
+            plan: {
+              include: { limits: true }
+            }
+          }
+        },
+        wallet: true
+      }
     });
 
-    if (!wallet) {
-      // Auto-create wallet for backwards compatibility
-      wallet = await prisma.wallet.create({
-        data: { userId, balance: 10 }
+    // Si el usuario existe por email pero con otro ID o no ha sido sincronizado
+    if (!user && userData.user.email) {
+      user = await prisma.user.findUnique({
+        where: { email: userData.user.email },
+        include: {
+          subscription: {
+            include: {
+              plan: { include: { limits: true } }
+            }
+          },
+          wallet: true
+        }
       });
     }
 
-    return NextResponse.json({ balance: wallet.balance });
+    // Si aún no existe, crearlo
+    if (!user && userData.user.email) {
+      const role = userData.user.email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
+      user = await prisma.user.create({
+        data: {
+          id: userId,
+          email: userData.user.email,
+          name: userData.user.user_metadata?.full_name || userData.user.email.split('@')[0],
+          role
+        },
+        include: {
+          subscription: { include: { plan: { include: { limits: true } } } },
+          wallet: true
+        }
+      });
+    }
+
+    // Asegurar Suscripción FREE si no tiene ninguna
+    let subscription = user?.subscription;
+    if (!subscription && user) {
+      let freePlan = await prisma.plan.findUnique({ where: { name: 'FREE' } });
+      if (!freePlan) {
+        freePlan = await prisma.plan.create({
+          data: {
+            name: 'FREE',
+            limits: {
+              create: {
+                maxChannels: 1,
+                maxVideosPerChannel: 5,
+                canRenderInCloud: false,
+                hasAdvancedTemplates: false,
+                maxMonthlyRenderMinutes: 0
+              }
+            }
+          }
+        });
+      }
+
+      subscription = await prisma.userSubscription.create({
+        data: {
+          userId: user.id,
+          planId: freePlan.id,
+          status: 'active'
+        },
+        include: {
+          plan: { include: { limits: true } }
+        }
+      });
+    }
+
+    // Asegurar Wallet
+    let wallet = user?.wallet;
+    if (!wallet) {
+      wallet = await prisma.wallet.create({
+        data: {
+          userId: user ? user.id : userId,
+          balance: 50 // 50 créditos de cortesía para pruebas iniciales
+        }
+      });
+    } else if (wallet.balance < 50 && (!subscription || subscription.plan.name === 'FREE')) {
+      // Si el usuario tenía los 10 créditos antiguos del código anterior, actualizar a los 50 créditos de prueba
+      wallet = await prisma.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: 50 }
+      });
+    }
+
+    const planName = subscription?.plan?.name || 'FREE';
+    const planStatus = subscription?.status || 'active';
+    const maxChannels = subscription?.plan?.limits?.maxChannels || 1;
+
+    return NextResponse.json({
+      balance: wallet.balance,
+      planName,
+      planStatus,
+      maxChannels,
+      currentPeriodEnd: subscription?.currentPeriodEnd
+    });
   } catch (error: any) {
     console.error('Error fetching wallet:', error);
     return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 });

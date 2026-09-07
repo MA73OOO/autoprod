@@ -40,6 +40,7 @@ export default function Home() {
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
             <a href="#features" className="hover:text-white transition-colors">{t.features}</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">{t.howItWorks}</a>
+            <a href="#pricing" className="hover:text-white transition-colors">{t.pricing}</a>
             <a href="file:///e:/AutoProd/docs/frontend/README.md" className="hover:text-white transition-colors">{t.docs}</a>
           </nav>
 
@@ -209,6 +210,253 @@ export default function Home() {
                   {t.step3Desc}
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 border-t border-zinc-900 bg-zinc-950/70 relative overflow-hidden">
+        {/* Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-purple-900/10 rounded-full blur-[140px] pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs font-semibold mb-4">
+              ⚡ {lang === 'es' ? 'Precios Transparentes & Tokens' : 'Transparent Pricing & Tokens'}
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">
+              {lang === 'es' ? 'Planes para Creadores y Canales Automatizados' : 'Plans for Creators and Automated Channels'}
+            </h2>
+            <p className="text-zinc-400 text-base leading-relaxed">
+              {lang === 'es'
+                ? 'AutoProd Brain™ (Cerebro Autónomo 24/7) es 100% GRATIS e ILIMITADO en todos los planes de pago. Tu presupuesto mensual se convierte en créditos para Whisper, video y modelos de razonamiento avanzado.'
+                : 'AutoProd Brain™ (24/7 Autonomous AI) is 100% FREE and UNLIMITED on all paid plans. Your monthly budget turns into credits for Whisper, video, and heavy models.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Free Trial */}
+            <div className="p-6 rounded-2xl border border-zinc-900 bg-zinc-950/80 flex flex-col justify-between hover:border-zinc-800 transition-all">
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Prueba Gratuita</span>
+                </div>
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold text-white">$0</span>
+                    <span className="text-xs text-zinc-500">USD</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-1">50 créditos de cortesía para empezar</p>
+                </div>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>1 Canal de YouTube para pruebas</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>50 créditos de bienvenida</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Subtitulado Whisper Local</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Video Looper 720p (10 min)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-amber-400/80 text-[11px]">
+                    <span>•</span>
+                    <span>AutoProd Brain™: 1 crédito/acción</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/login"
+                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
+              >
+                {lang === 'es' ? 'Comenzar Gratis' : 'Start Free'}
+              </Link>
+            </div>
+
+            {/* Starter Plan */}
+            <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col justify-between hover:border-zinc-700 transition-all">
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Starter</span>
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
+                    1 Canal Único
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold text-white">$70</span>
+                    <span className="text-xs text-zinc-500">USD / mes</span>
+                  </div>
+                  <div className="mt-2 text-[10px] bg-black/40 border border-zinc-800/80 rounded p-2 text-zinc-300 space-y-0.5">
+                    <p className="text-emerald-400 font-bold">🧠 AutoProd Brain™ 100% GRATIS</p>
+                    <p className="text-zinc-400">🪙 1,800 créditos netos mensuales</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span><strong>1 Canal de YouTube</strong> Profesional</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Video Looper 1080p (1 hora)</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>60 min Cloud Whisper</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Exportación SRT / ASS</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Subida guiada YouTube API v3</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/login?plan=starter"
+                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
+              >
+                {lang === 'es' ? 'Elegir Starter' : 'Choose Starter'}
+              </Link>
+            </div>
+
+            {/* Pro Plan - Highlighted */}
+            <div className="p-6 rounded-2xl border border-purple-500/50 bg-gradient-to-b from-purple-950/40 via-zinc-900 to-[#14141b] flex flex-col justify-between relative shadow-xl shadow-purple-950/40 ring-1 ring-purple-500/40">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-[10px] font-black uppercase text-white tracking-wider shadow-md">
+                🔥 MÁS POPULAR
+              </div>
+              <div>
+                <div className="flex justify-between items-center mb-3 mt-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-purple-300">Pro</span>
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    Hasta 3 Canales
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-black text-white">$100</span>
+                    <span className="text-xs text-zinc-400">USD / mes</span>
+                  </div>
+                  <div className="mt-2 text-[10px] bg-black/50 border border-purple-500/30 rounded p-2 text-zinc-200 space-y-0.5">
+                    <p className="text-emerald-400 font-bold">🧠 AutoProd Brain™ 100% GRATIS</p>
+                    <p className="text-zinc-300">🪙 2,700 créditos netos mensuales</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs text-zinc-300 mb-6 border-t border-zinc-800 pt-4">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span><strong>Hasta 3 Canales simultáneos</strong> (Multi-nicho)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>Video Looper 4K (3 hrs) + Batch</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>Modo Carpeta Canciones (Whisper)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>180 min Cloud Whisper</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>Memoria Vectorial Semántica</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>Programación masiva YouTube API</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/login?plan=pro"
+                className="w-full py-3 rounded-xl text-center text-xs font-extrabold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-lg shadow-purple-600/30 transition-opacity"
+              >
+                {lang === 'es' ? 'Empezar con Plan Pro' : 'Start with Pro Plan'}
+              </Link>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col justify-between hover:border-zinc-700 transition-all">
+              <div>
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Enterprise</span>
+                  <span className="text-[10px] uppercase font-extrabold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                    👑 Canales Ilimitados
+                  </span>
+                </div>
+                <div className="mb-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-extrabold text-white">$150</span>
+                    <span className="text-xs text-zinc-500">USD / mes</span>
+                  </div>
+                  <div className="mt-2 text-[10px] bg-black/40 border border-zinc-800/80 rounded p-2 text-zinc-300 space-y-0.5">
+                    <p className="text-emerald-400 font-bold">🧠 AutoProd Brain™ 100% GRATIS</p>
+                    <p className="text-zinc-400">🪙 4,500 créditos netos mensuales</p>
+                  </div>
+                </div>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span><strong>Canales de YouTube ILIMITADOS</strong></span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Looper 4K 60fps sin compresión</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>500 min Cloud Whisper</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Swarm de agentes autónomos continuos</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>Soporte VIP 1 a 1 y Onboarding</span>
+                  </div>
+                </div>
+              </div>
+              <Link
+                href="/login?plan=enterprise"
+                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
+              >
+                {lang === 'es' ? 'Elegir Enterprise' : 'Choose Enterprise'}
+              </Link>
+            </div>
+          </div>
+
+          {/* Payment Methods Footer Banner */}
+          <div className="mt-12 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-400">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💳</span>
+              <div>
+                <p className="font-bold text-white">Múltiples métodos de pago habilitados</p>
+                <p className="text-[11px] text-zinc-400">
+                  Tarjetas de crédito/débito internacionales vía Lemon Squeezy y pagos directos por Nequi, Daviplata o Transferencia Bancolombia con activación en minutos.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-2.5 py-1 rounded bg-black/60 border border-zinc-800 text-zinc-300 font-mono text-[11px]">Lemon Squeezy</span>
+              <span className="px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold text-[11px]">Nequi</span>
+              <span className="px-2.5 py-1 rounded bg-yellow-950/40 border border-yellow-500/30 text-yellow-400 font-bold text-[11px]">Bancolombia</span>
             </div>
           </div>
         </div>

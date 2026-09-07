@@ -2,6 +2,8 @@ import os
 import sys
 import shutil
 import subprocess
+import base64
+from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -468,5 +470,190 @@ def delete_folders(req: DeleteFoldersRequest):
         "deleted": deleted,
         "errors": errors if errors else None
     }
+
+
+class SaveBinaryFileRequest(BaseModel):
+    base64_data: str
+    file_name: str
+    channel_name: Optional[str] = None
+    subfolder: Optional[str] = "Miniaturas"
+    target_path: Optional[str] = None
+
+@router.post("/save_binary_file")
+def save_binary_file(req: SaveBinaryFileRequest):
+    """Guarda un archivo binario (ej. imagen en base64) físicamente en el workspace."""
+    try:
+        data_str = req.base64_data.strip()
+        if "," in data_str and "base64" in data_str[:30]:
+            data_str = data_str.split(",", 1)[1]
+
+        file_bytes = base64.b64decode(data_str)
+
+        # Resolver directorio de destino
+        if req.target_path and req.target_path.strip() not in [".", "/"]:
+            dest_dir = Path(req.target_path.strip())
+            if not dest_dir.is_absolute():
+                dest_dir = (default_workspace_path() / dest_dir).resolve()
+        elif req.channel_name and req.channel_name.strip():
+            sub = req.subfolder.strip() if req.subfolder else "Miniaturas"
+            dest_dir = (default_workspace_path() / req.channel_name.strip() / sub).resolve()
+        else:
+            dest_dir = (default_workspace_path() / "Recursos").resolve()
+
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        file_path = (dest_dir / req.file_name.strip()).resolve()
+
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
+
+        ext = file_path.suffix.lstrip(".").lower()
+        return {
+            "status": "success",
+            "message": f"Archivo guardado exitosamente en '{file_path.as_posix()}'.",
+            "path": file_path.as_posix(),
+            "name": file_path.name,
+            "format": ext,
+            "sizeBytes": file_path.stat().st_size
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar archivo binario: {str(e)}")
+
+class DeleteFileRequest(BaseModel):
+    path: str
+
+@router.post("/delete_file")
+def delete_file(req: DeleteFileRequest):
+    """Elimina un archivo específico del workspace del usuario."""
+    try:
+        raw_path = req.path.strip()
+        p = Path(raw_path)
+        if not p.is_absolute():
+            p = (default_workspace_path() / p).resolve()
+        else:
+            p = p.resolve()
+
+        if not p.exists():
+            raise HTTPException(status_code=404, detail=f"El archivo no existe: '{p.as_posix()}'")
+        if p.is_dir():
+            raise HTTPException(status_code=400, detail="La ruta proporcionada es una carpeta, use /delete_folder")
+
+        p.unlink()
+        return {
+            "status": "success",
+            "message": f"Archivo '{p.name}' eliminado correctamente.",
+            "deleted_path": p.as_posix()
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al eliminar archivo: {str(e)}")
+
+class OpenFolderRequest(BaseModel):
+    path: str
+
+@router.post("/open_folder")
+def open_folder(req: OpenFolderRequest):
+    """Abre el explorador de archivos nativo del SO en la ruta especificada."""
+    try:
+        raw_path = req.path.strip()
+        p = Path(raw_path)
+        if not p.is_absolute():
+            p = (default_workspace_path() / p).resolve()
+        else:
+            p = p.resolve()
+
+        if not p.exists():
+            p = p.parent
+
+        if not p.exists():
+            raise HTTPException(status_code=404, detail=f"Ruta no encontrada: '{p.as_posix()}'")
+
+        if sys.platform == "win32":
+            if p.is_file():
+                subprocess.Popen(["explorer.exe", f"/select,{p.as_posix().replace('/', chr(92))}"])
+            else:
+                subprocess.Popen(["explorer.exe", p.as_posix().replace('/', chr(92))])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R" if p.is_file() else "", p.as_posix()])
+        else:
+            subprocess.Popen(["xdg-open", (p.parent if p.is_file() else p).as_posix()])
+
+        return {"status": "success", "opened": p.as_posix()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error abriendo explorador de archivos: {str(e)}")
+
+class ScanMediaRequest(BaseModel):
+    channel_name: Optional[str] = None
+    target_path: Optional[str] = None
+
+@router.post("/scan_media")
+def scan_media(req: ScanMediaRequest):
+    """Escanea las carpetas locales en busca de imágenes, subtítulos, videos y audios físicos."""
+    try:
+        target_dir = resolve_target_dir(base_path=req.target_path, channel_name=req.channel_name)
+        if not target_dir.exists() or not target_dir.is_dir():
+            return {"status": "success", "target_path": target_dir.as_posix(), "count": 0, "files": []}
+
+        valid_exts = {
+            # Imágenes
+            "png": "IMAGE", "jpg": "IMAGE", "jpeg": "IMAGE", "webp": "IMAGE",
+            # Videos
+            "mp4": "VIDEO", "mov": "VIDEO", "mkv": "VIDEO", "webm": "VIDEO",
+            # Subtítulos
+            "srt": "SUBTITLE", "vtt": "SUBTITLE", "txt": "SUBTITLE",
+            # Audio
+            "mp3": "AUDIO", "wav": "AUDIO", "m4a": "AUDIO", "aac": "AUDIO", "flac": "AUDIO"
+        }
+
+        media_files = []
+        skip_dirs = {".git", "node_modules", "__pycache__", ".next", ".autoprod"}
+
+        for root, dirs, files in os.walk(target_dir):
+            dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
+            for f in files:
+                ext = f.split(".")[-1].lower() if "." in f else ""
+                if ext in valid_exts:
+                    file_path = Path(root) / f
+                    try:
+                        stat = file_path.stat()
+                        in_miniat = "miniatura" in root.lower() or "thumbnail" in root.lower()
+                        in_subtit = "subtitulo" in root.lower() or "subtitles" in root.lower()
+                        in_musica = "musica" in root.lower() or "cancion" in root.lower() or "audio" in root.lower()
+
+                        detected_type = valid_exts[ext]
+                        if detected_type == "IMAGE" and in_miniat:
+                            detected_type = "THUMBNAIL"
+                        elif ext == "txt" and not in_subtit:
+                            continue
+
+                        mod_iso = datetime.fromtimestamp(stat.st_mtime).isoformat()
+                        rel_path = file_path.relative_to(target_dir).as_posix()
+
+                        media_files.append({
+                            "name": f,
+                            "format": ext,
+                            "type": detected_type,
+                            "localPath": file_path.resolve().as_posix(),
+                            "relativePath": rel_path,
+                            "sizeBytes": stat.st_size,
+                            "modifiedAt": mod_iso
+                        })
+                    except Exception:
+                        continue
+
+        media_files.sort(key=lambda x: x["modifiedAt"], reverse=True)
+
+        return {
+            "status": "success",
+            "target_path": target_dir.as_posix(),
+            "channel": req.channel_name or target_dir.name,
+            "count": len(media_files),
+            "files": media_files
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al escanear medios locales: {str(e)}")
+
 
 
