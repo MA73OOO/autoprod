@@ -116,6 +116,8 @@ def format_time_hms(seconds: float) -> str:
         return f"{hours}h {minutes:02d}m {secs:02d}s"
     return f"{minutes}m {secs:02d}s"
 
+CREATE_NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
 def probe_duration(file_path: Path) -> float:
     ffprobe = get_ffprobe_path()
     try:
@@ -126,15 +128,15 @@ def probe_duration(file_path: Path) -> float:
             "-of", "default=noprint_wrappers=1:nokey=1",
             str(file_path)
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
         val = float(res.stdout.strip())
         return val if val > 0 else 0.0
     except Exception:
         # Si ffprobe falla, intentar con ffmpeg
         try:
             ffmpeg = get_ffmpeg_path()
-            cmd = [str(ffmpeg), "-i", str(file_path)]
-            res = subprocess.run(cmd, capture_output=True, text=True)
+            cmd = [str(ffmpeg), "-nostdin", "-i", str(file_path)]
+            res = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
             # Buscar Duration: 00:01:23.45
             for line in res.stderr.splitlines():
                 if "Duration:" in line:
@@ -164,7 +166,7 @@ def probe_video_meta(file_path: Path) -> Dict[str, Any]:
             "-of", "json",
             str(file_path)
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        res = subprocess.run(cmd, capture_output=True, text=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
         data = json.loads(res.stdout)
         if "format" in data and "duration" in data["format"]:
             meta["duration"] = float(data["format"]["duration"])
@@ -202,7 +204,8 @@ class CreateLoopRequest(BaseModel):
     audio_folder_path: Optional[str] = None       # Carpeta de canciones
     resolution: str = "1080p"                     # "1080p" | "4k" | "720p" | "shorts" | "original"
     quality: str = "high"                         # "master" | "high" | "balanced"
-    is_preview: bool = False                      # Si es true, limita a max 5 min y usa preset ultrafast
+    is_preview: bool = False                      # Si es true, limita a max 5 min y usa preset veryfast
+    mute_original_audio: bool = False             # Si es true, silencia/elimina el audio del video original
     output_channel: Optional[str] = None          # Nombre de canal de destino opcional
     output_filename: Optional[str] = None         # Nombre de archivo deseado
 
@@ -319,9 +322,9 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         # Si es modo previsualización, limitar a máximo 300 segundos (5 minutos)
         if req.is_preview:
             target_duration = min(300.0, target_duration)
-            JOBS[job_id]["message"] = "Renderizando previsualización rápida (máx. 5 minutos)..."
+            JOBS[job_id]["message"] = "Renderizando previsualización HD nítida (máx. 5 minutos)..."
         else:
-            JOBS[job_id]["message"] = f"Renderizando loop completo ({format_time_hms(target_duration)})..."
+            JOBS[job_id]["message"] = f"Renderizando loop completo en alta resolución ({format_time_hms(target_duration)})..."
 
         # 3. Calcular repeticiones necesarias para cubrir la duración
         loops_needed = max(1, math.ceil(target_duration / cycle_duration))
@@ -331,8 +334,8 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         with open(video_concat_txt, "w", encoding="utf-8") as f:
             for _ in range(loops_needed):
                 for v in valid_videos:
-                    # FFmpeg concat file format: file 'path' (con barras inclinadas)
-                    f.write(f"file '{v.as_posix()}'\n")
+                    clean_p = v.as_posix().replace("'", "'\\''")
+                    f.write(f"file '{clean_p}'\n")
 
         # 4. Preparar concat de audio si existe
         audio_concat_txt = None
@@ -340,43 +343,46 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
             audio_concat_txt = temp_dir / f"concat_a_{job_id}.txt"
             with open(audio_concat_txt, "w", encoding="utf-8") as f:
                 for a in audio_files_to_concat:
-                    f.write(f"file '{a.as_posix()}'\n")
+                    clean_ap = a.as_posix().replace("'", "'\\''")
+                    f.write(f"file '{clean_ap}'\n")
 
-        # 5. Configurar resolución y parámetros anti-pixelado
+        # 5. Configurar resolución y parámetros anti-pixelado con interpolación Lanczos
         res_map = {
             "1080p": (1920, 1080),
             "4k": (3840, 2160),
             "720p": (1280, 720),
             "shorts": (1080, 1920),
         }
-        w, h = res_map.get(req.resolution.lower(), (1920, 1080))
-        vf_filter = f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        
+        if req.resolution.lower() == "original" and valid_videos:
+            first_meta = probe_video_meta(valid_videos[0])
+            w, h = first_meta.get("width", 1920), first_meta.get("height", 1080)
+        else:
+            w, h = res_map.get(req.resolution.lower(), (1920, 1080))
+            
+        vf_filter = f"scale={w}:{h}:force_original_aspect_ratio=decrease:flags=lanczos,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1"
 
-        # Parámetros de calidad anti-pixelado
+        # Parámetros de calidad anti-pixelado con perfiles de alta fidelidad (CRF puro sin capping VBV para evitar artefactos)
         if req.quality == "master":
-            crf = "16"
-            b_v = "35M"
-            maxrate = "45M"
-            bufsize = "70M"
+            crf = "14"
+            preset = "faster" if req.is_preview else "slow"
+            x264_opts = "aq-mode=2:no-fast-pskip=1"
         elif req.quality == "balanced":
-            crf = "22"
-            b_v = "8M"
-            maxrate = "12M"
-            bufsize = "18M"
+            crf = "21"
+            preset = "veryfast" if req.is_preview else "medium"
+            x264_opts = "aq-mode=2"
         else: # "high" (por defecto)
-            crf = "18"
-            b_v = "18M"
-            maxrate = "25M"
-            bufsize = "35M"
+            crf = "17"
+            preset = "fast" if req.is_preview else "medium"
+            x264_opts = "aq-mode=2:no-fast-pskip=1"
 
-        # Preset: ultrafast para preview para que salga en pocos segundos, medium para export final
-        preset = "ultrafast" if req.is_preview else "medium"
+        if req.is_preview:
+            crf = "17"
 
         # 6. Definir archivo de salida
         if req.is_preview:
             output_file = temp_dir / f"preview_{job_id}.mp4"
         else:
-            # Carpeta destino en workspace
             ws_root = default_workspace_path()
             if req.output_channel:
                 channel_dir = ws_root / req.output_channel
@@ -392,10 +398,11 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
 
         JOBS[job_id]["progress"] = 25
 
-        # 7. Construir comando FFmpeg
+        # 7. Construir comando FFmpeg (con -nostdin para evitar bloqueo de consola)
         cmd = [
             str(ffmpeg),
-            "-y", # Sobrescribir
+            "-nostdin",
+            "-y",
             "-f", "concat",
             "-safe", "0",
             "-i", str(video_concat_txt)
@@ -414,13 +421,15 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
             "-c:v", "libx264",
             "-crf", crf,
             "-preset", preset,
+            "-x264-params", x264_opts,
             "-pix_fmt", "yuv420p",
+            "-colorspace", "bt709",
+            "-color_primaries", "bt709",
+            "-color_trc", "bt709",
             "-threads", str(governor.get_hardware_specs()["safe_threads"]),
-            "-b:v", b_v,
-            "-maxrate", maxrate,
-            "-bufsize", bufsize
         ])
 
+        # Manejo de audio: sincronización, silenciado o preservación
         if audio_concat_txt:
             cmd.extend([
                 "-c:a", "aac",
@@ -428,8 +437,15 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
                 "-map", "0:v:0",
                 "-map", "1:a:0"
             ])
+        elif req.mute_original_audio:
+            cmd.extend([
+                "-map", "0:v:0",
+                "-an"
+            ])
         else:
             cmd.extend([
+                "-map", "0:v:0",
+                "-map", "0:a?",
                 "-c:a", "aac",
                 "-b:a", "192k"
             ])
@@ -437,15 +453,32 @@ def run_loop_render(job_id: str, req: CreateLoopRequest):
         cmd.append(str(output_file))
 
         JOBS[job_id]["progress"] = 40
-        JOBS[job_id]["message"] = "Codificando video con calidad visual sin pixelado..."
+        JOBS[job_id]["message"] = "Codificando bucle continuo con gradientes nítidos y Lanczos..."
 
-        # Ejecutar FFmpeg
+        # Ejecutar FFmpeg sin ventana emergente en Windows
         process = subprocess.Popen(
             cmd,
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            creationflags=CREATE_NO_WINDOW
         )
+
+        def progress_ticker():
+            cur = 40
+            while process.poll() is None:
+                time.sleep(0.8)
+                if cur < 92:
+                    cur += 4
+                    JOBS[job_id]["progress"] = cur
+                    if cur > 75:
+                        JOBS[job_id]["message"] = "Finalizando compresión y estructura de fotogramas..."
+                    elif cur > 55:
+                        JOBS[job_id]["message"] = "Procesando bucles y estabilizando gradientes..."
+
+        ticker_thread = threading.Thread(target=progress_ticker, daemon=True)
+        ticker_thread.start()
 
         _, stderr = process.communicate()
 

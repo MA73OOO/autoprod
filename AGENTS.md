@@ -1,7 +1,7 @@
 # REGLAS DEL REPOSITORIO AUTOPROD (LEER OBLIGATORIAMENTE)
 
-Antes de realizar CUALQUIER cambio arquitectónico, crear una funcionalidad, o modificar el código fuente de AutoProd, **DEBES** leer el índice de funcionalidades ubicado en `docs/index.md`. 
-No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea, y si creas una funcionalidad nueva, estás obligado a documentarla en `docs/features/`.
+Antes de realizar CUALQUIER cambio arquitectónico, crear una funcionalidad, o modificar el código fuente de AutoProd, **DEBES** leer el índice de funcionalidades ubicado en `docs/index.md` y el Master Tracker en `docs/features/README.md`. 
+No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea, y si creas o modificas una funcionalidad, estás obligado a documentarla en `docs/features/{tu_feature}/` separando su `ficha_tecnica.md` (código, arquitectura, endpoints) e `idea.md` (visión, alcance y escalabilidad), actualizando el Master Tracker.
 
 ---
 

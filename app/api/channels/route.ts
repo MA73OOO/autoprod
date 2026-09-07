@@ -122,6 +122,7 @@ export async function POST(req: Request) {
           data: {
             channelId: newChannel.id,
             userId: user.id,
+            channelUrl: `local://${encodeURIComponent(cleanName)}`,
             title: niche?.trim() || cleanName,
             description: description?.trim() || `Canal enfocado en ${niche || cleanName}`,
             contextSummary: `Canal temático enfocado en el nicho: ${niche || cleanName}.`

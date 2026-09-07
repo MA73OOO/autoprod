@@ -24,7 +24,7 @@ export default function FileTree({ node, level = 0, onAddNode, onOpenFile }: Fil
   const isImage = !isDir && (nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp') || nameLower.endsWith('.gif'));
   const isVideo = !isDir && (nameLower.endsWith('.mp4') || nameLower.endsWith('.mov') || nameLower.endsWith('.mkv') || nameLower.endsWith('.webm') || nameLower.endsWith('.avi'));
   const isAudio = !isDir && (nameLower.endsWith('.mp3') || nameLower.endsWith('.wav') || nameLower.endsWith('.aac') || nameLower.endsWith('.m4a') || nameLower.endsWith('.flac') || nameLower.endsWith('.ogg'));
-  const isPreviewable = isMarkdown || isImage;
+  const isPreviewable = isMarkdown || isImage || isVideo || isAudio;
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();

@@ -14,6 +14,7 @@ interface VideoItem {
   width?: number;
   height?: number;
   sizeMb?: number;
+  hasAudio?: boolean;
 }
 
 interface SongItem {
@@ -59,6 +60,7 @@ export default function VideoLooperStudio({
   const [quality, setQuality] = useState<string>('high'); // 'high' (CRF 18), 'master' (CRF 16), 'balanced' (CRF 22)
   const [selectedChannel, setSelectedChannel] = useState<string>(channels[0]?.id || '');
   const [outputFilename, setOutputFilename] = useState<string>('loop_produccion.mp4');
+  const [muteOriginalAudio, setMuteOriginalAudio] = useState<boolean>(false);
 
   // ── Previsualización y Render ──
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
@@ -127,7 +129,8 @@ export default function VideoLooperStudio({
           durationFormatted: meta.duration_formatted,
           width: meta.width,
           height: meta.height,
-          sizeMb: meta.size_mb
+          sizeMb: meta.size_mb,
+          hasAudio: meta.has_audio
         } : v));
       } catch (err) {
         console.warn('Could not inspect media:', err);
@@ -206,15 +209,19 @@ export default function VideoLooperStudio({
     setRenderMessage(lang === 'es' ? 'Iniciando previsualización rápida...' : 'Starting fast preview...');
     setPreviewVideoUrl(null);
 
+    // Para previsualización rápida, calculamos entre 30 y 90 segundos (2-3 repeticiones del ciclo)
+    const previewTargetDuration = Math.min(90, Math.max(Math.round((cycleDuration || 15) * 2.5), 30));
+
     try {
       const res = await ControladorClient.createVideoLoop({
         videoPaths: selectedVideos.map(v => v.path),
         durationMode,
-        targetDurationSeconds: Math.min(300, targetDurationSeconds),
+        targetDurationSeconds: previewTargetDuration,
         audioFolderPath: durationMode === 'audio_folder' ? audioFolderPath : null,
         resolution,
         quality,
         isPreview: true,
+        muteOriginalAudio,
       });
 
       const jobId = res.job_id;
@@ -272,6 +279,7 @@ export default function VideoLooperStudio({
         resolution,
         quality,
         isPreview: false,
+        muteOriginalAudio,
         outputChannel: selectedChannel,
         outputFilename,
       });
@@ -453,9 +461,20 @@ export default function VideoLooperStudio({
                       </span>
                       <div className="truncate">
                         <p className="font-semibold text-zinc-200 truncate">{video.name}</p>
-                        <p className="text-[10px] text-zinc-500 font-mono">
-                          {video.width && video.height ? `${video.width}x${video.height}` : 'Video'} • {video.durationFormatted || 'Calculando...'} {video.sizeMb ? `• ${video.sizeMb} MB` : ''}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] text-zinc-500 font-mono">
+                            {video.width && video.height ? `${video.width}x${video.height}` : 'Video'} • {video.durationFormatted || 'Calculando...'} {video.sizeMb ? `• ${video.sizeMb} MB` : ''}
+                          </span>
+                          {video.hasAudio !== undefined && (
+                            <span className={`text-[9px] px-1.5 py-0.2 rounded font-mono font-medium border ${
+                              video.hasAudio 
+                                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40' 
+                                : 'bg-zinc-800/60 text-zinc-500 border-zinc-700/50'
+                            }`}>
+                              {video.hasAudio ? '🔊 Con audio' : '🔇 Sin audio'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -486,6 +505,58 @@ export default function VideoLooperStudio({
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Audio Strip / Mute Control */}
+            {selectedVideos.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-zinc-950/60 border border-zinc-800/80 mt-1">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-base border transition-colors shrink-0 ${
+                    muteOriginalAudio 
+                      ? 'bg-amber-950/50 text-amber-300 border-amber-800/50' 
+                      : 'bg-purple-950/50 text-purple-300 border-purple-800/50'
+                  }`}>
+                    {muteOriginalAudio ? '🔇' : '🔊'}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-zinc-200 flex items-center gap-2">
+                      {muteOriginalAudio 
+                        ? (lang === 'es' ? 'Audio de los clips silenciado' : 'Clips audio muted') 
+                        : (lang === 'es' ? 'Audio original de los clips activo' : 'Original clips audio active')}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-semibold ${
+                        muteOriginalAudio 
+                          ? 'bg-amber-950/70 text-amber-300 border border-amber-800/60' 
+                          : 'bg-purple-950/70 text-purple-300 border border-purple-800/60'
+                      }`}>
+                        {muteOriginalAudio ? (lang === 'es' ? 'Silenciado' : 'Muted') : (lang === 'es' ? 'Activo' : 'Active')}
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                      {muteOriginalAudio
+                        ? (lang === 'es' 
+                            ? 'Se eliminarán todas las pistas de audio originales del video para un loop mudo o con música de fondo limpia.' 
+                            : 'All original audio tracks will be stripped for a mute loop or clean background music.')
+                        : (lang === 'es'
+                            ? 'Se mantendrá el audio nativo de tus videos. Si añades música de fondo, se reemplazará o sincronizará.' 
+                            : 'Keep the native audio of your clips. If you add background songs, they will sync accordingly.')}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMuteOriginalAudio(!muteOriginalAudio)}
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 cursor-pointer border shadow-sm ${
+                    muteOriginalAudio
+                      ? 'bg-amber-500/20 border-amber-500/60 text-amber-300 hover:bg-amber-500/30'
+                      : 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:bg-zinc-700 hover:border-purple-500 hover:text-white'
+                  }`}
+                >
+                  {muteOriginalAudio 
+                    ? (lang === 'es' ? '🔊 Conservar Audio Original' : '🔊 Keep Original Audio') 
+                    : (lang === 'es' ? '🔇 Quitar / Silenciar Audio' : '🔇 Mute / Remove Audio')}
+                </button>
               </div>
             )}
           </div>
@@ -664,6 +735,7 @@ export default function VideoLooperStudio({
                 onChange={(e) => setResolution(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500 cursor-pointer"
               >
+                <option value="original">🎯 Original (Conservar resolución nativa sin reescalar)</option>
                 <option value="1080p">📺 1080p Full HD (1920x1080) - Estándar YouTube</option>
                 <option value="4k">🌟 4K Ultra HD (3840x2160) - Máxima Definición</option>
                 <option value="720p">⚡ 720p HD (1280x720) - Rápido / Liviano</option>
@@ -682,9 +754,9 @@ export default function VideoLooperStudio({
                 onChange={(e) => setQuality(e.target.value)}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500 cursor-pointer"
               >
-                <option value="high">✨ Alta Nitidez (CRF 18 / 18 Mbps) - Gradientes limpios sin pixelado</option>
-                <option value="master">💎 Calidad Master (CRF 16 / 35 Mbps) - Calidad estudio sin pérdidas</option>
-                <option value="balanced">⚖️ Equilibrado (CRF 22 / 8 Mbps) - Menor tamaño de archivo</option>
+                <option value="high">✨ Alta Nitidez Pro (CRF 17 / Sin artefactos de compresión) [Recomendado]</option>
+                <option value="master">💎 Calidad Master / Ultra Estudio (CRF 14 / Máxima fidelidad)</option>
+                <option value="balanced">⚖️ Equilibrado (CRF 21 / Menor tamaño de archivo)</option>
               </select>
             </div>
 
@@ -722,7 +794,7 @@ export default function VideoLooperStudio({
               <div className="flex items-center gap-2">
                 <span className="text-base">📺</span>
                 <h2 className="text-sm font-bold text-white">
-                  {lang === 'es' ? 'Previsualizador de Loop (Máx 5 min)' : 'Loop Previsualizer (Max 5 min)'}
+                  {lang === 'es' ? 'Previsualizador de Loop (HD)' : 'Loop Previsualizer (HD)'}
                 </h2>
               </div>
               {previewVideoUrl && (
@@ -732,7 +804,53 @@ export default function VideoLooperStudio({
               )}
             </div>
 
-            {previewVideoUrl ? (
+            {isRenderingPreview ? (
+              <div className="border border-purple-500/50 rounded-xl p-8 flex-1 flex flex-col items-center justify-center text-center gap-5 bg-gradient-to-b from-purple-950/40 via-[#18181b] to-black min-h-[260px] animate-in fade-in duration-300 shadow-2xl">
+                {/* Animated Glowing Dual Spinner */}
+                <div className="relative flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-full border-4 border-purple-900/40 border-t-purple-500 animate-spin" />
+                  <div className="w-10 h-10 rounded-full border-2 border-indigo-900/40 border-b-indigo-400 animate-spin absolute" style={{ animationDirection: 'reverse', animationDuration: '1.2s' }} />
+                  <span className="text-xl absolute">⚡</span>
+                </div>
+
+                {/* Stage & Progress Information */}
+                <div className="space-y-3 max-w-sm w-full">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-purple-300 flex items-center gap-1.5 truncate">
+                      <span className="inline-block w-2 h-2 rounded-full bg-purple-400 animate-ping shrink-0" />
+                      <span className="truncate">{renderMessage || (lang === 'es' ? 'Procesando bucle en alta fidelidad...' : 'Processing loop in high fidelity...')}</span>
+                    </span>
+                    <span className="font-mono text-purple-300 font-bold text-sm shrink-0 ml-2">{renderProgress}%</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-zinc-900 h-2.5 rounded-full overflow-hidden border border-purple-900/50 shadow-inner">
+                    <div
+                      className="bg-gradient-to-r from-purple-500 via-indigo-500 to-purple-400 h-full transition-all duration-300 rounded-full shadow-[0_0_12px_rgba(168,85,247,0.6)]"
+                      style={{ width: `${Math.max(8, renderProgress)}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 pt-1 text-[11px] text-zinc-400">
+                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-[10px] text-zinc-300">
+                      {resolution.toUpperCase()}
+                    </span>
+                    <span>•</span>
+                    <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 font-mono text-[10px] text-zinc-300">
+                      {quality === 'master' ? 'CRF 14 Master' : quality === 'balanced' ? 'CRF 21' : 'CRF 17 Pro'}
+                    </span>
+                    <span>•</span>
+                    <span className={`px-2 py-0.5 rounded font-mono text-[10px] border ${
+                      muteOriginalAudio 
+                        ? 'bg-amber-950/40 text-amber-400 border-amber-800/40' 
+                        : 'bg-zinc-900 text-zinc-400 border-zinc-800'
+                    }`}>
+                      {muteOriginalAudio ? '🔇 Mudo' : '🔊 Con audio'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : previewVideoUrl ? (
               <div className="flex flex-col gap-3">
                 <video
                   src={previewVideoUrl}
@@ -742,12 +860,14 @@ export default function VideoLooperStudio({
                   className="w-full rounded-lg border border-purple-500/40 shadow-2xl bg-black aspect-video object-contain"
                 />
                 <div className="flex items-center justify-between text-[11px] text-zinc-400 px-1">
-                  <span>Muestra renderizada para verificar fluidez del bucle y audio.</span>
+                  <span className="flex items-center gap-1.5 text-zinc-300 font-medium">
+                    <span className="text-emerald-400">✓</span> Muestra renderizada en alta fidelidad.
+                  </span>
                   <button
                     onClick={() => window.open(previewVideoUrl, '_blank')}
                     className="text-purple-400 hover:text-purple-300 font-semibold cursor-pointer underline"
                   >
-                    Abrir video
+                    Abrir video en pestaña nueva ↗
                   </button>
                 </div>
               </div>
@@ -762,8 +882,8 @@ export default function VideoLooperStudio({
                   </p>
                   <p className="text-[11px] text-zinc-500 max-w-xs">
                     {lang === 'es'
-                      ? 'Haz clic en "Previsualizar (Máx 5 min)" arriba para renderizar un fragmento rápido y comprobar la calidad y el bucle.'
-                      : 'Click "Preview (Max 5 min)" above to quickly generate a sample and check quality and transitions.'}
+                      ? 'Haz clic en "Previsualizar" arriba para renderizar un fragmento rápido y comprobar la calidad y el bucle.'
+                      : 'Click "Preview" above to quickly generate a sample and check quality and transitions.'}
                   </p>
                 </div>
                 <button

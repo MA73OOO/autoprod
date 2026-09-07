@@ -84,13 +84,15 @@ class HardwareGovernor:
         has_cuda = False
 
         if sys.platform == "win32":
+            CREATE_NO_WINDOW = 0x08000000
             # Verificar NVIDIA SMI
             if shutil.which("nvidia-smi"):
                 try:
                     out = subprocess.check_output(
                         ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
                         encoding="utf-8",
-                        errors="ignore"
+                        errors="ignore",
+                        creationflags=CREATE_NO_WINDOW
                     )
                     lines = [l.strip() for l in out.splitlines() if l.strip()]
                     if lines:
@@ -106,7 +108,8 @@ class HardwareGovernor:
                     out = subprocess.check_output(
                         ['reg', 'query', r'HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}', '/s', '/v', 'DriverDesc'],
                         encoding="utf-8",
-                        errors="ignore"
+                        errors="ignore",
+                        creationflags=CREATE_NO_WINDOW
                     )
                     for line in out.splitlines():
                         if "DriverDesc" in line and "REG_SZ" in line:

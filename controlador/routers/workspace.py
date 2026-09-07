@@ -5,7 +5,9 @@ import subprocess
 import base64
 from datetime import datetime
 from pathlib import Path
+import mimetypes
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Optional
 
@@ -284,6 +286,26 @@ def create_folder(req: CreateFolderRequest):
 class SaveFileRequest(BaseModel):
     path: str
     content: str
+
+@router.get("/raw")
+def get_raw_file(path: str):
+    """Sirve archivos binarios o multimedia (video, audio, imagen, texto) desde el workspace para previsualización."""
+    ws_root = default_workspace_path()
+    file_path = Path(path)
+    if not file_path.is_absolute():
+        file_path = (ws_root / file_path).resolve()
+    else:
+        file_path = file_path.resolve()
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="El archivo no existe.")
+
+    mime_type, _ = mimetypes.guess_type(str(file_path))
+    return FileResponse(
+        path=str(file_path),
+        media_type=mime_type or "application/octet-stream",
+        filename=file_path.name
+    )
 
 @router.get("/file")
 def read_file(path: str):

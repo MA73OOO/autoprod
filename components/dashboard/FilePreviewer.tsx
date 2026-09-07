@@ -21,6 +21,9 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
   const fileName = filePath.split(/[/\\]/).pop() || 'Archivo';
   const nameLower = fileName.toLowerCase();
   const isImage = nameLower.endsWith('.png') || nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp') || nameLower.endsWith('.gif');
+  const isVideo = nameLower.endsWith('.mp4') || nameLower.endsWith('.mov') || nameLower.endsWith('.mkv') || nameLower.endsWith('.webm') || nameLower.endsWith('.avi');
+  const isAudio = nameLower.endsWith('.mp3') || nameLower.endsWith('.wav') || nameLower.endsWith('.aac') || nameLower.endsWith('.m4a') || nameLower.endsWith('.flac') || nameLower.endsWith('.ogg');
+  const isMedia = isImage || isVideo || isAudio;
 
   const onCloseRef = useRef(onClose);
   useEffect(() => {
@@ -30,8 +33,7 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
   useEffect(() => {
     let active = true;
     
-    if (isImage) {
-      // For images, we don't need to load text content
+    if (isMedia) {
       setIsLoading(false);
       return;
     }
@@ -55,10 +57,10 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
     };
     loadFile();
     return () => { active = false; };
-  }, [filePath, isImage]);
+  }, [filePath, isMedia]);
 
   const handleSave = async () => {
-    if (isImage) return;
+    if (isMedia) return;
     setIsSaving(true);
     const toastId = toast.loading('Guardando...');
     try {
@@ -73,7 +75,7 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
   };
 
   useEffect(() => {
-    if (isImage) return;
+    if (isMedia) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -86,9 +88,9 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [content, filePath, isImage]);
+  }, [content, filePath, isMedia]);
 
-  const hasChanges = !isImage && content !== originalContent;
+  const hasChanges = !isMedia && content !== originalContent;
 
   if (isLoading) {
     return (
@@ -101,8 +103,7 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
     );
   }
 
-  // Fallback to control-server if local next API not present
-  const imageUrl = `/api/fs/read?path=${encodeURIComponent(filePath)}`;
+  const mediaUrl = `http://127.0.0.1:8000/workspace/raw?path=${encodeURIComponent(filePath)}`;
 
   return (
     <div className="flex-1 flex flex-col bg-[#09090b] overflow-hidden h-full">
@@ -110,25 +111,25 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
         <div className="flex items-center gap-3">
           <button 
             onClick={onClose}
-            className="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors"
+            className="text-zinc-400 hover:text-white p-1 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
             title="Cerrar vista previa"
           >
             ✕
           </button>
           <div className="flex flex-col">
             <span className="text-sm font-medium text-zinc-200 flex items-center gap-2">
-              {isImage ? '🖼️' : '📝'} {fileName}
+              {isImage ? '🖼️' : isVideo ? '🎬' : isAudio ? '🎵' : '📝'} {fileName}
               {hasChanges && <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" title="Cambios sin guardar"></span>}
             </span>
             <span className="text-[10px] text-zinc-500 truncate max-w-[200px] xl:max-w-md">{filePath}</span>
           </div>
         </div>
-        {!isImage && (
+        {!isMedia ? (
           <div className="flex items-center gap-2">
             <div className="flex bg-zinc-950 rounded-lg p-1 mr-2 border border-zinc-800">
               <button
                 onClick={() => setViewMode('edit')}
-                className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${
+                className={`px-3 py-1 text-[10px] font-bold rounded transition-colors cursor-pointer ${
                   viewMode === 'edit' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
@@ -136,7 +137,7 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
               </button>
               <button
                 onClick={() => setViewMode('preview')}
-                className={`px-3 py-1 text-[10px] font-bold rounded transition-colors ${
+                className={`px-3 py-1 text-[10px] font-bold rounded transition-colors cursor-pointer ${
                   viewMode === 'preview' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'
                 }`}
               >
@@ -146,24 +147,52 @@ export default function FilePreviewer({ filePath, onClose }: Props) {
             <button
               onClick={handleSave}
               disabled={!hasChanges || isSaving}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white text-xs font-bold rounded shadow transition-all"
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white text-xs font-bold rounded shadow transition-all cursor-pointer"
             >
               💾 Guardar
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => window.open(mediaUrl, '_blank')}
+              className="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-semibold rounded transition-colors cursor-pointer"
+              title="Abrir en ventana completa"
+            >
+              ↗ Abrir archivo
             </button>
           </div>
         )}
       </div>
 
       <div className="flex-1 p-4 relative overflow-y-auto minimal-scrollbar flex justify-center bg-[#09090b]">
-        {isImage ? (
+        {isVideo ? (
+          <div className="w-full h-full flex flex-col items-center justify-center p-2">
+            <video 
+              src={mediaUrl} 
+              controls
+              autoPlay
+              className="max-w-full max-h-[75vh] rounded-xl border border-zinc-800 shadow-2xl bg-black object-contain"
+            />
+          </div>
+        ) : isAudio ? (
+          <div className="w-full h-full flex flex-col items-center justify-center p-6 gap-4">
+            <span className="text-5xl">🎵</span>
+            <p className="text-sm font-semibold text-zinc-300">{fileName}</p>
+            <audio 
+              src={mediaUrl} 
+              controls
+              className="w-full max-w-md"
+            />
+          </div>
+        ) : isImage ? (
           <div className="w-full h-full flex items-center justify-center p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
-              src={imageUrl} 
+              src={mediaUrl} 
               alt={fileName}
               className="max-w-full max-h-full object-contain rounded-lg border border-zinc-800/50 shadow-2xl"
               onError={(e) => {
-                // If API fails, fallback to local path (sometimes public static files work)
                 (e.target as HTMLImageElement).src = `/${fileName}`;
               }}
             />

@@ -28,7 +28,8 @@ from routers.video_looper import (
     get_ffmpeg_path,
     get_ffprobe_path,
     probe_duration,
-    format_time_hms
+    format_time_hms,
+    CREATE_NO_WINDOW
 )
 
 router = APIRouter(
@@ -157,6 +158,7 @@ def extract_optimized_audio(source_file: Path, temp_dir: Path, target_id: str) -
     
     cmd = [
         str(ffmpeg),
+        "-nostdin",
         "-y",
         "-i", str(source_file),
         "-vn",
@@ -167,7 +169,7 @@ def extract_optimized_audio(source_file: Path, temp_dir: Path, target_id: str) -
         str(out_audio)
     ]
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
         if out_audio.exists() and out_audio.stat().st_size > 0:
             return out_audio
     except Exception:
@@ -286,7 +288,7 @@ def run_subtitles_worker(job_id: str, req: SubtitlesGenerateRequest):
                         cmd.extend(["--language", req.language])
 
                     SUB_JOBS[job_id]["message"] = f"Transcribiendo en local ({device.upper()} - {safe_threads} hilos): {file_item.name}..."
-                    subprocess.run(cmd, capture_output=True, check=True)
+                    subprocess.run(cmd, capture_output=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
                     
                     json_out = temp_dir / f"{opt_audio.stem}.json"
                     if json_out.exists():

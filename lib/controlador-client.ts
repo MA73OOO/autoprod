@@ -154,8 +154,11 @@ export class ControladorClient {
       return await response.json();
     } catch (error) {
       console.error('Controlador Client: initVideoWorkspace failed', error);
-      throw error;
     }
+  }
+
+  static async initVideoWorkspace(basePath: string, channelName: string, _structureName?: string, folders?: string[]) {
+    return this.createFolder(basePath, channelName, folders);
   }
 
   /**
@@ -249,6 +252,7 @@ export class ControladorClient {
     resolution?: string;
     quality?: string;
     isPreview?: boolean;
+    muteOriginalAudio?: boolean;
     outputChannel?: string | null;
     outputFilename?: string | null;
   }): Promise<{ job_id: string; status: string; is_preview: boolean; message: string }> {
@@ -264,6 +268,7 @@ export class ControladorClient {
           resolution: params.resolution || '1080p',
           quality: params.quality || 'high',
           is_preview: params.isPreview ?? false,
+          mute_original_audio: params.muteOriginalAudio ?? false,
           output_channel: params.outputChannel || null,
           output_filename: params.outputFilename || null,
         }),

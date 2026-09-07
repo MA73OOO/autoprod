@@ -18,27 +18,32 @@ Para lograr un sistema totalmente funcional y trabajable de manera agéntica, Au
 
 Antes de modificar cualquier parte del sistema, **DEBES** leer el `.md` correspondiente a la funcionalidad o área que vas a afectar. 
 
-### 🌟 Funcionalidades Específicas (`docs/features/`)
-Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear una nueva funcionalidad**, DEBES documentarla aquí creando una subcarpeta y añadiéndola a esta lista.
+### 🌟 Funcionalidades Específicas & Master Tracker (`docs/features/`)
+Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de producto.
+👉 **[🎯 Master Feature Tracker & Product Backlog](file:///e:/autoprod/docs/features/README.md):** Tablero de control de alcance, estado de tareas (`✅ HECHO`, `🔄 EN PROGRESO`, `📋 PLANIFICADO`, `💡 IDEA`) y banco de ideas.
 
-- 🤖 **[Agentic Orchestrator](file:///e:/autoprod/docs/features/agentic_orchestrator/README.md):** Cómo Gemini delega tareas usando Function Calling hacia el Motor de Python.
-- 🔁 **[Video Looper Studio](file:///e:/autoprod/docs/features/video_looper/README.md):** Creación de loops de video con sincronización de música, calidad anti-pixelado y previsualizador de 5 minutos.
-- 🎧 **[Subtitulador Whisper & Hardware Governor](file:///e:/autoprod/docs/features/subtitles_whisper/README.md):** Subtitulado con Whisper API/Local, modo carpeta de canciones, control de CPU/GPU y compatibilidad con CapCut.
-- ⚙️ **[Local Motor (FastAPI)](file:///e:/autoprod/docs/features/local_motor/README.md):** Cómo el backend de Python interactúa físicamente con el disco duro del usuario.
-- 📁 **[Folder CRUD](file:///e:/autoprod/docs/features/folder_crud/README.md):** Gestión agéntica y multiplataforma de carpetas y canales en el workspace local.
-- 🔐 **[Auth Guard & JWT](file:///e:/autoprod/docs/features/auth_guard/README.md):** Sistema SSR de doble verificación para sesiones de Supabase.
-- 📊 **[Token Tracker](file:///e:/autoprod/docs/features/token_tracker/README.md):** Sistema asíncrono para el rastreo de consumo de tokens por usuario.
-- 📺 **[YouTube Channel Extractor](file:///e:/autoprod/docs/features/youtube_channel_extractor/README.md):** Extracción con YouTube Data API v3, contexto local anti-duplicados y persistencia vectorial con pgvector.
-- 💳 **[Subscriptions, Billing & Token Economics](file:///e:/autoprod/docs/features/subscriptions_and_billing/README.md):** Sistema de monetización, planes ($70, $100, $150 USD), orquestador gpt-4o-mini gratuito, Lemon Squeezy y activación manual por Nequi.
-- 🗃️ **[Biblioteca de Recursos (Asset Library & CRUD)](file:///e:/autoprod/docs/features/asset_library/README.md):** Gestor unificado de recursos multimedia, cuadrícula y tabla, previsualizadores, medidor de cuotas y auto-escaneo de disco local.
-- 🎨 **[Creador de Imágenes & Miniaturas IA (Image Studio)](file:///e:/autoprod/docs/features/image_generator/README.md):** Generación DALL-E 3, análisis de referencias con visión multimodal, cuestionario guiado y persistencia dual local y nube.
+#### 🏛️ Contexto Macro de AutoProd
+- 🚀 **[AutoProd: Ficha Técnica Macro](file:///e:/autoprod/docs/features/AutoProd/ficha_tecnica.md)** \| **[AutoProd: Idea (Lo que Tenemos vs. Hacia Dónde Vamos)](file:///e:/autoprod/docs/features/AutoProd/idea.md)**: Arquitectura completa de 2 capas y la visión estratégica para creadores y agencias.
+
+#### 📦 Módulos Específicos
+- 🤖 **Agentic Orchestrator:** [Ficha Técnica](file:///e:/autoprod/docs/features/agentic_orchestrator/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/agentic_orchestrator/idea.md)
+- 🔁 **Video Looper Studio:** [Ficha Técnica](file:///e:/autoprod/docs/features/video_looper/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/video_looper/idea.md)
+- 🎧 **Subtitulador Whisper & Hardware Governor:** [Ficha Técnica](file:///e:/autoprod/docs/features/subtitles_whisper/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/subtitles_whisper/idea.md)
+- ⚙️ **Local Motor (FastAPI):** [Ficha Técnica](file:///e:/autoprod/docs/features/local_motor/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/local_motor/idea.md)
+- 📁 **Folder CRUD:** [Ficha Técnica](file:///e:/autoprod/docs/features/folder_crud/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/folder_crud/idea.md)
+- 🔐 **Auth Guard & JWT:** [Ficha Técnica](file:///e:/autoprod/docs/features/auth_guard/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/auth_guard/idea.md)
+- 📊 **Token Tracker:** [Ficha Técnica](file:///e:/autoprod/docs/features/token_tracker/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/token_tracker/idea.md)
+- 📺 **YouTube Channel Extractor:** [Ficha Técnica](file:///e:/autoprod/docs/features/youtube_channel_extractor/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/youtube_channel_extractor/idea.md)
+- 💳 **Subscriptions, Billing & Token Economics:** [Ficha Técnica](file:///e:/autoprod/docs/features/subscriptions_and_billing/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/subscriptions_and_billing/idea.md)
+- 🗃️ **Biblioteca de Recursos (Asset Library & CRUD):** [Ficha Técnica](file:///e:/autoprod/docs/features/asset_library/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/asset_library/idea.md)
+- 🎨 **Creador de Imágenes & Miniaturas IA (Image Studio):** [Ficha Técnica](file:///e:/autoprod/docs/features/image_generator/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/image_generator/idea.md)
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.
 - 🌐 **[Backend (Next.js)](file:///e:/autoprod/docs/backend/README.md):** API Routes, Supabase, Vercel AI SDK.
 - 🗄️ **[Base de Datos (Prisma)](file:///e:/autoprod/docs/database/README.md):** Esquemas, migraciones, sincronización con auth de Supabase.
 - 🛣️ **[Roadmap y Planeación](file:///e:/autoprod/docs/plan/roadmap.md):** Visión a futuro e historial de implementaciones.
-- 🎯 **[Control de Alcance, Backlog & Ideas](file:///e:/autoprod/docs/plan/control_alcance_ideas.md):** Matriz maestra de seguimiento de lo hecho, en curso y banco de ideas para la escalabilidad de AutoProd.
+- 🎯 **[Master Feature Tracker](file:///e:/autoprod/docs/features/README.md):** Control central de alcance, estado y banco de ideas.
 
 ---
 
@@ -46,9 +51,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear u
 
 1. **Expón tu contexto primero:** Antes de ejecutar acciones, escribir código o crear un plan de implementación, DEBES explicar claramente al usuario cuál es tu contexto actual, por qué estás tomando esas decisiones y cómo se alinean con la arquitectura de AutoProd. Muestra tu razonamiento ("una ventana de contexto") para que el usuario valide que estás en sintonía.
 2. **Lee antes de escribir:** Nunca asumas cómo funciona una funcionalidad. Ve al link correspondiente arriba y léela.
-3. **Documenta siempre:** Si creas una funcionalidad (ej. Integración de Pagos, Render de Video), al finalizar DEBES crear su carpeta en `docs/features/{tu_feature}/README.md` y agregar el link a este archivo `docs/index.md`.
-4. **Estructura Estándar para features:** Tu `README.md` dentro de `docs/features/` DEBE contener:
-   - **Qué hace:** (Resumen)
-   - **Cómo lo hace:** (Lógica paso a paso)
-   - **Archivos involucrados:** (Rutas exactas)
-   - **Propósito:** (Por qué existe en el negocio)
+3. **Documenta siempre:** Si creas o modificas una funcionalidad, al finalizar DEBES crear su carpeta en `docs/features/{tu_feature}/`, registrar su `ficha_tecnica.md` e `idea.md`, y agregarlo al tracker en `docs/features/README.md` y a este índice `docs/index.md`.
+4. **Estructura Estándar Dual para features:** Cada carpeta dentro de `docs/features/{tu_feature}/` DEBE contener:
+   - **`ficha_tecnica.md`:** Código real detrás de la función (endpoints, modelos, archivos exactos, rendimiento y capacidades `✅ HECHAS`).
+   - **`idea.md`:** Visión de negocio, propósito del creador, capacidades `⏳ FALTANTES` y banco de ideas de escalabilidad.

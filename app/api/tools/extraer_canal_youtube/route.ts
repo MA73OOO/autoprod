@@ -267,7 +267,6 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     // 6. Generación de Archivos en el Workspace Local
     // ──────────────────────────────────────────────
-    const workspaceRoot = _userContext?.workspacePath || getWorkspacePath();
     let writtenFiles: string[] = [];
     let localFolderPath = '';
 

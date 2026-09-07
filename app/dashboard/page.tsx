@@ -443,7 +443,7 @@ export default function Dashboard() {
       toast.error(lang === 'es'
         ? `Has alcanzado el límite de ${maxChannels} canal(es) de tu plan actual. Actualiza a Plan Pro o Enterprise para gestionar múltiples canales.`
         : `You have reached the limit of ${maxChannels} channel(s) for your plan. Upgrade to Pro or Enterprise.`);
-      setShowPlansModal(true);
+      setIsPlansModalOpen(true);
       return;
     }
 
