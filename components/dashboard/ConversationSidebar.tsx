@@ -21,6 +21,7 @@ interface Props {
   onRenameConversation?: (id: string, newTitle: string) => void;
   onAddNode: (parentPath: string, type: 'channel' | 'video') => void;
   onOpenFile?: (path: string) => void;
+  onRefreshWorkspace?: () => void;
 }
 
 export default function ConversationSidebar({
@@ -37,6 +38,7 @@ export default function ConversationSidebar({
   onRenameConversation,
   onAddNode,
   onOpenFile,
+  onRefreshWorkspace,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -122,6 +124,17 @@ export default function ConversationSidebar({
         <div className="space-y-3 shrink-0">
           <div className="flex items-center justify-between mb-3 px-2">
             <h3 className="text-[10px] font-bold text-zinc-500 tracking-wider">PROYECTO / WORKSPACE</h3>
+            {onRefreshWorkspace && workspacePath && (
+              <button
+                onClick={onRefreshWorkspace}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors p-1 rounded hover:bg-zinc-800 text-xs flex items-center gap-1 cursor-pointer"
+                title={lang === 'es' ? 'Actualizar workspace' : 'Refresh workspace'}
+              >
+                <svg className="w-3.5 h-3.5 hover:rotate-180 transition-transform duration-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
+            )}
           </div>
           <div className="bg-zinc-900/50 rounded-lg p-2 border border-zinc-800/50">
             {!workspacePath ? (

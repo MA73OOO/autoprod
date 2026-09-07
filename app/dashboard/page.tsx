@@ -547,6 +547,14 @@ export default function Dashboard() {
             });
           }
 
+          // Actualizar inmediatamente el árbol del workspace si la IA ejecutó acciones o devolvió respuesta
+          if (workspacePath) {
+            loadWorkspaceTree(workspacePath);
+          }
+          if (data.workspaceModified) {
+            toast.success(lang === 'es' ? 'Workspace sincronizado con los cambios de la IA' : 'Workspace synchronized with AI changes');
+          }
+
           // Update UI with AI response
           setConversations(prev => prev.map(c => {
             if (c.id !== conversationId) return c;
@@ -603,6 +611,9 @@ export default function Dashboard() {
       setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, messages: c.messages.filter(m => !m.isTemp) } : c));
     } finally {
       setIsGeneratingGlobal(false);
+      if (workspacePath) {
+        loadWorkspaceTree(workspacePath);
+      }
     }
   };
 
@@ -763,6 +774,7 @@ export default function Dashboard() {
             workspacePath={workspacePath}
             workspaceTree={workspaceTree}
             motorStatus={motorStatus}
+            onRefreshWorkspace={() => workspacePath && loadWorkspaceTree(workspacePath)}
             onNewConversation={handleNewConversation}
             onSelectConversation={(id) => { setActiveConversationId(id); setActiveView('chat'); }}
             onDeleteConversation={(id) => setDeleteTargetId(id)}

@@ -8,6 +8,7 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
 import { getWorkspacePath } from '@/harness/setup/detector';
 import path from 'path';
+import fs from 'fs';
 
 // ──────────────────────────────────────────────
 // Tool executor — calls the Python Motor API
@@ -193,6 +194,7 @@ export async function POST(req: Request) {
     }
     let systemPrompt = baseSystemPrompt;
     const aiTools: Record<string, any> = {};
+    const executedTools: string[] = [];
 
     try {
       // Obtener el agente orquestador desde la BD
@@ -212,6 +214,39 @@ export async function POST(req: Request) {
           : (getWorkspacePath() || 'No configurado');
         const resolvedPrompt = orchestrator.systemPrompt.replace('{workspace_path}', currentWorkspacePath);
         systemPrompt = (userRecord?.name ? `Estás hablando con ${userRecord.name}. Dirígete a él/ella por su nombre.\n\n` : '') + resolvedPrompt;
+
+        // Escanear el estado físico actual del workspace en disco en tiempo real
+        let workspaceStructureSnapshot = '';
+        try {
+          if (currentWorkspacePath && currentWorkspacePath !== 'No configurado' && fs.existsSync(currentWorkspacePath)) {
+            const entries = fs.readdirSync(currentWorkspacePath, { withFileTypes: true });
+            const structureLines: string[] = [];
+            for (const entry of entries) {
+              if (entry.name.startsWith('.')) continue;
+              if (entry.isDirectory()) {
+                const subPath = path.join(currentWorkspacePath, entry.name);
+                let subDirs: string[] = [];
+                try {
+                  subDirs = fs.readdirSync(subPath, { withFileTypes: true })
+                    .filter(e => !e.name.startsWith('.'))
+                    .map(e => `${e.isDirectory() ? '📁' : '📄'} ${e.name}`);
+                } catch { /* ignorar errores de permisos */ }
+                structureLines.push(`• Canal/Carpeta "${entry.name}": [${subDirs.join(', ') || 'vacío'}]`);
+              } else {
+                structureLines.push(`• Archivo en raíz: "${entry.name}"`);
+              }
+            }
+            if (structureLines.length > 0) {
+              workspaceStructureSnapshot = `\n\n--- ESTADO ACTUAL DEL WORKSPACE EN DISCO (TIEMPO REAL) ---\nUbicación: ${currentWorkspacePath}\nElementos detectados actualmente:\n${structureLines.join('\n')}\n(Usa esta lista como verdad absoluta de lo que existe físicamente en el disco duro del usuario al momento de responder. Si el usuario pregunta qué tiene o se refiere a un canal o carpeta, básate en este estado).`;
+            } else {
+              workspaceStructureSnapshot = `\n\n--- ESTADO ACTUAL DEL WORKSPACE EN DISCO (TIEMPO REAL) ---\nUbicación: ${currentWorkspacePath}\nEl workspace está actualmente vacío (sin canales ni archivos).`;
+            }
+          }
+        } catch (scanErr: any) {
+          console.warn("[Workspace Scan Error]:", scanErr.message);
+        }
+
+        systemPrompt += workspaceStructureSnapshot;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
         const toolNames: string[] = [];
@@ -229,6 +264,7 @@ export async function POST(req: Request) {
             parameters: toolSchemaObj,
             execute: async (args: any) => {
                try {
+                 executedTools.push(dbTool.name);
                  console.log(`[Proxy Tool] Invocando ${dbTool.name} en ${dbTool.apiEndpoint}`);
                  
                  // Inyectar el contexto dinámico del usuario en los argumentos (incluyendo workspacePath)
@@ -578,7 +614,21 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ text: finalOutput, modelName: cleanModel || model });
+    const MUTATING_TOOLS = new Set([
+      'crear_carpetas',
+      'eliminar_carpetas',
+      'guardar_archivo',
+      'generar_info_canal',
+      'generar_metadatos_subida'
+    ]);
+    const workspaceModified = executedTools.some(t => MUTATING_TOOLS.has(t));
+
+    return NextResponse.json({ 
+      text: finalOutput, 
+      modelName: cleanModel || model,
+      workspaceModified,
+      executedTools
+    });
   } catch (error: any) {
     console.error('Chat API Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
