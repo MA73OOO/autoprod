@@ -2,7 +2,8 @@
 
 Hoja de ruta completa del sistema. Cada fase es un bloque deployable de funcionalidad que amplía el control de AutoProd sobre el flujo de producción de YouTube.
 
-> **Última actualización:** 2026-08-28 — Commit `d1e5891`
+> **Última actualización:** 2026-09-07 — Sincronizado con Master Tracker  
+> 📌 Para el seguimiento detallado de funcionalidades hechas, en curso y banco de ideas, consulta la [Matriz de Control de Alcance, Backlog & Ideas](file:///e:/autoprod/docs/plan/control_alcance_ideas.md).
 
 ---
 

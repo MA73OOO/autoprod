@@ -51,11 +51,14 @@ def resolve_target_dir(base_path: Optional[str] = None, channel_name: Optional[s
         target = (ws_root / target).resolve()
 
     # Si no existe directamente, intentar búsqueda insensible a mayúsculas/acentos en ws_root
-    if not target.exists() and ws_root.exists():
-        norm_name = normalize_str(target.name)
-        for item in ws_root.iterdir():
-            if item.is_dir() and normalize_str(item.name) == norm_name:
-                return item.resolve()
+    try:
+        if not target.exists() and ws_root.exists():
+            norm_name = normalize_str(target.name)
+            for item in ws_root.iterdir():
+                if item.is_dir() and normalize_str(item.name) == norm_name:
+                    return item.resolve()
+    except Exception:
+        pass
 
     return target.resolve()
 
@@ -593,7 +596,12 @@ def scan_media(req: ScanMediaRequest):
     """Escanea las carpetas locales en busca de imágenes, subtítulos, videos y audios físicos."""
     try:
         target_dir = resolve_target_dir(base_path=req.target_path, channel_name=req.channel_name)
-        if not target_dir.exists() or not target_dir.is_dir():
+        try:
+            is_valid_dir = target_dir.exists() and target_dir.is_dir()
+        except Exception:
+            is_valid_dir = False
+
+        if not is_valid_dir:
             return {"status": "success", "target_path": target_dir.as_posix(), "count": 0, "files": []}
 
         valid_exts = {

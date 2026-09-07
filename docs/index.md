@@ -30,12 +30,15 @@ Esta carpeta contiene el detalle de las mecánicas centrales. **Si vas a crear u
 - 📊 **[Token Tracker](file:///e:/autoprod/docs/features/token_tracker/README.md):** Sistema asíncrono para el rastreo de consumo de tokens por usuario.
 - 📺 **[YouTube Channel Extractor](file:///e:/autoprod/docs/features/youtube_channel_extractor/README.md):** Extracción con YouTube Data API v3, contexto local anti-duplicados y persistencia vectorial con pgvector.
 - 💳 **[Subscriptions, Billing & Token Economics](file:///e:/autoprod/docs/features/subscriptions_and_billing/README.md):** Sistema de monetización, planes ($70, $100, $150 USD), orquestador gpt-4o-mini gratuito, Lemon Squeezy y activación manual por Nequi.
+- 🗃️ **[Biblioteca de Recursos (Asset Library & CRUD)](file:///e:/autoprod/docs/features/asset_library/README.md):** Gestor unificado de recursos multimedia, cuadrícula y tabla, previsualizadores, medidor de cuotas y auto-escaneo de disco local.
+- 🎨 **[Creador de Imágenes & Miniaturas IA (Image Studio)](file:///e:/autoprod/docs/features/image_generator/README.md):** Generación DALL-E 3, análisis de referencias con visión multimodal, cuestionario guiado y persistencia dual local y nube.
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.
 - 🌐 **[Backend (Next.js)](file:///e:/autoprod/docs/backend/README.md):** API Routes, Supabase, Vercel AI SDK.
 - 🗄️ **[Base de Datos (Prisma)](file:///e:/autoprod/docs/database/README.md):** Esquemas, migraciones, sincronización con auth de Supabase.
 - 🛣️ **[Roadmap y Planeación](file:///e:/autoprod/docs/plan/roadmap.md):** Visión a futuro e historial de implementaciones.
+- 🎯 **[Control de Alcance, Backlog & Ideas](file:///e:/autoprod/docs/plan/control_alcance_ideas.md):** Matriz maestra de seguimiento de lo hecho, en curso y banco de ideas para la escalabilidad de AutoProd.
 
 ---
 
