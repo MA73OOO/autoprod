@@ -701,6 +701,11 @@ Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\`
           // Read the JSON response from the AI (non-streaming)
           const data = await res.json();
           aiResponseText = data.text || '';
+
+          if (typeof data.newBalance === 'number') {
+            setCurrentCredits(data.newBalance);
+            window.dispatchEvent(new CustomEvent('autoprod:wallet-updated', { detail: { balance: data.newBalance } }));
+          }
           
           if (reqPreview) {
             setActionPreview({

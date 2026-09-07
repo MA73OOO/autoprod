@@ -101,12 +101,6 @@ export async function GET() {
           balance: 50 // 50 créditos de cortesía para pruebas iniciales
         }
       });
-    } else if (wallet.balance < 50 && (!subscription || subscription.plan.name === 'FREE')) {
-      // Si el usuario tenía los 10 créditos antiguos del código anterior, actualizar a los 50 créditos de prueba
-      wallet = await prisma.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: 50 }
-      });
     }
 
     const planName = subscription?.plan?.name || 'FREE';

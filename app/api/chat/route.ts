@@ -86,32 +86,25 @@ export async function POST(req: Request) {
 
 
     let apiKey = '';
+    let requiredCredits = 0;
+    let usedSystemKey = false;
+    let userWalletId: string | null = null;
+    const userPlanName = userRecord?.subscription?.plan?.name || 'FREE';
 
-    // 1a. PRIORIDAD 1: Variable de Entorno (.env / .env.local)
-    if ((provider === 'openai' || provider === 'chatgpt') && process.env.OPENAI_API_KEY) {
-      apiKey = process.env.OPENAI_API_KEY;
-    } else if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
-      apiKey = process.env.GEMINI_API_KEY;
-    } else if (provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
-      apiKey = process.env.ANTHROPIC_API_KEY;
+    // 1. PRIORIDAD 1: BYOK del Usuario en Vault (openaiVaultId, geminiVaultId, anthropicVaultId)
+    let userSecretId = null;
+    if (provider === 'openai' || provider === 'chatgpt') userSecretId = userRecord?.openaiVaultId;
+    if (provider === 'gemini') userSecretId = userRecord?.geminiVaultId;
+    if (provider === 'anthropic') userSecretId = userRecord?.anthropicVaultId;
+
+    if (userSecretId) {
+      const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: userSecretId });
+      if (secretData) {
+        apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+      }
     }
 
-    // 1b. PRIORIDAD 2: BYOK en Vault (openaiVaultId, geminiVaultId, etc.)
-    if (!apiKey) {
-      let secretId = null;
-      if (provider === 'openai' || provider === 'chatgpt') secretId = userRecord?.openaiVaultId;
-      if (provider === 'gemini') secretId = userRecord?.geminiVaultId;
-      if (provider === 'anthropic') secretId = userRecord?.anthropicVaultId;
-
-      if (secretId) {
-        const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: secretId });
-        if (secretData) {
-          apiKey = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
-        }
-      } 
-    }
-
-    // 1c. PRIORIDAD 3: RPC get_api_key (User API keys)
+    // 1b. PRIORIDAD 2: BYOK vía RPC get_api_key (User API keys en Vault)
     if (!apiKey && userId) {
       const providerKey = (provider === 'openai' || provider === 'chatgpt') ? 'openai' : provider;
       try {
@@ -129,21 +122,16 @@ export async function POST(req: Request) {
         console.warn('RPC get_api_key fallback error:', e);
       }
     }
-    
-    let requiredCredits = 0;
-    let usedSystemKey = false;
-    let userWalletId: string | null = null;
-    const userPlanName = userRecord?.subscription?.plan?.name || 'FREE';
 
+    // 2. SI EL USUARIO NO TIENE BYOK -> USAR LLAVE MAESTRA DE LA PLATAFORMA (CONSUMO DE CRÉDITOS)
     if (!apiKey) {
-      // 2. EL USUARIO NO TIENE BYOK: Pasamos directo a las Llaves Maestras del Sistema (Admin)
       usedSystemKey = true;
 
       // Evaluar si es orquestador gratuito para este plan
       const isFree = isOrchestratorFreeForUser(userPlanName, model);
 
       if (isFree) {
-        requiredCredits = 0; // Gratuito para usuarios de pago en gpt-4o-mini
+        requiredCredits = 0; // Gratuito para usuarios de pago en gpt-4o-mini (Starter, Pro, Enterprise)
       } else if (userPlanName === 'FREE' && (!model || model === 'default' || model === 'gpt-4o-mini')) {
         requiredCredits = 1; // Para usuarios FREE, gpt-4o-mini cuesta 1 crédito de sus 50 tokens de prueba
       } else {
@@ -160,11 +148,11 @@ export async function POST(req: Request) {
           if (pricing && pricing.isActive) {
             requiredCredits = pricing.costPerUnit;
           } else {
-            requiredCredits = 1;
+            requiredCredits = (model?.includes('4o') && !model?.includes('mini')) ? 3 : model?.includes('claude') ? 4 : 1;
           }
         } catch (e) {
-          console.warn('Error reading service pricing, defaulting to 1', e);
-          requiredCredits = 1;
+          console.warn('Error reading service pricing, defaulting', e);
+          requiredCredits = (model?.includes('4o') && !model?.includes('mini')) ? 3 : model?.includes('claude') ? 4 : 1;
         }
       }
 
@@ -196,31 +184,43 @@ export async function POST(req: Request) {
         }
       }
 
-      // Solo pedir confirmación si tiene costo en créditos y el usuario no ha confirmado
-      if (requiredCredits > 0 && !confirmCreditUsage) {
+      // Confirmación de consumo (solo para modelos pesados con costo > 1 si no ha confirmado)
+      // En la prueba gratuita de 1 crédito en gpt-4o-mini, el consumo es directo y fluido sin interrumpir cada mensaje.
+      if (requiredCredits > 1 && !confirmCreditUsage) {
         return NextResponse.json({ 
           requiresConfirmation: true, 
           message: `Esta acción consumirá ${requiredCredits} crédito(s) de la plataforma. ¿Deseas continuar?`
         }, { status: 402 });
       }
 
+      // Obtener la Llave Maestra del Sistema (Admin / Servidor)
+      // 1. Variable de Entorno (.env / .env.local)
+      if ((provider === 'openai' || provider === 'chatgpt') && process.env.OPENAI_API_KEY) {
+        apiKey = process.env.OPENAI_API_KEY;
+      } else if (provider === 'gemini' && process.env.GEMINI_API_KEY) {
+        apiKey = process.env.GEMINI_API_KEY;
+      } else if (provider === 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+        apiKey = process.env.ANTHROPIC_API_KEY;
+      }
 
-      // Si ya confirmó, buscamos la llave en SystemSettings -> Vault
-      try {
-        const systemSettings = await prisma.systemSettings.findUnique({ where: { id: "global" }});
-        let systemSecretId = null;
-        if (provider === 'openai' || provider === 'chatgpt') systemSecretId = systemSettings?.openaiVaultId;
-        if (provider === 'gemini') systemSecretId = systemSettings?.geminiVaultId;
-        if (provider === 'anthropic') systemSecretId = systemSettings?.anthropicVaultId;
+      // 2. Si no está en variables de entorno, buscar en SystemSettings -> Vault
+      if (!apiKey) {
+        try {
+          const systemSettings = await prisma.systemSettings.findUnique({ where: { id: "global" }});
+          let systemSecretId = null;
+          if (provider === 'openai' || provider === 'chatgpt') systemSecretId = systemSettings?.openaiVaultId;
+          if (provider === 'gemini') systemSecretId = systemSettings?.geminiVaultId;
+          if (provider === 'anthropic') systemSecretId = systemSettings?.anthropicVaultId;
 
-        if (systemSecretId) {
-          const { data: sysSecretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: systemSecretId });
-          if (sysSecretData) {
-             apiKey = typeof sysSecretData === 'string' ? sysSecretData : sysSecretData.get_decrypted_secret || sysSecretData;
+          if (systemSecretId) {
+            const { data: sysSecretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: systemSecretId });
+            if (sysSecretData) {
+               apiKey = typeof sysSecretData === 'string' ? sysSecretData : sysSecretData.get_decrypted_secret || sysSecretData;
+            }
           }
+        } catch(e) {
+          console.warn('Error reading system settings from vault', e);
         }
-      } catch(e) {
-        console.warn('Error reading system settings from vault', e);
       }
     }
 
@@ -427,32 +427,41 @@ El usuario ha seleccionado expresamente el canal "${activeChannel.name}".
 
 === PRESENTACIÓN DE CAPACIDADES PARA EL CANAL "${activeChannel.name}" ===
 Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", o pida ideas:
-Responde como el **Director y Productor Ejecutivo exclusivo del canal "${activeChannel.name}"**, con una **estructura limpia, ejecutiva y visualmente atractiva** con Markdown profesional:
+Responde como el socio creativo y director de contenido de su canal "${activeChannel.name}".
+Usa un tono CERCANO, AMIGABLE Y MUY FÁCIL DE ENTENDER. 
+⛔ ESTRICTAMENTE PROHIBIDO USAR JERGA TÉCNICA: NUNCA uses términos como "Copia Directa 1:1", "línea de tiempo multiclip", "catálogo anti-duplicados", "concatenación", "CRF", "codec", "bitrate", etc. Explica todo pensando en un creador de contenido que solo quiere que sus videos queden profesionales, consigan más visitas y le ahorren horas de trabajo:
 
-ESTRUCTURA DE RESPUESTA EXIGIDA PARA "${activeChannel.name}":
-• **Saludo y Enfoque del Canal:**
-  "¡Hola! Estamos trabajando en tu canal **${activeChannel.name}** (Nicho: ${channelNiche}). Como tu Co-Pilot y Director de Producción, mi labor es potenciar el crecimiento y automatizar la creación de contenido para este canal."
+ESTRUCTURA DE RESPUESTA SENCILLA Y CLARA:
+• **Saludo y Enfoque:**
+  "¡Hola! Aquí estamos para hacer crecer tu canal **${activeChannel.name}** (temática: ${channelNiche})."
 
-• **Pilares de Producción Aplicados a ${activeChannel.name}:**
-  - 🎯 **Estrategia & Ideación para ${activeChannel.name}:** Desarrollo de conceptos ganadores y premisas para el nicho de ${channelNiche}, ganchos psicológicos en los primeros 5 segundos y fórmulas de títulos de alto CTR.
-  - 🎬 **Video Looper Studio (PRO HD):** Producción y repetición de videos en bucle continuo con Copia Directa 1:1 (cero pérdida de nitidez de YouTube), línea de tiempo multiclip interactiva y sincronización con música para fondos de 30 min a 3 horas ideales para ${activeChannel.name}.
-  - 🎨 **Estudio Creativo & Miniaturas IA:** Diseño de miniaturas adaptadas a la identidad visual de ${activeChannel.name}, análisis de imágenes de referencia y generación de portadas con alto CTR.
-  - 📈 **Inteligencia Competitiva de YouTube:** Análisis y minería de canales referentes del nicho (${channelNiche}) para extraer etiquetas ganadoras, patrones de títulos con millones de views y catálogo anti-duplicados para no repetir ideas.
-  - 📁 **Organización del Workspace:** Estructura modular de carpetas en ${channelLocal} (/Guiones, /Miniaturas, /Videos, /InfoCanal).
+• **Lo que podemos hacer juntos para este canal:**
+  - 🎬 **Videos Largos y Fondos Musicales:** Convertimos clips en videos largos (de 30 minutos a varias horas) con música de fondo que nunca se corta ni se pixela. Ideal para que la gente los deje sonando mientras estudia, duerme o se relaja.
+  - ✍️ **Ideas y Guiones Atrapantes:** Escribimos historias y guiones con ganchos en los primeros segundos para enganchar a tu audiencia y evitar que se vayan de tus videos.
+  - 🎨 **Miniaturas que Dan Ganas de Hacer Clic:** Diseñamos portadas llamativas para tus videos. Si tienes una imagen de referencia que te guste de YouTube, la analizamos para crear algo igual de atractivo.
+  - 🔍 **Inspiración y Análisis de Competencia:** Pásame el link de un canal de YouTube que admires en tu temática y revisamos qué videos y etiquetas le están funcionando mejor, asegurándonos de que tus temas sean frescos y originales.
+  - 📂 **Todo en Orden:** Guardamos automáticamente cada guion, imagen y video organizado en su carpeta para que no pierdas nada.
 
-• **3 Siguientes Pasos Inteligentes para ${activeChannel.name}:**
-  Ofrece 3 opciones creativas y accionables para avanzar de inmediato con este canal (ejemplo: 1. Redactar el guion del próximo video con gancho de alta retención; 2. Analizar un canal referente de ${channelNiche} para minar sus mejores tags; 3. Diseñar la miniatura o fondo en bucle en el Looper Studio).
+• **3 Formas Fáciles de Arrancar:**
+  1. ¿Escribimos la idea o el guion de tu próximo video?
+  2. ¿Revisamos un canal de YouTube que te guste para ver qué le funciona?
+  3. ¿O armamos un video largo con música de fondo o una miniatura?
 
-Cierra preguntando: "¿Por cuál de estas acciones prefieres que arranquemos con ${activeChannel.name} hoy?"`;
+Dime cuál de estas opciones te gustaría arrancar hoy.`;
 
           systemPrompt += channelSpecificDirective;
         } else {
-          const generalCapabilitiesDirective = `\n\n=== DIRECTIVA DE PRESENTACIÓN DE CAPACIDADES (MODO GENERAL / SIN CANAL ESPECÍFICO) ===
-Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", "¿cuáles son tus funciones?", pida orientación o cómo arrancar:
-1. Responde como un **Director y Productor Ejecutivo de Contenido de Élite**, con una **estructura limpia, ejecutiva y visualmente atractiva** con Markdown profesional.
-2. Menciona los canales que tiene disponibles en su workspace (${existingChannels.length > 0 ? existingChannels.join(', ') : 'tus canales'}).
-3. Explica los pilares de producción de AutoProd (Estrategia & Ideación, Video Looper PRO 1:1, Estudio de Miniaturas IA, Inteligencia Competitiva de YouTube, y Organización de Workspace).
-4. Ofrece 3 opciones claras: trabajar en uno de sus canales existentes, analizar un nuevo canal competidor de YouTube, o configurar su espacio de producción.`;
+          const generalCapabilitiesDirective = `\n\n=== DIRECTIVA DE PRESENTACIÓN DE CAPACIDADES (MODO GENERAL / SIN CANAL SELECCIONADO) ===
+Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", o pida orientación:
+Responde con un lenguaje sencillo, cercano y sin tecnicismos complejos:
+1. Menciona los canales que tiene disponibles en su espacio de trabajo (${existingChannels.length > 0 ? existingChannels.join(', ') : 'tus canales'}).
+2. Explica de forma clara y directa lo que AutoProd resuelve:
+   - 🎬 Videos largos en bucle con música de fondo (para dejar sonando horas sin cortes ni pixelado).
+   - ✍️ Guiones con ganchos al inicio para retener a los espectadores.
+   - 🎨 Miniaturas atractivas que aumenten los clics de tus videos.
+   - 🔍 Análisis de canales de la competencia para ver qué títulos y etiquetas generan más visitas.
+   - 📂 Organización automática de archivos y proyectos.
+3. Invítalo a seleccionar o indicar en cuál de sus canales le gustaría trabajar hoy.`;
 
           systemPrompt += generalCapabilitiesDirective;
         }
@@ -887,9 +896,10 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
       }
 
       // Descuento de créditos
+      let updatedBalance: number | null = null;
       if (usedSystemKey && userWalletId && requiredCredits > 0) {
         try {
-          await prisma.$transaction([
+          const [updatedWallet] = await prisma.$transaction([
             prisma.wallet.update({
               where: { id: userWalletId },
               data: { balance: { decrement: requiredCredits } }
@@ -904,6 +914,7 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
               }
             })
           ]);
+          updatedBalance = updatedWallet.balance;
         } catch (e: any) {
           console.warn('Error deducting credits:', e.message);
         }
@@ -971,7 +982,8 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
       modelName: cleanModel || model,
       workspaceModified,
       executedTools,
-      isDeepThinking
+      isDeepThinking,
+      newBalance: updatedBalance
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);

@@ -1,21 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/src/prisma/db';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { isOrchestratorFreeForUser } from '@/lib/pricing-config';
 
-async function getApiKey(userId: string): Promise<string> {
-  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
-    return process.env.OPENAI_API_KEY.trim();
-  }
+interface ApiKeyResolution {
+  apiKey: string;
+  isSystemKey: boolean;
+}
+
+async function resolveOpenAiKey(userId: string): Promise<ApiKeyResolution> {
+  const supabase = await createClient();
+
+  // 1. PRIORIDAD 1: BYOK en User Vault (openaiVaultId)
   try {
-    const supabase = await createClient();
-    const { data: oaiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
-    if (oaiKey && typeof oaiKey === 'string' && oaiKey.trim() !== '') {
-      return oaiKey.trim();
+    const userRecord = await db.user.findUnique({
+      where: { id: userId },
+      select: { openaiVaultId: true }
+    });
+    if (userRecord?.openaiVaultId) {
+      const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: userRecord.openaiVaultId });
+      if (secretData) {
+        const key = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+        if (key && key.trim()) {
+          return { apiKey: key.trim(), isSystemKey: false };
+        }
+      }
     }
   } catch (e) {
-    console.warn('Error fetching key from Vault:', e);
+    console.warn('Error reading user openaiVaultId:', e);
   }
-  throw new Error('No se encontró ninguna clave de OpenAI (OPENAI_API_KEY) configurada.');
+
+  // 1b. PRIORIDAD 2: BYOK vía RPC get_api_key
+  try {
+    const { data: rpcKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
+    if (rpcKey && typeof rpcKey === 'string' && rpcKey.trim() !== '') {
+      return { apiKey: rpcKey.trim(), isSystemKey: false };
+    }
+  } catch (e) {
+    console.warn('Error fetching key from Vault via RPC:', e);
+  }
+
+  // 2. PRIORIDAD 3: Llave Maestra del Sistema (Admin / Servidor)
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+    return { apiKey: process.env.OPENAI_API_KEY.trim(), isSystemKey: true };
+  }
+
+  // 2b. Buscar en SystemSettings Vault
+  try {
+    const sysSettings = await db.systemSettings.findUnique({ where: { id: 'global' } });
+    if (sysSettings?.openaiVaultId) {
+      const { data: sysKey } = await supabase.rpc('get_decrypted_secret', { p_secret_id: sysSettings.openaiVaultId });
+      if (sysKey) {
+        const key = typeof sysKey === 'string' ? sysKey : sysKey.get_decrypted_secret || sysKey;
+        if (key && key.trim()) {
+          return { apiKey: key.trim(), isSystemKey: true };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading systemSettings vault for openai:', e);
+  }
+
+  throw new Error('No se encontró ninguna clave de OpenAI (OPENAI_API_KEY) configurada ni en BYOK ni en el servidor.');
 }
 
 export async function POST(req: NextRequest) {
@@ -31,7 +78,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Se requiere la imagen de referencia (imageBase64)' }, { status: 400 });
     }
 
-    const apiKey = await getApiKey(user.id);
+    const { apiKey, isSystemKey } = await resolveOpenAiKey(user.id);
+
+    // Obtener plan de suscripción del usuario
+    const userWithSub = await db.user.findUnique({
+      where: { id: user.id },
+      include: { subscription: { include: { plan: true } } }
+    });
+    const userPlanName = userWithSub?.subscription?.plan?.name || 'FREE';
+
+    // Determinar créditos requeridos para análisis visual con gpt-4o-mini
+    let requiredCredits = 0;
+    if (isSystemKey) {
+      const isFree = isOrchestratorFreeForUser(userPlanName, 'gpt-4o-mini');
+      requiredCredits = isFree ? 0 : 1; // 1 crédito para cuentas FREE, 0 para planes de pago
+    }
+
+    let wallet = null;
+    if (isSystemKey && requiredCredits > 0) {
+      wallet = await db.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) {
+        wallet = await db.wallet.create({ data: { userId: user.id, balance: 50 } });
+      }
+
+      if (wallet.balance < requiredCredits) {
+        return NextResponse.json({
+          error: `Has agotado tus créditos de prueba gratuita. Para continuar analizando imágenes y usando AutoProd, suscríbete a un plan o añade créditos.`,
+          requiresUpgrade: true
+        }, { status: 402 });
+      }
+    }
 
     const formattedImage = imageBase64.startsWith('data:')
       ? imageBase64
@@ -98,9 +174,35 @@ Debes responder SIEMPRE en formato JSON estricto con las siguientes claves:
     const content = openAiData.choices?.[0]?.message?.content;
     const parsed = JSON.parse(content || '{}');
 
+    // Descuento de créditos para usuarios FREE que usan la plataforma
+    let newBalance: number | null = null;
+    if (isSystemKey && wallet && requiredCredits > 0) {
+      try {
+        const [updatedWallet] = await db.$transaction([
+          db.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { decrement: requiredCredits } }
+          }),
+          db.creditConsumption.create({
+            data: {
+              walletId: wallet.id,
+              creditsUsed: requiredCredits,
+              serviceType: 'TOOL',
+              modelName: 'gpt-4o-mini-vision',
+              description: 'Análisis multimodal de imagen de referencia con GPT-4o-mini'
+            }
+          })
+        ]);
+        newBalance = updatedWallet.balance;
+      } catch (e: any) {
+        console.warn('Error debiting analyze credits:', e.message);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       analysis: parsed,
+      newBalance
     });
   } catch (err: any) {
     console.error('Error analyzing image:', err);

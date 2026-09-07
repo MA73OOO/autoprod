@@ -109,6 +109,9 @@ export default function ImageStudio({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al analizar la imagen');
 
+      if (typeof data.newBalance === 'number') {
+        window.dispatchEvent(new CustomEvent('autoprod:wallet-updated', { detail: { balance: data.newBalance } }));
+      }
       setAnalysisResult(data.analysis);
       if (data.analysis?.draftPrompt) {
         setFinalPrompt(data.analysis.draftPrompt);
@@ -177,6 +180,9 @@ export default function ImageStudio({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al generar la imagen');
 
+      if (typeof data.newBalance === 'number') {
+        window.dispatchEvent(new CustomEvent('autoprod:wallet-updated', { detail: { balance: data.newBalance } }));
+      }
       setGeneratedAsset(data.asset);
       toast.success(lang === 'es' ? '¡Imagen generada y guardada exitosamente!' : 'Image generated and saved successfully!', { id: toastId });
     } catch (err: any) {

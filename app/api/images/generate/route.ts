@@ -3,20 +3,65 @@ import { db } from '@/src/prisma/db';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
-async function getApiKey(userId: string): Promise<string> {
-  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
-    return process.env.OPENAI_API_KEY.trim();
-  }
+interface ApiKeyResolution {
+  apiKey: string;
+  isSystemKey: boolean;
+}
+
+async function resolveOpenAiKey(userId: string): Promise<ApiKeyResolution> {
+  const supabase = await createClient();
+
+  // 1. PRIORIDAD 1: BYOK en User Vault (openaiVaultId)
   try {
-    const supabase = await createClient();
-    const { data: oaiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
-    if (oaiKey && typeof oaiKey === 'string' && oaiKey.trim() !== '') {
-      return oaiKey.trim();
+    const userRecord = await db.user.findUnique({
+      where: { id: userId },
+      select: { openaiVaultId: true }
+    });
+    if (userRecord?.openaiVaultId) {
+      const { data: secretData } = await supabase.rpc('get_decrypted_secret', { p_secret_id: userRecord.openaiVaultId });
+      if (secretData) {
+        const key = typeof secretData === 'string' ? secretData : secretData.get_decrypted_secret || secretData;
+        if (key && key.trim()) {
+          return { apiKey: key.trim(), isSystemKey: false };
+        }
+      }
     }
   } catch (e) {
-    console.warn('Error fetching key from Vault:', e);
+    console.warn('Error reading user openaiVaultId:', e);
   }
-  throw new Error('No se encontró ninguna clave de OpenAI (OPENAI_API_KEY) configurada.');
+
+  // 1b. PRIORIDAD 2: BYOK vía RPC get_api_key
+  try {
+    const { data: rpcKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
+    if (rpcKey && typeof rpcKey === 'string' && rpcKey.trim() !== '') {
+      return { apiKey: rpcKey.trim(), isSystemKey: false };
+    }
+  } catch (e) {
+    console.warn('Error fetching key from Vault via RPC:', e);
+  }
+
+  // 2. PRIORIDAD 3: Llave Maestra del Sistema (Admin / Servidor)
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+    return { apiKey: process.env.OPENAI_API_KEY.trim(), isSystemKey: true };
+  }
+
+  // 2b. Buscar en SystemSettings Vault
+  try {
+    const sysSettings = await db.systemSettings.findUnique({ where: { id: 'global' } });
+    if (sysSettings?.openaiVaultId) {
+      const { data: sysKey } = await supabase.rpc('get_decrypted_secret', { p_secret_id: sysSettings.openaiVaultId });
+      if (sysKey) {
+        const key = typeof sysKey === 'string' ? sysKey : sysKey.get_decrypted_secret || sysKey;
+        if (key && key.trim()) {
+          return { apiKey: key.trim(), isSystemKey: true };
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Error reading systemSettings vault for openai:', e);
+  }
+
+  throw new Error('No se encontró ninguna clave de OpenAI (OPENAI_API_KEY) configurada ni en BYOK ni en el servidor.');
 }
 
 export async function POST(req: NextRequest) {
@@ -39,7 +84,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'El prompt es obligatorio' }, { status: 400 });
     }
 
-    const apiKey = await getApiKey(user.id);
+    const { apiKey, isSystemKey } = await resolveOpenAiKey(user.id);
+    const requiredCredits = isSystemKey ? 5 : 0; // DALL-E 3 cuesta 5 créditos si usa llave de plataforma
+
+    // Validar saldo de créditos antes de invocar DALL-E 3
+    let wallet = null;
+    if (isSystemKey) {
+      wallet = await db.wallet.findUnique({ where: { userId: user.id } });
+      if (!wallet) {
+        wallet = await db.wallet.create({ data: { userId: user.id, balance: 50 } });
+      }
+
+      if (wallet.balance < requiredCredits) {
+        return NextResponse.json({
+          error: `Créditos insuficientes (${wallet.balance} disponibles, necesitas ${requiredCredits} créditos para generar una imagen HD con DALL-E 3). Por favor recarga tu saldo o mejora tu plan para continuar.`,
+          requiresUpgrade: true
+        }, { status: 402 });
+      }
+    }
 
     // Dimensiones según aspecto para DALL-E 3
     let size = '1792x1024'; // 16:9 YouTube Thumbnail
@@ -165,6 +227,31 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // 5. Descuento atómico de créditos si usó llave del sistema
+    let newBalance: number | null = null;
+    if (isSystemKey && wallet && requiredCredits > 0) {
+      try {
+        const [updatedWallet] = await db.$transaction([
+          db.wallet.update({
+            where: { id: wallet.id },
+            data: { balance: { decrement: requiredCredits } }
+          }),
+          db.creditConsumption.create({
+            data: {
+              walletId: wallet.id,
+              creditsUsed: requiredCredits,
+              serviceType: 'TOOL',
+              modelName: 'dall-e-3',
+              description: `Generación miniatura/imagen HD con DALL-E 3: ${fileName}`
+            }
+          })
+        ]);
+        newBalance = updatedWallet.balance;
+      } catch (e: any) {
+        console.warn('Error debiting DALL-E credits:', e.message);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Imagen generada y guardada exitosamente.',
@@ -174,6 +261,7 @@ export async function POST(req: NextRequest) {
         channelName: asset.channel?.name || null,
       },
       revisedPrompt,
+      newBalance
     });
   } catch (err: any) {
     console.error('Error in image generation:', err);

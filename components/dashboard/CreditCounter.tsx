@@ -62,9 +62,18 @@ export default function CreditCounter({ onClick, planName }: CreditCounterProps)
         .subscribe();
     };
     
-    subscribeToWallet();
+    // 3. Listener de eventos locales para reactividad instantánea en la UI
+    const handleWalletUpdated = (e: any) => {
+      if (typeof e.detail?.balance === 'number') {
+        setBalance(e.detail.balance);
+      } else {
+        fetchBalance();
+      }
+    };
+    window.addEventListener('autoprod:wallet-updated', handleWalletUpdated);
 
     return () => {
+      window.removeEventListener('autoprod:wallet-updated', handleWalletUpdated);
       if (channel) {
         supabase.removeChannel(channel);
       }
