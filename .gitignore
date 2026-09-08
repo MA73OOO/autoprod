@@ -72,6 +72,11 @@ env/
 /.autoprod/
 *.cjs
 scripts/seed-orchestrator.ts
-
+# Executables and Binaries
+*.exe
+*.dll
+terraform/terraform.exe
+terraform/.temp/
+.temp/
 terraform_1.16.1_windows_amd64/terraform.exe
 terraform_1.16.1_windows_amd64/LICENSE.txt
