@@ -8,6 +8,7 @@ import { AutoProdLogo } from "@/components/AutoProdLogo";
 export default function Home() {
   const [lang, setLang] = useState<Language>('es');
   const [activeMockupTab, setActiveMockupTab] = useState<'agent' | 'looper' | 'whisper' | 'images' | 'workspace'>('agent');
+  const [hoveredPillar, setHoveredPillar] = useState<'creative' | 'production' | 'analytics' | 'automation' | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   // Load language from localStorage if available
@@ -88,37 +89,37 @@ export default function Home() {
       <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 overflow-hidden z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center">
 
-          {/* Hero Brand Identity: Large Logo + Tagline */}
-          <div className="flex flex-col items-center justify-center mb-8">
-            <div className="relative group mb-6">
-              {/* Multi-layer Neon Violet Aura */}
-              <div className="absolute -inset-6 bg-gradient-to-r from-[#8629FE]/50 via-indigo-600/40 to-[#8629FE]/50 rounded-full blur-3xl opacity-70 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-
-              {/* Monogram Container */}
-              <div className="relative h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32 rounded-3xl bg-gradient-to-b from-[#13111f] to-[#08080d] border border-purple-500/40 p-5 sm:p-6 flex items-center justify-center backdrop-blur-2xl shadow-2xl shadow-purple-950/90 group-hover:scale-105 group-hover:border-purple-400/60 transition-all duration-300">
-                <AutoProdLogo className="w-full h-full drop-shadow-[0_0_24px_rgba(134,41,254,0.85)]" />
-              </div>
+          {/* Monumental Brand Identity: Grande, Centrado y Protagonista Absoluto */}
+          <div className="flex flex-col items-center justify-center mb-8 sm:mb-10">
+            <div className="relative group flex items-center justify-center mb-4 sm:mb-5">
+              {/* Gran Aura y Resplandor Violeta de Marca */}
+              <div className="absolute w-56 h-56 sm:w-72 sm:h-72 md:w-96 md:h-96 bg-[#8629FE]/30 rounded-full blur-[100px] pointer-events-none group-hover:bg-[#8629FE]/45 transition-all duration-700" />
+              
+              {/* Monograma Oficial AP Enorme sin Fondo */}
+              <AutoProdLogo className="h-32 w-32 sm:h-44 sm:w-44 md:h-52 md:w-52 lg:h-60 lg:w-60 drop-shadow-[0_0_45px_rgba(134,41,254,0.85)] group-hover:scale-105 transition-transform duration-500" />
             </div>
 
-            {/* Tagline Pill */}
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-purple-500/30 bg-purple-500/10 backdrop-blur-md shadow-lg shadow-purple-950/40">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="font-title text-xs sm:text-sm font-semibold tracking-wide text-purple-200">
-                {t.heroTagline}
-              </span>
-            </div>
+            {/* Nombre de Marca Monumental: AutoProdAI en Plus Jakarta Sans 800 */}
+            <h1 className="font-logo text-5xl sm:text-7xl md:text-8xl font-extrabold tracking-tight text-white drop-shadow-2xl">
+              AutoProd<span className="text-[#8629FE]">AI</span>
+            </h1>
           </div>
 
-          {/* Main Headline — Space Grotesk 700 */}
-          <h1 className="font-title text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-6 max-w-5xl mx-auto leading-[1.14]">
-            {t.heroTitle}
+          {/* Tagline / Titular Emocional Complementario — Space Grotesk 700 */}
+          <h2 className="font-title text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight text-zinc-100 mb-4 max-w-4xl mx-auto leading-tight">
+            {t.heroMainHeadline}{" "}
             <span className="bg-gradient-to-r from-purple-400 via-indigo-300 to-cyan-400 bg-clip-text text-transparent">
-              {t.heroTitleHighlight}
+              {t.heroMainHeadlineHighlight}
             </span>
-          </h1>
+          </h2>
 
-          {/* Subtitle — Inter 400 */}
-          <p className="font-body text-base sm:text-xl text-zinc-400 max-w-3xl mx-auto mb-10 leading-relaxed font-normal">
+          {/* Subtitular — Space Grotesk 500 */}
+          <p className="font-subtitle text-base sm:text-xl font-medium text-zinc-400 max-w-2xl mx-auto mb-3 tracking-tight">
+            {t.heroSubheadline}
+          </p>
+
+          {/* Párrafo Descriptivo Ligero y Equilibrado — Inter 400 */}
+          <p className="font-body text-xs sm:text-sm text-zinc-500 max-w-xl mx-auto mb-10 leading-relaxed font-normal">
             {t.heroSubtitle}
           </p>
 
@@ -139,23 +140,489 @@ export default function Home() {
             </a>
           </div>
 
-          {/* Trust Metrics Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-4xl mx-auto mb-20 text-left">
-            <div className="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
-              <div className="text-xs text-emerald-400 font-bold">4K ULTRA HD</div>
-              <div className="text-sm font-bold text-white mt-0.5">{t.heroTrust1}</div>
+          {/* ── 4 PILARES INTERACTIVOS (ESTILO BLACK TORCH: CREATIVO, PRODUCCIÓN, ANALYTICS, AUTOMATIZACIÓN) ── */}
+          <div className="max-w-6xl mx-auto mb-20 text-left">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-[11px] font-ui font-semibold uppercase tracking-wider mb-2 backdrop-blur-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                {t.pillarsBadge}
+              </div>
+              <h3 className="font-title text-xl sm:text-2xl font-bold text-white tracking-tight">
+                {lang === 'es' ? 'Los 4 Aspectos Clave de AutoProd' : 'The 4 Core Aspects of AutoProd'}
+              </h3>
+              <p className="font-body text-xs sm:text-sm text-zinc-400 mt-1 max-w-lg mx-auto">
+                {lang === 'es'
+                  ? 'Pasa el cursor por cada aspecto para desplegar las herramientas de AutoProd en acción.'
+                  : 'Hover over each aspect to reveal AutoProd’s integrated production tools.'}
+              </p>
             </div>
-            <div className="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
-              <div className="text-xs text-purple-400 font-bold">SUBTÍTULOS RÁPIDOS</div>
-              <div className="text-sm font-bold text-white mt-0.5">{t.heroTrust2}</div>
-            </div>
-            <div className="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
-              <div className="text-xs text-indigo-400 font-bold">ESTRUCTURAS VIRALES</div>
-              <div className="text-sm font-bold text-white mt-0.5">{t.heroTrust3}</div>
-            </div>
-            <div className="p-3.5 rounded-xl border border-zinc-800/80 bg-zinc-900/40 backdrop-blur-sm">
-              <div className="text-xs text-cyan-400 font-bold">100% PRIVACIDAD</div>
-              <div className="text-sm font-bold text-white mt-0.5">{t.heroTrust4}</div>
+
+            {/* 4 Vertical Slices (Black Torch Inspired) */}
+            <div className="flex flex-col lg:flex-row gap-3 min-h-[500px]">
+
+              {/* ── 1. CREATIVO (Cyan / Electric Blue) ── */}
+              <div
+                onMouseEnter={() => setHoveredPillar('creative')}
+                onMouseLeave={() => setHoveredPillar(null)}
+                onClick={() => setHoveredPillar(hoveredPillar === 'creative' ? null : 'creative')}
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
+                  hoveredPillar === 'creative'
+                    ? 'lg:flex-[2.2] border-cyan-400/80 bg-gradient-to-b from-cyan-950/50 via-cyan-900/20 to-[#0c0e17] shadow-2xl shadow-cyan-950/80'
+                    : hoveredPillar !== null
+                    ? 'lg:flex-[0.7] border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                    : 'lg:flex-1 border-cyan-500/30 bg-gradient-to-b from-cyan-950/25 via-zinc-950/40 to-[#08090f] hover:border-cyan-400/60'
+                }`}
+              >
+                {/* Background Aura Glow */}
+                <div className="absolute top-0 left-0 right-0 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/20 transition-all" />
+                
+                {/* Background Watermark Vertical Typography (Black Torch Vibe) */}
+                <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
+                  <span className="font-title text-8xl font-black text-cyan-300 tracking-tighter uppercase leading-none block">
+                    CREATE
+                  </span>
+                </div>
+
+                {/* Top Section */}
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+                      {t.pillarCreativeTag}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                      💡
+                    </div>
+                    <div>
+                      <h4 className="font-logo text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-cyan-300 transition-colors">
+                        {t.pillarCreativeTitle}
+                      </h4>
+                      <p className="font-subtitle text-xs text-cyan-300/80 font-medium">
+                        {t.pillarCreativeSlogan}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Section: Alternates between Slogan Callout and Full Functionalities on Hover */}
+                <div className="relative z-10 my-auto py-4">
+                  {hoveredPillar === 'creative' ? (
+                    <div className="space-y-2.5 animate-fadeIn">
+                      <div className="p-3 rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold font-title">
+                          <span>📝</span>
+                          <span>{t.pillarCreativeF1Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarCreativeF1Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold font-title">
+                          <span>🎨</span>
+                          <span>{t.pillarCreativeF2Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarCreativeF2Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-cyan-300 text-xs font-bold font-title">
+                          <span>🗃️</span>
+                          <span>{t.pillarCreativeF3Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarCreativeF3Desc}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="h-1 w-12 bg-cyan-400/40 rounded-full" />
+                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                        {lang === 'es'
+                          ? 'Estructura ideas de alta retención, diseña ganchos virales y crea portadas que disparan el CTR en YouTube.'
+                          : 'Structure retention hooks, validate fresh topics, and craft standout YouTube thumbnails.'}
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400/80">
+                        <span>✦</span>
+                        <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Trigger to Demo */}
+                <div className="relative z-10 pt-3 border-t border-cyan-500/20 flex items-center justify-between text-[11px] text-cyan-300">
+                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD CREATIVE</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMockupTab('agent');
+                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <span>Ver demo</span>
+                    <span>↓</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── 2. PRODUCCIÓN (Neon Purple / Violet #8629FE) ── */}
+              <div
+                onMouseEnter={() => setHoveredPillar('production')}
+                onMouseLeave={() => setHoveredPillar(null)}
+                onClick={() => setHoveredPillar(hoveredPillar === 'production' ? null : 'production')}
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
+                  hoveredPillar === 'production'
+                    ? 'lg:flex-[2.2] border-purple-400/80 bg-gradient-to-b from-purple-950/50 via-[#8629FE]/15 to-[#0c0e17] shadow-2xl shadow-purple-950/80'
+                    : hoveredPillar !== null
+                    ? 'lg:flex-[0.7] border-purple-500/20 bg-gradient-to-b from-purple-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                    : 'lg:flex-1 border-purple-500/30 bg-gradient-to-b from-purple-950/25 via-zinc-950/40 to-[#08090f] hover:border-purple-400/60'
+                }`}
+              >
+                <div className="absolute top-0 left-0 right-0 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/20 transition-all" />
+                
+                <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
+                  <span className="font-title text-8xl font-black text-purple-300 tracking-tighter uppercase leading-none block">
+                    RENDER
+                  </span>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-purple-500/40 bg-purple-500/10 text-purple-300">
+                      {t.pillarProductionTag}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                      🎬
+                    </div>
+                    <div>
+                      <h4 className="font-logo text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-purple-300 transition-colors">
+                        {t.pillarProductionTitle}
+                      </h4>
+                      <p className="font-subtitle text-xs text-purple-300/80 font-medium">
+                        {t.pillarProductionSlogan}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 my-auto py-4">
+                  {hoveredPillar === 'production' ? (
+                    <div className="space-y-2.5 animate-fadeIn">
+                      <div className="p-3 rounded-xl border border-purple-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-purple-300 text-xs font-bold font-title">
+                          <span>🔁</span>
+                          <span>{t.pillarProductionF1Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarProductionF1Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-purple-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-purple-300 text-xs font-bold font-title">
+                          <span>✂️</span>
+                          <span>{t.pillarProductionF2Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarProductionF2Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-purple-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-purple-300 text-xs font-bold font-title">
+                          <span>🎙️</span>
+                          <span>{t.pillarProductionF3Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarProductionF3Desc}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="h-1 w-12 bg-purple-400/40 rounded-full" />
+                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                        {lang === 'es'
+                          ? 'Crea bucles continuos de 1 a 3 horas en 4K, corta clips rápidos para Shorts y subtitula palabra por palabra con tu GPU.'
+                          : 'Build 1 to 3 hour 4K loops, extract fast viral shorts, and generate auto-synced word subtitles locally.'}
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-purple-400/80">
+                        <span>✦</span>
+                        <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative z-10 pt-3 border-t border-purple-500/20 flex items-center justify-between text-[11px] text-purple-300">
+                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD STUDIO</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMockupTab('looper');
+                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <span>Ver demo</span>
+                    <span>↓</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── 3. ANALYTICS (Amber / Golden Orange) ── */}
+              <div
+                onMouseEnter={() => setHoveredPillar('analytics')}
+                onMouseLeave={() => setHoveredPillar(null)}
+                onClick={() => setHoveredPillar(hoveredPillar === 'analytics' ? null : 'analytics')}
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
+                  hoveredPillar === 'analytics'
+                    ? 'lg:flex-[2.2] border-amber-400/80 bg-gradient-to-b from-amber-950/50 via-amber-900/20 to-[#0c0e17] shadow-2xl shadow-amber-950/80'
+                    : hoveredPillar !== null
+                    ? 'lg:flex-[0.7] border-amber-500/20 bg-gradient-to-b from-amber-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                    : 'lg:flex-1 border-amber-500/30 bg-gradient-to-b from-amber-950/25 via-zinc-950/40 to-[#08090f] hover:border-amber-400/60'
+                }`}
+              >
+                <div className="absolute top-0 left-0 right-0 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all" />
+                
+                <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
+                  <span className="font-title text-8xl font-black text-amber-300 tracking-tighter uppercase leading-none block">
+                    METRICS
+                  </span>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                      {t.pillarAnalyticsTag}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                      📊
+                    </div>
+                    <div>
+                      <h4 className="font-logo text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-amber-300 transition-colors">
+                        {t.pillarAnalyticsTitle}
+                      </h4>
+                      <p className="font-subtitle text-xs text-amber-300/80 font-medium">
+                        {t.pillarAnalyticsSlogan}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 my-auto py-4">
+                  {hoveredPillar === 'analytics' ? (
+                    <div className="space-y-2.5 animate-fadeIn">
+                      <div className="p-3 rounded-xl border border-amber-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-title">
+                          <span>📺</span>
+                          <span>{t.pillarAnalyticsF1Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAnalyticsF1Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-amber-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-title">
+                          <span>🎯</span>
+                          <span>{t.pillarAnalyticsF2Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAnalyticsF2Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-amber-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-amber-300 text-xs font-bold font-title">
+                          <span>📈</span>
+                          <span>{t.pillarAnalyticsF3Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAnalyticsF3Desc}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="h-1 w-12 bg-amber-400/40 rounded-full" />
+                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                        {lang === 'es'
+                          ? 'Extrae y analiza el rendimiento de canales de YouTube, identifica ganchos ganadores y conserva memoria histórica de cada tema.'
+                          : 'Scrape and analyze YouTube channel performance, identify winning hooks, and track historical content memory.'}
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400/80">
+                        <span>✦</span>
+                        <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative z-10 pt-3 border-t border-amber-500/20 flex items-center justify-between text-[11px] text-amber-300">
+                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD INTELLIGENCE</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMockupTab('workspace');
+                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <span>Ver demo</span>
+                    <span>↓</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── 4. AUTOMATIZACIÓN (Emerald / Mint Green) ── */}
+              <div
+                onMouseEnter={() => setHoveredPillar('automation')}
+                onMouseLeave={() => setHoveredPillar(null)}
+                onClick={() => setHoveredPillar(hoveredPillar === 'automation' ? null : 'automation')}
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
+                  hoveredPillar === 'automation'
+                    ? 'lg:flex-[2.2] border-emerald-400/80 bg-gradient-to-b from-emerald-950/50 via-emerald-900/20 to-[#0c0e17] shadow-2xl shadow-emerald-950/80'
+                    : hoveredPillar !== null
+                    ? 'lg:flex-[0.7] border-emerald-500/20 bg-gradient-to-b from-emerald-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                    : 'lg:flex-1 border-emerald-500/30 bg-gradient-to-b from-emerald-950/25 via-zinc-950/40 to-[#08090f] hover:border-emerald-400/60'
+                }`}
+              >
+                <div className="absolute top-0 left-0 right-0 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/20 transition-all" />
+                
+                <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
+                  <span className="font-title text-8xl font-black text-emerald-300 tracking-tighter uppercase leading-none block">
+                    AUTO
+                  </span>
+                </div>
+
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
+                      {t.pillarAutomationTag}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                      🤖
+                    </div>
+                    <div>
+                      <h4 className="font-logo text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-emerald-300 transition-colors">
+                        {t.pillarAutomationTitle}
+                      </h4>
+                      <p className="font-subtitle text-xs text-emerald-300/80 font-medium">
+                        {t.pillarAutomationSlogan}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative z-10 my-auto py-4">
+                  {hoveredPillar === 'automation' ? (
+                    <div className="space-y-2.5 animate-fadeIn">
+                      {/* Featured Smart Calendar Card */}
+                      <div className="p-3 rounded-xl border border-emerald-500/40 bg-emerald-950/30 backdrop-blur-md">
+                        <div className="flex items-center justify-between text-emerald-300 text-xs font-bold font-title">
+                          <div className="flex items-center gap-2">
+                            <span>🗓️</span>
+                            <span>{t.pillarAutomationF1Title}</span>
+                          </div>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">
+                            PROGRAMADO
+                          </span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAutomationF1Desc}
+                        </p>
+
+                        {/* Calendar Mini-Preview Widget */}
+                        <div className="mt-2.5 grid grid-cols-3 gap-1.5 text-center text-[10px]">
+                          <div className="p-1.5 rounded-lg bg-black/50 border border-zinc-800">
+                            <span className="text-zinc-500 block text-[8px] font-mono">LUN 10 · 18:00</span>
+                            <span className="font-bold text-white truncate block">Loop 3h 4K</span>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/50">
+                            <span className="text-emerald-400 block text-[8px] font-mono">MIÉ 12 · 14:00</span>
+                            <span className="font-bold text-emerald-300 truncate block">Shorts x3</span>
+                          </div>
+                          <div className="p-1.5 rounded-lg bg-black/50 border border-zinc-800">
+                            <span className="text-zinc-500 block text-[8px] font-mono">VIE 14 · 20:00</span>
+                            <span className="font-bold text-white truncate block">Video 1h</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-emerald-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold font-title">
+                          <span>⚡</span>
+                          <span>{t.pillarAutomationF2Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAutomationF2Desc}
+                        </p>
+                      </div>
+
+                      <div className="p-3 rounded-xl border border-emerald-500/30 bg-black/40 backdrop-blur-md">
+                        <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold font-title">
+                          <span>🔄</span>
+                          <span>{t.pillarAutomationF3Title}</span>
+                        </div>
+                        <p className="font-body text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                          {t.pillarAutomationF3Desc}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="h-1 w-12 bg-emerald-400/40 rounded-full" />
+                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                        {lang === 'es'
+                          ? 'Planifica publicaciones con calendario integrado, automatiza colas de renderizado y escala tu canal en piloto automático.'
+                          : 'Schedule channel releases with the smart calendar, run background render queues, and scale your channel effortlessly.'}
+                      </p>
+                      <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400/80">
+                        <span>✦</span>
+                        <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative z-10 pt-3 border-t border-emerald-500/20 flex items-center justify-between text-[11px] text-emerald-300">
+                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD PIPELINE</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveMockupTab('workspace');
+                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                  >
+                    <span>Ver demo</span>
+                    <span>↓</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
 

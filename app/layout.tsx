@@ -27,6 +27,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "AutoProd — Creator Studio IDE para YouTube",
   description: "Crea, edita y escala tus canales de YouTube con Inteligencia Artificial. Videos en 4K sin límites, subtítulos sincronizados y portadas de alto CTR.",
+  icons: {
+    icon: [
+      { url: '/logo.svg', type: 'image/svg+xml' },
+      { url: '/logo.png', type: 'image/png' },
+    ],
+    shortcut: '/logo.svg',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

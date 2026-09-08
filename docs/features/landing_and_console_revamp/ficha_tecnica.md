@@ -3,10 +3,13 @@
 > **Módulo:** Rediseño Integral de Frontend, Identidad Visual y Consola de Producción  
 > **Estado:** `✅ HECHO`  
 > **Archivos Modificados:**  
-> - `public/logo.svg` (Logotipo oficial vectorial AP estilizado en #8629FE)  
-> - `app/layout.tsx` (Fuentes Google: Plus Jakarta Sans, Space Grotesk, Inter)  
+> - `public/brand/` (Directorio oficial con `logo-monogram.svg`, `logo-monogram.png` y `logo-lockup.png`)  
+> - `public/logo.svg` y `public/logo.png` (Archivos raíz para acceso directo estático)  
+> - `app/icon.svg` (Favicon e icono de aplicación nativo de Next.js App Router)  
+> - `components/AutoProdLogo.tsx` (Componente React reutilizable del monograma AP)  
+> - `app/layout.tsx` (Metadatos con favicon/icons y fuentes Google: Plus Jakarta Sans, Space Grotesk, Inter)  
 > - `app/globals.css` (Clases de utilidad de tipografía .font-logo, .font-title, .font-btn, etc.)  
-> - `app/page.tsx` (Landing page con logotipo oficial, mockup interactivo y especificaciones realistas)  
+> - `app/page.tsx` (Hero centrado sin fondo con marca AutoProdai, mockup interactivo y especificaciones realistas)  
 > - `app/translations.ts` (Diccionario bilingüe actualizado con visión integral para creadores de video)  
 > - `app/login/page.tsx` (Cabecera de autenticación con logotipo oficial vectorial)  
 > - `app/dashboard/page.tsx` (Cabecera con logotipo oficial, switcher de estudios y status de motor local)  
@@ -29,9 +32,12 @@
   - **Datos, Badges y UI:** *Inter* 500 (Medium).
 
 ### 1.2 Landing Page (`app/page.tsx`)
-- **Identidad Central en el Hero:**
-  - Logotipo oficial en gran escala (`AutoProdLogo`, contenedor `h-24 w-24 sm:h-28 sm:w-28 md:h-32 md:w-32`) con aura multicapa de neón violeta (`#8629FE`) y efecto glassmórfico.
-  - Tagline insignia centrado directamente debajo del logo: *"Nunca había sido tan fácil producir tu contenido..."* (`t.heroTagline`), implementado con badge translúcido y pulso esmeralda.
+- **Protagonismo Monumental del Logo y la Marca en el Hero:**
+  - Logotipo oficial `AP` en escala gigante (`h-32` a `lg:h-60`), 100% libre sin caja ni fondo (`fill="none"`), centrado con un aura envolvente de neón violeta (`#8629FE`, blur de 100px).
+  - Nombre de marca como el elemento más grande y dominante de la página: **AutoProdAI** en escala colosal (`text-5xl` a `text-8xl`), en tipografía *Plus Jakarta Sans* 800 ExtraBold (`font-logo`).
+  - **Titular Complementario (H2 - Space Grotesk 700):** *"Nunca había sido tan fácil producir tu contenido"*, en un tamaño armónico que acompaña sin competir (`text-2xl` a `text-5xl`).
+  - **Subtitular (Space Grotesk 500):** *"Crea, edita y escala tus videos con Inteligencia Artificial"*, en `text-zinc-400`.
+  - **Párrafo Descriptivo (Inter 400):** Conciso, ligero y estilizado (`text-zinc-500`), dejando todo el protagonismo a la marca y el valor del producto.
 - **Posicionamiento Transversal para Creadores:**
   - Orientado a creadores con cámara propia, editores, generadores de clips para Shorts/Reels/TikTok y canales automatizados.
   - Cero hipérboles irreales: Especificación precisa de bucles de 1 a 3 horas, sincronización de audio, subtitulado palabra por palabra, diseño de portadas 16:9 y 9:16, y optimización de metraje.
