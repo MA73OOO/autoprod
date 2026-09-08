@@ -76,7 +76,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      initialized: plansCount === 0,
+      initialized: plans.length > 0,
       plans
     });
   } catch (error: any) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
+import { openai, createOpenAI } from '@ai-sdk/openai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import fs from 'fs/promises';
 import path from 'path';
@@ -9,11 +9,11 @@ import { getWorkspacePath } from '@/harness/setup/detector';
 
 async function getToolAiModel(supabase: any, userId: string) {
   if (process.env.OPENAI_API_KEY) {
-    return openai('gpt-4o-mini', { apiKey: process.env.OPENAI_API_KEY });
+    return createOpenAI({ apiKey: process.env.OPENAI_API_KEY })('gpt-4o-mini');
   }
   const { data: openaiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
   if (openaiKey && typeof openaiKey === 'string' && openaiKey.trim() !== '') {
-    return openai('gpt-4o-mini', { apiKey: openaiKey });
+    return createOpenAI({ apiKey: openaiKey })('gpt-4o-mini');
   }
   if (process.env.GEMINI_API_KEY) {
     return createGoogleGenerativeAI({ apiKey: process.env.GEMINI_API_KEY })('gemini-1.5-flash');

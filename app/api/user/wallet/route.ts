@@ -6,9 +6,10 @@ export async function GET() {
   try {
     const supabase = await createClient();
     const { data: userData } = await supabase.auth.getUser();
-    const userId = userData?.user?.id;
+    const authUser = userData?.user;
+    const userId = authUser?.id;
 
-    if (!userId) {
+    if (!userId || !authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,9 +29,9 @@ export async function GET() {
     });
 
     // Si el usuario existe por email pero con otro ID o no ha sido sincronizado
-    if (!user && userData.user.email) {
+    if (!user && authUser.email) {
       user = await prisma.user.findUnique({
-        where: { email: userData.user.email },
+        where: { email: authUser.email },
         include: {
           subscription: {
             include: {
@@ -43,13 +44,13 @@ export async function GET() {
     }
 
     // Si aún no existe, crearlo
-    if (!user && userData.user.email) {
-      const role = userData.user.email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
+    if (!user && authUser.email) {
+      const role = authUser.email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
       user = await prisma.user.create({
         data: {
           id: userId,
-          email: userData.user.email,
-          name: userData.user.user_metadata?.full_name || userData.user.email.split('@')[0],
+          email: authUser.email,
+          name: authUser.user_metadata?.full_name || authUser.email.split('@')[0],
           role
         },
         include: {

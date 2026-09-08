@@ -12,6 +12,7 @@ export async function installBinary(depId: string, filePath: string, manifest: a
   if (!dep) throw new Error(`Dependency ${depId} not found in manifest`);
 
   const localBin = getLocalBinPath();
+  if (!localBin) throw new Error('Local bin path is not defined');
   await fs.mkdir(localBin, { recursive: true });
 
   if (onLog) onLog(`Iniciando instalación de ${dep.name}...`);

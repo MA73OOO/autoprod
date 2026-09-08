@@ -103,13 +103,9 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
+    const auth = await getAuthUser();
+    if (!auth.ok) return auth.response;
+    const { user } = auth;
 
     const { id: conversationId } = await params;
 

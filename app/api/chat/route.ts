@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import { generateText, tool as aiTool, jsonSchema, embed } from 'ai';
 import { openai, createOpenAI } from '@ai-sdk/openai';
-import { anthropic } from '@ai-sdk/anthropic';
+import { anthropic, createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
 import { isOrchestratorFreeForUser, PLANS_CONFIG } from '@/lib/pricing-config';
@@ -338,7 +338,7 @@ export async function POST(req: Request) {
           }
         }
 
-        // 2. Detección inteligente por lenguaje natural en el mensaje del usuario si no vino channelId
+        // 2. Detección por nombre de canal en el mensaje del usuario si no vino channelId
         if (!activeChannel && messages && messages.length > 0) {
           const recentUserText = messages
             .filter((m: any) => m.role === 'user')
@@ -348,30 +348,23 @@ export async function POST(req: Request) {
 
           const normUserText = recentUserText.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-          // a) Match contra canales del usuario en Base de Datos
+          // Match directo contra nombres de canales o palabras del canal registrado
           for (const ch of allUserChannels) {
             const normName = ch.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             if (normUserText.includes(normName)) {
               activeChannel = ch;
               break;
             }
-          }
-
-          // b) Match por palabras clave distintivas (ej: "padre" o "abrazo" para "El Abrazo del Padre worship")
-          if (!activeChannel) {
-            const stopWords = new Set(['canal', 'para', 'el', 'la', 'los', 'las', 'de', 'del', 'un', 'una', 'en', 'con', 'video', 'videos', 'nuevo', 'crear', 'hacer', 'puedes', 'ayudarme', 'quiero']);
-            for (const ch of allUserChannels) {
-              const words = ch.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter((w: string) => w.length > 3 && !stopWords.has(w));
-              if (words.some((w: string) => normUserText.includes(w))) {
-                activeChannel = ch;
-                break;
-              }
+            // Coincidencia con palabras significativas del propio nombre del canal (de al menos 4 caracteres)
+            const channelWords = normName.split(/[\s_]+/).filter((w: string) => w.length >= 4);
+            if (channelWords.some((w: string) => normUserText.includes(w))) {
+              activeChannel = ch;
+              break;
             }
           }
 
-          // c) Match contra carpetas físicas en disco del workspace
+          // Match contra carpetas físicas en disco si no coincidió en BD
           if (!activeChannel && existingChannels.length > 0) {
-            const stopWords = new Set(['canal', 'para', 'el', 'la', 'los', 'las', 'de', 'del', 'un', 'una', 'en', 'con', 'video', 'videos', 'nuevo', 'crear', 'hacer', 'puedes', 'ayudarme', 'quiero']);
             for (const folderName of existingChannels) {
               const normFolder = folderName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
               if (normUserText.includes(normFolder)) {
@@ -383,8 +376,8 @@ export async function POST(req: Request) {
                 };
                 break;
               }
-              const words = normFolder.split(/\s+/).filter((w: string) => w.length > 3 && !stopWords.has(w));
-              if (words.some((w: string) => normUserText.includes(w))) {
+              const folderWords = normFolder.split(/[\s_]+/).filter((w: string) => w.length >= 4);
+              if (folderWords.some((w: string) => normUserText.includes(w))) {
                 activeChannel = allUserChannels.find(c => c.name.toLowerCase() === folderName.toLowerCase()) || {
                   id: folderName,
                   name: folderName,
@@ -397,7 +390,7 @@ export async function POST(req: Request) {
           }
         }
 
-        // 3. Fallback: Si el usuario tiene exactamente 1 canal registrado, asumirlo por defecto
+        // 3. Si el usuario tiene exactamente 1 canal registrado, asumirlo por defecto
         if (!activeChannel && allUserChannels.length === 1) {
           activeChannel = allUserChannels[0];
         }
@@ -555,9 +548,8 @@ Si el usuario dice que desea crear o producir un video pero no ha especificado c
 
           const toolSchemaObj = jsonSchema((dbTool.schema && typeof dbTool.schema === 'object') ? dbTool.schema as any : { type: 'object', properties: {} });
 
-          aiTools[dbTool.name] = aiTool({
+          aiTools[dbTool.name] = (aiTool as any)({
             description: dbTool.description || '',
-            inputSchema: toolSchemaObj,
             parameters: toolSchemaObj,
             execute: async (args: any) => {
                try {
@@ -923,11 +915,11 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
         selectedModel = (model && (model.includes('o1') || model.includes('o3') || (model.includes('4o') && !model.includes('mini')))) ? model : 'o3-mini';
       }
       cleanModel = selectedModel;
-      aiModel = openai(selectedModel, { apiKey });
+      aiModel = createOpenAI({ apiKey })(selectedModel);
     } else if (provider === 'anthropic') {
       const selectedModel = isDeepThinking ? 'claude-3-7-sonnet-20250219' : (model || 'claude-3-5-sonnet-20240620');
       cleanModel = selectedModel;
-      aiModel = anthropic(selectedModel, { apiKey });
+      aiModel = createAnthropic({ apiKey })(selectedModel);
     } else if (provider === 'gemini') {
       let rawModel = model || 'gemini-2.5-flash';
       if (isDeepThinking) {
@@ -955,21 +947,21 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
     // ──────────────────────────────────────────────
     // 3. Generar Texto (Function Calling Nativo)
     // ──────────────────────────────────────────────
-    const result = await generateText({
+    const result: any = await generateText({
       model: aiModel,
       messages: history.filter((h: any) => h.role !== 'system'),
       system: systemPrompt,
       tools: Object.keys(aiTools).length > 0 ? aiTools : undefined,
       maxSteps: 5 // Permite al LLM iterar, llamar herramientas y luego responder
-    });
+    } as any);
 
     // Guardar token usage y descontar créditos si usó llave maestra
     let updatedBalance: number | null = null;
     if (userId) {
       if (result.usage && result.usage.totalTokens > 0) {
         try {
-          if (prisma.tokenUsage) {
-            prisma.tokenUsage.create({
+          if ((prisma as any).tokenUsage) {
+            (prisma as any).tokenUsage.create({
               data: {
                 userId,
                 provider,
@@ -978,7 +970,7 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
                 completionTokens: result.usage.completionTokens,
                 totalTokens: result.usage.totalTokens
               }
-            }).catch(err => console.warn("[TokenUsage] Error guardando:", err.message));
+            }).catch((err: any) => console.warn("[TokenUsage] Error guardando:", err.message));
           }
         } catch { /* ignorar silenciosamente si la tabla no existe */ }
       }
