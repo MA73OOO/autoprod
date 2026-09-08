@@ -81,10 +81,10 @@ export default function Home() {
           {/* Logo AP con su halo violeta envolvente y nombre de marca */}
           <div className="relative flex flex-col items-center justify-center mb-8">
             <div className="absolute w-56 h-56 sm:w-72 sm:h-72 bg-[#8629FE]/30 rounded-full blur-[100px] pointer-events-none" />
-            <AutoProdLogo className="h-24 w-24 sm:h-32 sm:w-32 drop-shadow-[0_0_40px_rgba(134,41,254,0.85)] hover:scale-105 transition-transform duration-500" />
+            <AutoProdLogo className="h-64 w-64 sm:h-64 sm:w-64 drop-shadow-[0_0_40px_rgba(134,41,254,0.85)] hover:scale-105 transition-transform duration-500" />
             <div className="mt-4 flex items-center justify-center">
-              <span className="font-logo font-extrabold tracking-wider text-xl sm:text-2xl text-white uppercase drop-shadow-[0_0_20px_rgba(134,41,254,0.5)]">
-                AUTOPROD<span className="text-[#8629FE]">AI</span>
+              <span className="font-logo font-extrabold tracking-wider text-3xl sm:text-7xl text-white drop-shadow-[0_0_25px_rgba(134,41,254,0.6)]">
+                AutoProd<span className="text-[#8629FE]">AI</span>
               </span>
             </div>
           </div>
@@ -723,11 +723,10 @@ export default function Home() {
                     top: `calc(50% + ${y}px)`,
                     transform: 'translate(-50%, -50%)',
                   }}
-                  className={`absolute z-20 flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all duration-300 backdrop-blur-md cursor-pointer group ${
-                    isActive
-                      ? `${step.activeRing} ring-2 scale-110 z-30`
-                      : 'border border-zinc-800/80 bg-zinc-900/90 hover:border-zinc-700 hover:bg-zinc-800/90 text-zinc-400 hover:text-white scale-100'
-                  }`}
+                  className={`absolute z-20 flex items-center gap-2 px-3 py-1.5 rounded-2xl transition-all duration-300 backdrop-blur-md cursor-pointer group ${isActive
+                    ? `${step.activeRing} ring-2 scale-110 z-30`
+                    : 'border border-zinc-800/80 bg-zinc-900/90 hover:border-zinc-700 hover:bg-zinc-800/90 text-zinc-400 hover:text-white scale-100'
+                    }`}
                 >
                   <div className={`w-7 h-7 rounded-xl flex items-center justify-center text-base transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-105'}`}>
                     {step.icon}
@@ -812,9 +811,8 @@ export default function Home() {
                         <button
                           key={dotIdx}
                           onClick={() => setActiveCycleStep(dotIdx)}
-                          className={`h-1.5 rounded-full transition-all ${
-                            activeCycleStep === dotIdx ? 'w-3.5 bg-purple-400' : 'w-1.5 bg-zinc-700 hover:bg-zinc-500'
-                          }`}
+                          className={`h-1.5 rounded-full transition-all ${activeCycleStep === dotIdx ? 'w-3.5 bg-purple-400' : 'w-1.5 bg-zinc-700 hover:bg-zinc-500'
+                            }`}
                         />
                       ))}
                     </div>
@@ -849,11 +847,10 @@ export default function Home() {
                 <button
                   key={item.num}
                   onClick={() => setActiveCycleStep(idx)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
-                    activeCycleStep === idx
-                      ? 'border-purple-500/80 bg-purple-950/60 text-white shadow-lg shadow-purple-950/50'
-                      : 'border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${activeCycleStep === idx
+                    ? 'border-purple-500/80 bg-purple-950/60 text-white shadow-lg shadow-purple-950/50'
+                    : 'border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-white'
+                    }`}
                 >
                   <span>{item.icon}</span>
                   <span>{item.num}</span>
