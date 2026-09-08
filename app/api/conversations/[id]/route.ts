@@ -103,6 +103,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  try {
     const auth = await getAuthUser();
     if (!auth.ok) return auth.response;
     const { user } = auth;
