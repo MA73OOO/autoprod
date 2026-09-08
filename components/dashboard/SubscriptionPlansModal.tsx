@@ -70,7 +70,7 @@ export default function SubscriptionPlansModal({
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-3 sm:p-4 animate-in fade-in duration-200">
       <div className="bg-[#0e0e12] border border-zinc-800 rounded-2xl w-full max-w-7xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative">
-        
+
         {/* Glow Effects */}
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-48 bg-purple-600/20 blur-[100px] pointer-events-none" />
         <div className="absolute -bottom-24 right-10 w-80 h-40 bg-indigo-600/15 blur-[90px] pointer-events-none" />
@@ -128,15 +128,14 @@ export default function SubscriptionPlansModal({
               return (
                 <div
                   key={key}
-                  className={`rounded-xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 relative border ${
-                    isPopular
+                  className={`rounded-xl p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 relative border ${isPopular
                       ? 'bg-gradient-to-b from-purple-950/40 via-zinc-900 to-[#14141b] border-purple-500/50 shadow-lg shadow-purple-950/40 ring-1 ring-purple-500/40'
                       : isCurrent
-                      ? 'bg-zinc-900/90 border-emerald-500/50 ring-1 ring-emerald-500/30'
-                      : isFree
-                      ? 'bg-zinc-950/80 border-zinc-800/80 hover:border-zinc-700'
-                      : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
-                  }`}
+                        ? 'bg-zinc-900/90 border-emerald-500/50 ring-1 ring-emerald-500/30'
+                        : isFree
+                          ? 'bg-zinc-950/80 border-zinc-800/80 hover:border-zinc-700'
+                          : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900/90'
+                    }`}
                 >
                   {/* Top Badges */}
                   <div className="flex justify-between items-center mb-3">
@@ -198,13 +197,12 @@ export default function SubscriptionPlansModal({
                           ) : (
                             <span className="text-purple-400 text-xs mt-0.5 shrink-0">✓</span>
                           )}
-                          <span className={`leading-snug text-[11px] sm:text-xs ${
-                            isExcluded 
-                              ? 'text-zinc-500 line-through' 
-                              : isHighlight 
-                              ? 'text-zinc-100 font-semibold' 
-                              : 'text-zinc-300'
-                          }`}>
+                          <span className={`leading-snug text-[11px] sm:text-xs ${isExcluded
+                              ? 'text-zinc-500 line-through'
+                              : isHighlight
+                                ? 'text-zinc-100 font-semibold'
+                                : 'text-zinc-300'
+                            }`}>
                             {cleanFeat}
                           </span>
                         </div>
@@ -216,11 +214,10 @@ export default function SubscriptionPlansModal({
                   <div className="space-y-2 pt-3 border-t border-zinc-800/80">
                     {isFree ? (
                       <div className="space-y-1">
-                        <div className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${
-                          isCurrent
+                        <div className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 ${isCurrent
                             ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
                             : 'bg-zinc-800/60 text-zinc-400 border border-zinc-800'
-                        }`}>
+                          }`}>
                           <span>{isCurrent ? '✓' : '•'}</span>
                           <span>{isCurrent ? (lang === 'es' ? 'Tu Plan Actual' : 'Your Current Plan') : (lang === 'es' ? 'Nivel Básico Gratuito' : 'Free Basic Tier')}</span>
                         </div>
@@ -233,13 +230,12 @@ export default function SubscriptionPlansModal({
                         <button
                           onClick={() => handleCheckout(key as 'STARTER' | 'PRO' | 'ENTERPRISE')}
                           disabled={isLoadingCheckout || isCurrent}
-                          className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${
-                            isCurrent
+                          className={`w-full py-2.5 px-3 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer ${isCurrent
                               ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                               : isPopular
-                              ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-purple-600/30'
-                              : 'bg-zinc-800 hover:bg-zinc-700 text-white'
-                          }`}
+                                ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-purple-600/30'
+                                : 'bg-zinc-800 hover:bg-zinc-700 text-white'
+                            }`}
                         >
                           <span>💳</span>
                           <span>

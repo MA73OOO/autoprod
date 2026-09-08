@@ -53,7 +53,9 @@ export default function Home() {
           </div>
 
           <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold text-zinc-400">
-            <a href="#studios" className="hover:text-white transition-colors">{t.features}</a>
+            <a href="#pillars" className="hover:text-white transition-colors">{t.features}</a>
+            <a href="#studios" className="hover:text-white transition-colors">{t.studios}</a>
+            <a href="#comparison" className="hover:text-white transition-colors">{t.comparison}</a>
             <a href="#how-it-works" className="hover:text-white transition-colors">{t.howItWorks}</a>
             <a href="#pricing" className="hover:text-white transition-colors">{t.pricing}</a>
             <a href="#faq" className="hover:text-white transition-colors">{t.faq}</a>
@@ -119,15 +121,56 @@ export default function Home() {
           </p>
 
           {/* Párrafo Descriptivo Ligero y Equilibrado — Inter 400 */}
-          <p className="font-body text-xs sm:text-sm text-zinc-500 max-w-xl mx-auto mb-10 leading-relaxed font-normal">
+          <p className="font-body text-xs sm:text-sm text-zinc-400 max-w-xl mx-auto mb-8 leading-relaxed font-normal">
             {t.heroSubtitle}
           </p>
 
-          {/* ── 4 PILARES INTERACTIVOS: CREATIVO, PRODUCCIÓN, ANALYTICS, AUTOMATIZACIÓN ── */}
-          <div className="max-w-6xl mx-auto mb-20 text-left">
-            <div className="text-center mb-8">
-              <h3 className="font-title text-xl sm:text-2xl font-bold text-white tracking-tight">
-                {lang === 'es' ? 'AutoProdAI se enfoca en:' : 'The 4 Core Aspects of AutoProd'}
+          {/* CTAs Principales */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+            <Link
+              href="/login"
+              className="font-btn px-7 py-3.5 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white hover:opacity-95 transition-all shadow-lg shadow-purple-600/35 hover:scale-[1.02] flex items-center gap-2"
+            >
+              <span>{t.heroCtaPrimary}</span>
+              <span>→</span>
+            </Link>
+            <a
+              href="#pillars"
+              className="font-btn px-6 py-3.5 rounded-xl text-sm font-semibold text-zinc-300 hover:text-white bg-zinc-900/80 hover:bg-zinc-800/90 border border-zinc-800 transition-all flex items-center gap-2"
+            >
+              <span>{t.heroCtaSecondary}</span>
+              <span>↓</span>
+            </a>
+          </div>
+
+          {/* Badges de Confianza */}
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-zinc-400 mb-14">
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-400 font-bold">✓</span>
+              <span>{t.heroTrust1}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-400 font-bold">✓</span>
+              <span>{t.heroTrust2}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-400 font-bold">✓</span>
+              <span>{t.heroTrust3}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-400 font-bold">✓</span>
+              <span>{t.heroTrust4}</span>
+            </div>
+          </div>
+
+          {/* ── 4 PILARES DEL SISTEMA: CREA, PRODUCE, ANALIZA, ESCALA ── */}
+          <div id="pillars" className="max-w-6xl mx-auto mb-20 text-left scroll-mt-24">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs font-semibold mb-3">
+                {t.pillarsBadge}
+              </div>
+              <h3 className="font-title text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                {t.pillarsHeadline}
               </h3>
             </div>
 
@@ -213,10 +256,8 @@ export default function Home() {
                   ) : (
                     <div className="space-y-4">
                       <div className="h-1 w-12 bg-cyan-400/40 rounded-full" />
-                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
-                        {lang === 'es'
-                          ? 'Estructura ideas de alta retención, diseña ganchos virales y crea portadas que disparan el CTR en YouTube.'
-                          : 'Structure retention hooks, validate fresh topics, and craft standout YouTube thumbnails.'}
+                      <p className="font-body text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+                        {t.pillarCreativePreview}
                       </p>
                       <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400/80">
                         <span>✦</span>
@@ -243,7 +284,7 @@ export default function Home() {
 
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-purple-300 tracking-tighter uppercase leading-none block">
-                    RENDER
+                    PRODUCE
                   </span>
                 </div>
 
@@ -302,10 +343,8 @@ export default function Home() {
                   ) : (
                     <div className="space-y-4">
                       <div className="h-1 w-12 bg-purple-400/40 rounded-full" />
-                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
-                        {lang === 'es'
-                          ? 'Crea bucles continuos de 1 a 3 horas en 4K, corta clips rápidos para Shorts y subtitula palabra por palabra con tu GPU.'
-                          : 'Build 1 to 3 hour 4K loops, extract fast viral shorts, and generate auto-synced word subtitles locally.'}
+                      <p className="font-body text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+                        {t.pillarProductionPreview}
                       </p>
                       <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-purple-400/80">
                         <span>✦</span>
@@ -333,7 +372,7 @@ export default function Home() {
 
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-amber-300 tracking-tighter uppercase leading-none block">
-                    METRICS
+                    ANALYZE
                   </span>
                 </div>
 
@@ -392,10 +431,8 @@ export default function Home() {
                   ) : (
                     <div className="space-y-4">
                       <div className="h-1 w-12 bg-amber-400/40 rounded-full" />
-                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
-                        {lang === 'es'
-                          ? 'Extrae y analiza el rendimiento de canales de YouTube, identifica ganchos ganadores y conserva memoria histórica de cada tema.'
-                          : 'Scrape and analyze YouTube channel performance, identify winning hooks, and track historical content memory.'}
+                      <p className="font-body text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+                        {t.pillarAnalyticsPreview}
                       </p>
                       <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400/80">
                         <span>✦</span>
@@ -423,7 +460,7 @@ export default function Home() {
 
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-emerald-300 tracking-tighter uppercase leading-none block">
-                    AUTO
+                    SCALE
                   </span>
                 </div>
 
@@ -504,10 +541,8 @@ export default function Home() {
                   ) : (
                     <div className="space-y-4">
                       <div className="h-1 w-12 bg-emerald-400/40 rounded-full" />
-                      <p className="font-body text-xs text-zinc-400 leading-relaxed line-clamp-4">
-                        {lang === 'es'
-                          ? 'Planifica publicaciones con calendario integrado, automatiza colas de renderizado y escala tu canal en piloto automático.'
-                          : 'Schedule channel releases with the smart calendar, run background render queues, and scale your channel effortlessly.'}
+                      <p className="font-body text-xs sm:text-sm text-zinc-300 leading-relaxed font-normal">
+                        {t.pillarAutomationPreview}
                       </p>
                       <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400/80">
                         <span>✦</span>
@@ -614,7 +649,7 @@ export default function Home() {
                       <div className="self-start sm:self-auto shrink-0">
                         <span className="px-3 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 text-xs font-semibold flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                          Modo Alta Retención
+                          Planificación Creativa Activa
                         </span>
                       </div>
                     </div>
@@ -631,7 +666,7 @@ export default function Home() {
                             Instrucción del Creador:
                           </span>
                           <p className="text-xs sm:text-sm font-medium text-zinc-100 leading-snug">
-                            "Quiero hacer un video sobre <span className="text-purple-300 font-semibold">'Música Lofi para concentrarse bajo la lluvia'</span>. Dame un gancho que dispare el tiempo de visualización y define la estructura de producción."
+                            "Quiero preparar un proyecto sobre <span className="text-purple-300 font-semibold">'Paisajes sonoros para lectura y concentración profunda'</span>. Ayúdame a estructurar la progresión narrativa, los recursos visuales y la escaleta de producción."
                           </p>
                         </div>
                       </div>
@@ -643,21 +678,21 @@ export default function Home() {
                         <div className="flex items-center justify-between flex-wrap gap-2 border-b border-purple-500/20 pb-2.5">
                           <div className="flex items-center gap-2 text-xs font-bold text-emerald-400">
                             <span>⚡</span>
-                            <span className="uppercase tracking-wider font-btn">Estructura & Estrategia Generada</span>
+                            <span className="uppercase tracking-wider font-btn">Estructura Narrativa & Recursos Definidos</span>
                           </div>
                           <span className="text-[11px] px-2.5 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 border border-emerald-500/30 font-medium">
-                            ✓ 98% Potencial de Retención
+                            ✓ Proyecto Estructurado
                           </span>
                         </div>
 
-                        {/* HIGHLIGHTED HOOK */}
+                        {/* HIGHLIGHTED PREMISE */}
                         <div className="p-3.5 sm:p-4 rounded-xl bg-purple-950/30 border-l-4 border-purple-500 border-y border-r border-purple-500/20 space-y-1">
                           <div className="flex items-center gap-2 text-[11px] font-bold text-purple-300 uppercase tracking-wider font-btn">
                             <span>🎯</span>
-                            <span>Gancho de los Primeros 5 Segundos (Hook):</span>
+                            <span>Premisa Narrativa y Apertura:</span>
                           </div>
                           <p className="text-sm sm:text-base font-semibold text-white italic leading-relaxed">
-                            "¿Te cuesta mantener el enfoque al estudiar? Este paisaje sonoro con frecuencias binaurales y lluvia suave sincronizada mantendrá tu mente en concentración profunda por horas..."
+                            "En un entorno saturado de distracciones, encontrar calma y concentración es un ritual valioso. Esta sesión combina lluvia continua, frecuencias binaurales suaves y una atmósfera inmersiva..."
                           </p>
                         </div>
 
@@ -669,24 +704,24 @@ export default function Home() {
                             <span className="text-[10px] text-zinc-400 block">Bucles suaves cada 30 min</span>
                           </div>
                           <div className="p-3 rounded-xl bg-black/40 border border-zinc-800/80 space-y-1">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-btn">🎨 Concepto Visual</span>
-                            <p className="text-xs sm:text-sm font-bold text-white">Anime Lofi Lluvia</p>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-btn">🎨 Dirección Visual</span>
+                            <p className="text-xs sm:text-sm font-bold text-white">Atmósfera Lofi en Acuarela</p>
                             <span className="text-[10px] text-zinc-400 block">Tono azulado cálido</span>
                           </div>
                           <div className="p-3 rounded-xl bg-black/40 border border-zinc-800/80 space-y-1">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-btn">🚀 Siguiente Acción</span>
-                            <p className="text-xs sm:text-sm font-bold text-purple-300">1 Clic a Bucles & Clips</p>
-                            <span className="text-[10px] text-zinc-400 block">Ensamblar audio y video</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block font-btn">📁 Espacio de Trabajo</span>
+                            <p className="text-xs sm:text-sm font-bold text-purple-300">Listo para Ensamble</p>
+                            <span className="text-[10px] text-zinc-400 block">Recursos en /Videos y /Musica</span>
                           </div>
                         </div>
 
                         {/* Action Badges */}
                         <div className="flex items-center gap-2 flex-wrap pt-1">
                           <span className="px-2.5 py-1 rounded bg-purple-500/20 text-purple-300 text-[11px] font-semibold border border-purple-500/30">
-                            ✓ Guion y descripción listos
+                            ✓ Escaleta y guion técnico listos
                           </span>
                           <span className="px-2.5 py-1 rounded bg-emerald-500/20 text-emerald-300 text-[11px] font-semibold border border-emerald-500/30">
-                            ✓ Listo para ensamblar en 4K
+                            ✓ Recursos asignados a la carpeta del canal
                           </span>
                         </div>
 
@@ -802,11 +837,11 @@ export default function Home() {
                       <div className="space-y-2">
                         <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800 text-zinc-100 flex items-start gap-3 text-sm">
                           <span className="text-purple-400 font-bold shrink-0 font-mono">[00:01]</span>
-                          <span>"La clave para crecer en YouTube no es subir más videos..."</span>
+                          <span>"La clave para construir un canal sólido no es la prisa ni las fórmulas mágicas..."</span>
                         </div>
                         <div className="p-3 rounded-lg bg-zinc-900/80 border border-zinc-800 text-zinc-100 flex items-start gap-3 text-sm">
                           <span className="text-purple-400 font-bold shrink-0 font-mono">[00:03]</span>
-                          <span>"Es lograr que la gente no pueda despegar los ojos en los primeros 10 segundos."</span>
+                          <span>"Es tener un sistema de trabajo que te permita publicar con consistencia y calidad."</span>
                         </div>
                       </div>
 
@@ -848,12 +883,12 @@ export default function Home() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                       <div className="aspect-video rounded-xl bg-gradient-to-tr from-purple-900/60 via-indigo-950 to-zinc-900 border border-purple-500/40 p-4 flex flex-col justify-between relative overflow-hidden group shadow-lg">
-                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-yellow-500/40 text-yellow-400 font-bold text-[10px]">
-                          Alto Contraste Visual 🔥
+                        <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 border border-emerald-500/40 text-emerald-400 font-bold text-[10px]">
+                          Identidad Visual Coherente ✨
                         </div>
                         <div className="space-y-1">
-                          <span className="text-[10px] text-purple-400 font-bold tracking-wider font-btn">CANAL: LOFI CHILL</span>
-                          <h4 className="text-base font-black text-white leading-tight font-title">MÚSICA PARA ESTUDIAR BAJO LA LLUVIA</h4>
+                          <span className="text-[10px] text-purple-400 font-bold tracking-wider font-btn">CANAL: PAISAJES SONOROS</span>
+                          <h4 className="text-base font-black text-white leading-tight font-title">SESIÓN PARA CONCENTRACIÓN PROFUNDA</h4>
                         </div>
                         <div className="flex items-center justify-between text-xs text-zinc-300">
                           <span>Optimizado para Pantallas Móviles</span>
@@ -863,9 +898,9 @@ export default function Home() {
 
                       <div className="space-y-2.5 text-xs text-zinc-300">
                         <div className="p-3.5 rounded-lg bg-zinc-900/80 border border-zinc-800 space-y-1">
-                          <span className="text-[11px] font-bold text-purple-400 uppercase font-btn">Diseño Basado en Tendencias:</span>
+                          <span className="text-[11px] font-bold text-purple-400 uppercase font-btn">Consistencia de Marca:</span>
                           <p className="text-xs text-zinc-300 leading-relaxed font-body">
-                            La herramienta analiza qué composiciones y colores captan más la mirada en YouTube para que tus videos reciban más clics.
+                            Diseña carátulas que reflejan la personalidad de tu canal, manteniendo coherencia tipográfica y cromática tanto en formato horizontal (16:9) como en Shorts (9:16).
                           </p>
                         </div>
                         <div className="p-3.5 rounded-lg bg-zinc-900/80 border border-zinc-800 flex items-center justify-between">
@@ -945,6 +980,105 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── COMPARISON: WORKFLOW FRAGMENTADO VS SISTEMA OPERATIVO AUTOPROD ── */}
+      <section id="comparison" className="py-24 border-t border-zinc-900 relative">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs font-semibold mb-4">
+              ⚖️ {lang === 'es' ? 'LA COMPARATIVA' : 'THE COMPARISON'}
+            </div>
+            <h2 className="font-title text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+              {t.compTitle}
+            </h2>
+            <p className="font-body text-zinc-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+              {t.compSubtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
+            {/* Columna Tradicional (Caos Fragmentado) */}
+            <div className="p-7 sm:p-8 rounded-2xl border border-red-500/20 bg-gradient-to-b from-red-950/15 via-zinc-950/80 to-[#0d090a] space-y-6 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 border-b border-red-500/20 pb-4 mb-6">
+                  <div className="h-10 w-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 font-black text-lg shrink-0">
+                    ✕
+                  </div>
+                  <div>
+                    <h3 className="font-title text-base sm:text-lg font-bold text-red-300">
+                      {t.compOldHeader}
+                    </h3>
+                    <span className="font-body text-[11px] text-zinc-500 font-medium">El ciclo agotador de 10 herramientas</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs sm:text-sm text-zinc-400 font-body">
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-400 font-bold mt-0.5 text-base">✕</span>
+                    <p className="leading-relaxed">{t.compOld1}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-400 font-bold mt-0.5 text-base">✕</span>
+                    <p className="leading-relaxed">{t.compOld2}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-400 font-bold mt-0.5 text-base">✕</span>
+                    <p className="leading-relaxed">{t.compOld3}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-red-400 font-bold mt-0.5 text-base">✕</span>
+                    <p className="leading-relaxed">{t.compOld4}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-red-500/10 text-[11px] text-red-400/80 font-medium">
+                Resultado: Menos tiempo creando, más tiempo como puente técnico manual.
+              </div>
+            </div>
+
+            {/* Columna AutoProd (Sistema Operativo Unificado) */}
+            <div className="p-7 sm:p-8 rounded-2xl border border-purple-500/40 bg-gradient-to-b from-purple-950/25 via-zinc-950/90 to-[#0e0c18] shadow-2xl shadow-purple-950/30 space-y-6 flex flex-col justify-between relative overflow-hidden ring-1 ring-purple-500/30">
+              <div className="absolute top-0 right-0 w-44 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div>
+                <div className="flex items-center gap-3 border-b border-purple-500/20 pb-4 mb-6">
+                  <div className="h-10 w-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 font-black text-lg shrink-0">
+                    ✓
+                  </div>
+                  <div>
+                    <h3 className="font-title text-base sm:text-lg font-bold text-purple-200">
+                      {t.compNewHeader}
+                    </h3>
+                    <span className="font-body text-[11px] text-emerald-400 font-medium">Todo tu canal en un solo entorno unificado</span>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs sm:text-sm text-zinc-200 font-body">
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-bold mt-0.5 text-base">✓</span>
+                    <p className="leading-relaxed">{t.compNew1}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-bold mt-0.5 text-base">✓</span>
+                    <p className="leading-relaxed">{t.compNew2}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-bold mt-0.5 text-base">✓</span>
+                    <p className="leading-relaxed">{t.compNew3}</p>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="text-emerald-400 font-bold mt-0.5 text-base">✓</span>
+                    <p className="leading-relaxed">{t.compNew4}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-purple-500/20 text-[11px] text-emerald-400 font-medium">
+                Resultado: Automatizas el trabajo mecánico y conservas el control absoluto.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── THE 4 PRODUCTION STUDIOS (FEATURES) ── */}
       <section id="studios" className="py-24 border-t border-zinc-900 relative">
@@ -1083,6 +1217,66 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── TU CONTENIDO. TU EQUIPO. TU CONTROL. ── */}
+      <section id="local-advantage" className="py-24 border-t border-zinc-900 bg-gradient-to-b from-[#08080c] via-zinc-950/60 to-[#070709] relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-emerald-950/15 rounded-full blur-[160px] pointer-events-none" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-semibold mb-4">
+              🛡️ {lang === 'es' ? 'SOBERANÍA Y PRIVACIDAD' : 'SOVEREIGNTY & PRIVACY'}
+            </div>
+            <h2 className="font-title text-3xl sm:text-4xl md:text-5xl font-black text-white mb-4 tracking-tight leading-tight">
+              {t.localTitle}
+            </h2>
+            <p className="font-body text-zinc-400 text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+              {t.localSubtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Feature 1 */}
+            <div className="p-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 hover:border-emerald-500/40 transition-all space-y-4 group">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                ⚡
+              </div>
+              <h3 className="font-title text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">
+                {t.localF1Title}
+              </h3>
+              <p className="font-body text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                {t.localF1Desc}
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="p-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 hover:border-purple-500/40 transition-all space-y-4 group">
+              <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                💎
+              </div>
+              <h3 className="font-title text-lg font-bold text-white group-hover:text-purple-300 transition-colors">
+                {t.localF2Title}
+              </h3>
+              <p className="font-body text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                {t.localF2Desc}
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="p-8 rounded-2xl border border-zinc-800/80 bg-zinc-900/40 hover:border-cyan-500/40 transition-all space-y-4 group">
+              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                🔒
+              </div>
+              <h3 className="font-title text-lg font-bold text-white group-hover:text-cyan-300 transition-colors">
+                {t.localF3Title}
+              </h3>
+              <p className="font-body text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                {t.localF3Desc}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── HOW IT WORKS ── */}
       <section id="how-it-works" className="py-24 border-t border-zinc-900 bg-zinc-950/70 relative">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -1146,15 +1340,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs font-semibold mb-4">
-              ⚡ {lang === 'es' ? 'Planes para Creadores' : 'Creator Plans'}
+              ⚡ {t.pricingBadge}
             </div>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mb-4 tracking-tight">
-              {lang === 'es' ? 'Elige el Plan que Mejor se Adapta a tus Canales' : 'Choose the Plan that Fits Your Channels'}
+            <h2 className="font-title text-3xl sm:text-5xl font-black text-white mb-4 tracking-tight">
+              {t.pricingTitle}
             </h2>
-            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
-              {lang === 'es'
-                ? 'Comienza gratis o desbloquea mayor volumen de producción y herramientas avanzadas para escalar múltiples canales.'
-                : 'Start free or unlock higher production volume and advanced tools to scale multiple channels.'}
+            <p className="font-body text-zinc-400 text-sm sm:text-base leading-relaxed">
+              {t.pricingSubtitle}
             </p>
           </div>
 
@@ -1163,36 +1355,40 @@ export default function Home() {
             <div className="p-6 rounded-2xl border border-zinc-900 bg-zinc-950/80 flex flex-col justify-between hover:border-zinc-800 transition-all">
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Prueba Gratuita</span>
+                  <span className="font-title text-xs font-bold uppercase tracking-wider text-zinc-400">{t.pricingFreeTrialTitle}</span>
                 </div>
                 <div className="mb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-white">$0</span>
+                    <span className="font-title text-3xl font-extrabold text-white">{t.pricingFreeTrialPrice}</span>
                     <span className="text-xs text-zinc-500">USD</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-1">Créditos de cortesía para empezar</p>
+                  <p className="font-body text-[11px] text-zinc-400 mt-1">{t.pricingFreeTrialDesc}</p>
                 </div>
-                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4 font-body">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">{lang === 'es' ? 'Incluye:' : 'Includes:'}</p>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>1 Canal para pruebas</span>
+                    <span>{t.pricingFreeF1}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Videos de prueba</span>
+                    <span>{t.pricingFreeF2}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Asistente de guiones básico</span>
+                    <span>{t.pricingFreeF3}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>{t.pricingFreeF4}</span>
                   </div>
                 </div>
               </div>
               <Link
                 href="/login"
-                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
+                className="font-btn w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 transition-colors"
               >
-                {lang === 'es' ? 'Comenzar Gratis' : 'Start Free'}
+                {t.pricingFreeTrialCta}
               </Link>
             </div>
 
@@ -1200,94 +1396,102 @@ export default function Home() {
             <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col justify-between hover:border-zinc-700 transition-all">
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Starter</span>
+                  <span className="font-title text-xs font-bold uppercase tracking-wider text-zinc-400">{t.pricingStarterTitle}</span>
                   <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                    1 Canal
+                    {t.pricingStarterBadge}
                   </span>
                 </div>
                 <div className="mb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-white">$70</span>
-                    <span className="text-xs text-zinc-500">USD / mes</span>
+                    <span className="font-title text-3xl font-extrabold text-white">{t.pricingStarterPrice}</span>
+                    <span className="text-xs text-zinc-500">{t.pricingBilledMonthly}</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-1">Para creadores solistas</p>
+                  <p className="font-body text-[11px] text-zinc-400 mt-1">{t.pricingStarterDesc}</p>
                 </div>
-                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4 font-body">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">{lang === 'es' ? 'Incluye:' : 'Includes:'}</p>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span><strong>1 Canal de YouTube</strong> activo</span>
+                    <span>{t.pricingStarterF1}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Videos de hasta 1 hora en 1080p</span>
+                    <span>{t.pricingStarterF2}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Subtítulos automáticos ilimitados</span>
+                    <span>{t.pricingStarterF3}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Exportación para CapCut y Premiere</span>
+                    <span>{t.pricingStarterF4}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>{t.pricingStarterF5}</span>
                   </div>
                 </div>
               </div>
               <Link
                 href="/login?plan=starter"
-                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
+                className="font-btn w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
               >
-                {lang === 'es' ? 'Elegir Starter' : 'Choose Starter'}
+                {t.pricingStarterCta}
               </Link>
             </div>
 
             {/* Pro Plan */}
             <div className="p-6 rounded-2xl border border-purple-500/50 bg-gradient-to-b from-purple-950/40 via-zinc-900 to-[#14141b] flex flex-col justify-between relative shadow-xl shadow-purple-950/40 ring-1 ring-purple-500/40">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 text-[10px] font-black uppercase text-white tracking-wider shadow-md">
-                🔥 MÁS POPULAR
+                🔥 {t.pricingProPopular}
               </div>
               <div>
                 <div className="flex justify-between items-center mb-3 mt-1">
-                  <span className="text-xs font-bold uppercase tracking-wider text-purple-300">Pro</span>
+                  <span className="font-title text-xs font-bold uppercase tracking-wider text-purple-300">{t.pricingProTitle}</span>
                   <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
-                    Hasta 3 Canales
+                    {t.pricingProBadge}
                   </span>
                 </div>
                 <div className="mb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-black text-white">$100</span>
-                    <span className="text-xs text-zinc-400">USD / mes</span>
+                    <span className="font-title text-4xl font-black text-white">{t.pricingProPrice}</span>
+                    <span className="text-xs text-zinc-400">{t.pricingBilledMonthly}</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-1">Para creadores con múltiples proyectos</p>
+                  <p className="font-body text-[11px] text-zinc-400 mt-1">{t.pricingProDesc}</p>
                 </div>
-                <div className="space-y-2 text-xs text-zinc-300 mb-6 border-t border-zinc-800 pt-4">
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase">Incluye:</p>
+                <div className="space-y-2 text-xs text-zinc-300 mb-6 border-t border-zinc-800 pt-4 font-body">
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase">{lang === 'es' ? 'Incluye:' : 'Includes:'}</p>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
-                    <span><strong>Hasta 3 Canales simultáneos</strong></span>
+                    <span><strong>{t.pricingProF1}</strong></span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
-                    <span>Renderizado 4K y bucles continuos</span>
+                    <span>{t.pricingProF2}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
-                    <span>Generador de miniaturas de alto clic</span>
+                    <span>{t.pricingProF3}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
-                    <span>Subtítulos palabra por palabra dinámicos</span>
+                    <span>{t.pricingProF4}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-bold">✓</span>
-                    <span>Memoria de estilo de cada canal</span>
+                    <span>{t.pricingProF5}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-purple-400 font-bold">✓</span>
+                    <span>{t.pricingProF6}</span>
                   </div>
                 </div>
               </div>
               <Link
                 href="/login?plan=pro"
-                className="w-full py-3 rounded-xl text-center text-xs font-extrabold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-lg shadow-purple-600/30 transition-opacity"
+                className="font-btn w-full py-3 rounded-xl text-center text-xs font-extrabold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-lg shadow-purple-600/30 transition-opacity"
               >
-                {lang === 'es' ? 'Empezar con Plan Pro' : 'Start with Pro Plan'}
+                {t.pricingProCta}
               </Link>
             </div>
 
@@ -1295,58 +1499,44 @@ export default function Home() {
             <div className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950 flex flex-col justify-between hover:border-zinc-700 transition-all">
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">Enterprise</span>
+                  <span className="font-title text-xs font-bold uppercase tracking-wider text-zinc-400">{t.pricingEnterpriseTitle}</span>
                   <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                    Canales Ilimitados
+                    {t.pricingEnterpriseBadge}
                   </span>
                 </div>
                 <div className="mb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-extrabold text-white">$150</span>
-                    <span className="text-xs text-zinc-500">USD / mes</span>
+                    <span className="font-title text-3xl font-extrabold text-white">{t.pricingEnterprisePrice}</span>
+                    <span className="text-xs text-zinc-500">{t.pricingBilledMonthly}</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-1">Para agencias y equipos</p>
+                  <p className="font-body text-[11px] text-zinc-400 mt-1">{t.pricingEnterpriseDesc}</p>
                 </div>
-                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4">
-                  <p className="text-[10px] font-bold text-zinc-500 uppercase">Incluye:</p>
+                <div className="space-y-2 text-xs text-zinc-400 mb-6 border-t border-zinc-900 pt-4 font-body">
+                  <p className="text-[10px] font-bold text-zinc-500 uppercase">{lang === 'es' ? 'Incluye:' : 'Includes:'}</p>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span><strong>Canales de YouTube Ilimitados</strong></span>
+                    <span><strong>{t.pricingEnterpriseF1}</strong></span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Producción de video en lote</span>
+                    <span>{t.pricingEnterpriseF2}</span>
                   </div>
                   <div className="flex items-center gap-2 text-zinc-300">
                     <span className="text-purple-400">✓</span>
-                    <span>Máxima prioridad y soporte 1 a 1</span>
+                    <span>{t.pricingEnterpriseF3}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-zinc-300">
+                    <span className="text-purple-400">✓</span>
+                    <span>{t.pricingEnterpriseF4}</span>
                   </div>
                 </div>
               </div>
               <Link
                 href="/login?plan=enterprise"
-                className="w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
+                className="font-btn w-full py-2.5 rounded-xl text-center text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-white transition-colors"
               >
-                {lang === 'es' ? 'Elegir Enterprise' : 'Choose Enterprise'}
+                {t.pricingEnterpriseCta}
               </Link>
-            </div>
-          </div>
-
-          {/* Payment Methods Footer Banner */}
-          <div className="mt-12 bg-zinc-900/40 border border-zinc-800/80 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-400">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">💳</span>
-              <div>
-                <p className="font-bold text-white">Métodos de pago seguros y accesibles</p>
-                <p className="text-[11px] text-zinc-400">
-                  Tarjetas de crédito/débito internacionales y pagos directos por Nequi, Daviplata o Bancolombia.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2.5 py-1 rounded bg-black/60 border border-zinc-800 text-zinc-300 text-[11px]">Tarjetas Internacionales</span>
-              <span className="px-2.5 py-1 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-bold text-[11px]">Nequi</span>
-              <span className="px-2.5 py-1 rounded bg-yellow-950/40 border border-yellow-500/30 text-yellow-400 font-bold text-[11px]">Bancolombia</span>
             </div>
           </div>
         </div>
@@ -1356,10 +1546,10 @@ export default function Home() {
       <section id="faq" className="py-24 border-t border-zinc-900 relative">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
+            <h2 className="font-title text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
               {t.faqTitle}
             </h2>
-            <p className="text-zinc-400 text-sm sm:text-base leading-relaxed">
+            <p className="font-body text-zinc-400 text-sm sm:text-base leading-relaxed">
               {t.faqSubtitle}
             </p>
           </div>
@@ -1379,18 +1569,43 @@ export default function Home() {
                   onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                   className="w-full p-5 text-left flex items-center justify-between gap-4 cursor-pointer"
                 >
-                  <span className="text-sm sm:text-base font-bold text-white">{faqItem.q}</span>
+                  <span className="font-title text-sm sm:text-base font-bold text-white">{faqItem.q}</span>
                   <span className="text-zinc-400 text-lg shrink-0 font-mono">
                     {openFaq === idx ? '−' : '+'}
                   </span>
                 </button>
                 {openFaq === idx && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-zinc-400 leading-relaxed border-t border-zinc-900 pt-4 animate-in fade-in duration-200">
+                  <div className="px-5 pb-5 text-xs sm:text-sm text-zinc-400 leading-relaxed border-t border-zinc-900 pt-4 animate-in fade-in duration-200 font-body">
                     {faqItem.a}
                   </div>
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── MANIFIESTO DE CIERRE ── */}
+      <section className="py-24 border-t border-zinc-900 relative overflow-hidden bg-gradient-to-b from-[#0a0a0f] to-[#050507]">
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/10 via-indigo-900/10 to-transparent pointer-events-none" />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10 space-y-6">
+          <div className="h-14 w-14 mx-auto rounded-2xl bg-[#8629FE]/20 border border-[#8629FE]/40 flex items-center justify-center text-3xl shadow-xl shadow-[#8629FE]/20">
+            ✨
+          </div>
+          <h2 className="font-title text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            {t.manifestoTitle}
+          </h2>
+          <p className="font-subtitle text-base sm:text-xl text-zinc-300 max-w-2xl mx-auto leading-relaxed">
+            "{t.manifestoDesc}"
+          </p>
+          <div className="pt-2">
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-2 font-btn px-8 py-4 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white hover:opacity-95 shadow-xl shadow-purple-600/30 hover:scale-[1.02] transition-all"
+            >
+              <span>{t.manifestoCta}</span>
+              <span>→</span>
+            </Link>
           </div>
         </div>
       </section>
