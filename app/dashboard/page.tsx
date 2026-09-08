@@ -23,6 +23,7 @@ import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
 import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
 import CreditCounter from '@/components/dashboard/CreditCounter';
 import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
+import { AutoProdLogo } from '@/components/AutoProdLogo';
 import SubscriptionPlansModal from '@/components/dashboard/SubscriptionPlansModal';
 
 import { Conversation, Message } from '@/components/dashboard/types';
@@ -875,14 +876,89 @@ export default function Dashboard() {
     <div className="h-screen w-screen bg-[#09090b] text-zinc-200 flex flex-col font-sans overflow-hidden">
 
       {/* ── Header ── */}
-      <header className="h-12 border-b border-zinc-800 bg-[#0f0f12] flex items-center justify-between px-4 shrink-0">
-        <button
-          onClick={() => { setActiveView('home'); setActiveConversationId(null); }}
-          className="flex items-center gap-2 cursor-pointer focus:outline-none"
-        >
-          <div className="h-6 w-6 rounded bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-white text-xs">A</div>
-          <span className="font-bold tracking-tight text-sm text-white">AutoProd Console</span>
-        </button>
+      <header className="h-12 border-b border-zinc-800 bg-[#0f0f12] flex items-center justify-between px-4 shrink-0 gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => { setActiveView('home'); setActiveConversationId(null); }}
+            className="flex items-center gap-2.5 cursor-pointer focus:outline-none group"
+          >
+            <div className="h-7 w-7 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <AutoProdLogo className="h-6 w-6 drop-shadow-[0_0_10px_rgba(134,41,254,0.5)]" />
+            </div>
+            <span className="font-logo font-extrabold tracking-tight text-sm text-white">AutoProd Console</span>
+          </button>
+
+          {/* Motor Status Badge */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[10px]">
+            <span className={`w-1.5 h-1.5 rounded-full ${motorStatus ? 'bg-emerald-400 animate-ping' : 'bg-zinc-600'}`} />
+            <span className={motorStatus ? 'text-emerald-400 font-semibold' : 'text-zinc-500'}>
+              {motorStatus ? (lang === 'es' ? 'Motor Conectado' : 'Engine Ready') : (lang === 'es' ? 'Modo Nube' : 'Cloud Mode')}
+            </span>
+          </div>
+        </div>
+
+        {/* Studio Quick Switcher Tabs */}
+        <div className="hidden md:flex items-center gap-1 bg-[#15151c] border border-zinc-800/80 rounded-xl p-1">
+          <button
+            onClick={() => { setActiveView('home'); setActiveConversationId(null); }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'home' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>🏠</span>
+            <span>{t.viewHome || 'Inicio'}</span>
+          </button>
+          <button
+            onClick={() => {
+              if (conversations.length > 0 && !activeConversationId) {
+                setActiveConversationId(conversations[0].id);
+              }
+              setActiveView('chat');
+            }}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'chat' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>💡</span>
+            <span>{t.viewChat || 'Asistente'}</span>
+          </button>
+          <button
+            onClick={() => setActiveView('looper')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'looper' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>🎬</span>
+            <span>{t.viewLooper || 'Videos Largos'}</span>
+          </button>
+          <button
+            onClick={() => setActiveView('subtitles')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'subtitles' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>🎙️</span>
+            <span>{t.viewSubtitles || 'Subtítulos'}</span>
+          </button>
+          <button
+            onClick={() => setActiveView('images')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'images' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>🎯</span>
+            <span>{t.viewImages || 'Miniaturas'}</span>
+          </button>
+          <button
+            onClick={() => setActiveView('assets')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              activeView === 'assets' ? 'bg-cyan-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
+            }`}
+          >
+            <span>🗂️</span>
+            <span>{t.viewAssets || 'Recursos'}</span>
+          </button>
+        </div>
 
         <div className="flex items-center gap-4">
           <button
@@ -968,6 +1044,14 @@ export default function Dashboard() {
               onSelectSubtitles={() => setActiveView('subtitles')}
               onSelectAssets={() => setActiveView('assets')}
               onSelectImages={() => setActiveView('images')}
+              motorStatus={motorStatus}
+              workspacePath={workspacePath}
+              channelsCount={channels.length}
+              onLinkWorkspace={() => {
+                setModalParentPath(null);
+                setCreationMode(null);
+                setIsWorkspaceModalOpen(true);
+              }}
             />
           ) : activeView === 'looper' ? (
             <VideoLooperStudio

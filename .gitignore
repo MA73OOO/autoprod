@@ -73,3 +73,5 @@ env/
 *.cjs
 scripts/seed-orchestrator.ts
 
+terraform_1.16.1_windows_amd64/terraform.exe
+terraform_1.16.1_windows_amd64/LICENSE.txt

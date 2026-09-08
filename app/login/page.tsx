@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import GoogleLoginButton from '@/components/auth/GoogleLoginButton';
 import { toast } from 'sonner';
+import { AutoProdLogo } from '@/components/AutoProdLogo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -99,11 +100,11 @@ export default function LoginPage() {
         
         {/* Logo/Brand Header */}
         <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="flex items-center gap-2 mb-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-purple-500/20">
-              A
+          <Link href="/" className="flex items-center gap-3 mb-3 group">
+            <div className="h-10 w-10 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <AutoProdLogo className="h-10 w-10 drop-shadow-[0_0_18px_rgba(134,41,254,0.6)]" />
             </div>
-            <span className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-zinc-400 bg-clip-text text-transparent">
+            <span className="font-logo text-2xl font-extrabold tracking-tight text-white">
               AutoProd
             </span>
           </Link>

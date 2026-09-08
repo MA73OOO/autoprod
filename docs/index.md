@@ -38,6 +38,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
 - 🗃️ **Biblioteca de Recursos (Asset Library & CRUD):** [Ficha Técnica](file:///e:/autoprod/docs/features/asset_library/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/asset_library/idea.md)
 - 🎨 **Creador de Imágenes & Miniaturas IA (Image Studio):** [Ficha Técnica](file:///e:/autoprod/docs/features/image_generator/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/image_generator/idea.md)
 - 🏛️ **Gobernanza de Canales (FEAT-12):** [Ficha Técnica](file:///e:/autoprod/docs/features/channel_governance/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_governance/idea.md)
+- 🚀 **Rediseño Integral de Frontend (FEAT-13):** [Ficha Técnica](file:///e:/autoprod/docs/features/landing_and_console_revamp/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/landing_and_console_revamp/idea.md)
 
 ### 🏛️ Arquitectura General (`docs/`)
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.

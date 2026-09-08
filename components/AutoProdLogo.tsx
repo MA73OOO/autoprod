@@ -1,0 +1,36 @@
+import React from "react";
+
+interface AutoProdLogoProps {
+  className?: string;
+  size?: number;
+}
+
+export function AutoProdLogo({ className = "h-8 w-8", size }: AutoProdLogoProps) {
+  const style = size ? { width: size, height: size } : undefined;
+
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      style={style}
+    >
+      {/* Monograma Geométrico Oficial AutoProd AP */}
+      <path
+        d="M15 105.5V64.5M15 64.5V16.7364C15 15.9656 15.8352 15.4846 16.5019 15.8715L55.0019 38.211C55.3102 38.3899 55.5 38.7194 55.5 39.0759V45L55 96.5M55.5 45L35.5 54.75L15 64.5"
+        stroke="#8629FE"
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
+      <path
+        d="M69.5 102V97.9337V76M69.5 76V38.729C69.5 37.9599 70.332 37.4787 70.9987 37.8623L104.375 57.0653C105.069 57.4642 105.036 58.4752 104.319 58.829L69.5 76Z"
+        stroke="#8629FE"
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export default AutoProdLogo;
