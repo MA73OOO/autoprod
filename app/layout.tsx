@@ -25,8 +25,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "AutoProd — Creator Studio IDE para YouTube",
-  description: "Crea, edita y escala tus canales de YouTube con Inteligencia Artificial. Videos en 4K sin límites, subtítulos sincronizados y portadas de alto CTR.",
+  title: "AutoProd — El Sistema Operativo para Canales de Contenido",
+  description: "Organiza tus ideas, produce tus videos, analiza tus canales y reúne tu workflow en un solo lugar. Más control para crear. Menos tiempo perdido entre herramientas.",
   icons: {
     icon: [
       { url: '/logo.svg', type: 'image/svg+xml' },
