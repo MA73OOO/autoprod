@@ -78,10 +78,15 @@ export default function Home() {
       {/* ── 01: HERO CON ILUMINACIÓN ATMOSFÉRICA PROTAGONISTA ── */}
       <section className="relative pt-16 pb-20 md:pt-24 md:pb-28 text-center px-4 z-10">
         <div className="max-w-4xl mx-auto">
-          {/* Logo AP con su halo violeta envolvente */}
-          <div className="relative flex items-center justify-center mb-6">
+          {/* Logo AP con su halo violeta envolvente y nombre de marca */}
+          <div className="relative flex flex-col items-center justify-center mb-8">
             <div className="absolute w-56 h-56 sm:w-72 sm:h-72 bg-[#8629FE]/30 rounded-full blur-[100px] pointer-events-none" />
-            <AutoProdLogo className="h-28 w-28 sm:h-36 sm:w-36 drop-shadow-[0_0_40px_rgba(134,41,254,0.85)] hover:scale-105 transition-transform duration-500" />
+            <AutoProdLogo className="h-24 w-24 sm:h-32 sm:w-32 drop-shadow-[0_0_40px_rgba(134,41,254,0.85)] hover:scale-105 transition-transform duration-500" />
+            <div className="mt-4 flex items-center justify-center">
+              <span className="font-logo font-extrabold tracking-wider text-xl sm:text-2xl text-white uppercase drop-shadow-[0_0_20px_rgba(134,41,254,0.5)]">
+                AUTOPROD<span className="text-[#8629FE]">AI</span>
+              </span>
+            </div>
           </div>
 
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight text-white mb-4 leading-tight">
