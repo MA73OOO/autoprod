@@ -94,7 +94,7 @@ export default function Home() {
             <div className="relative group flex items-center justify-center mb-4 sm:mb-5">
               {/* Gran Aura y Resplandor Violeta de Marca */}
               <div className="absolute w-56 h-56 sm:w-72 sm:h-72 md:w-96 md:h-96 bg-[#8629FE]/30 rounded-full blur-[100px] pointer-events-none group-hover:bg-[#8629FE]/45 transition-all duration-700" />
-              
+
               {/* Monograma Oficial AP Enorme sin Fondo */}
               <AutoProdLogo className="h-32 w-32 sm:h-44 sm:w-44 md:h-52 md:w-52 lg:h-60 lg:w-60 drop-shadow-[0_0_45px_rgba(134,41,254,0.85)] group-hover:scale-105 transition-transform duration-500" />
             </div>
@@ -123,41 +123,15 @@ export default function Home() {
             {t.heroSubtitle}
           </p>
 
-          {/* CTA Buttons — Plus Jakarta Sans 600 */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <Link
-              href="/login"
-              className="font-btn w-full sm:w-auto px-8 py-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 text-white hover:opacity-95 transition-all shadow-xl shadow-purple-600/30 hover:scale-[1.02] flex items-center justify-center gap-2"
-            >
-              <span>{t.heroCtaPrimary}</span>
-              <span>→</span>
-            </Link>
-            <a
-              href="#interactive-demo"
-              className="font-btn w-full sm:w-auto px-8 py-4 rounded-xl text-sm font-semibold bg-zinc-900/80 hover:bg-zinc-800 text-zinc-200 transition-all border border-zinc-800 hover:border-zinc-700 flex items-center justify-center gap-2"
-            >
-              <span>{t.heroCtaSecondary}</span>
-            </a>
-          </div>
-
-          {/* ── 4 PILARES INTERACTIVOS (ESTILO BLACK TORCH: CREATIVO, PRODUCCIÓN, ANALYTICS, AUTOMATIZACIÓN) ── */}
+          {/* ── 4 PILARES INTERACTIVOS: CREATIVO, PRODUCCIÓN, ANALYTICS, AUTOMATIZACIÓN ── */}
           <div className="max-w-6xl mx-auto mb-20 text-left">
             <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-[11px] font-ui font-semibold uppercase tracking-wider mb-2 backdrop-blur-md">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-                {t.pillarsBadge}
-              </div>
               <h3 className="font-title text-xl sm:text-2xl font-bold text-white tracking-tight">
-                {lang === 'es' ? 'Los 4 Aspectos Clave de AutoProd' : 'The 4 Core Aspects of AutoProd'}
+                {lang === 'es' ? 'AutoProdAI se enfoca en:' : 'The 4 Core Aspects of AutoProd'}
               </h3>
-              <p className="font-body text-xs sm:text-sm text-zinc-400 mt-1 max-w-lg mx-auto">
-                {lang === 'es'
-                  ? 'Pasa el cursor por cada aspecto para desplegar las herramientas de AutoProd en acción.'
-                  : 'Hover over each aspect to reveal AutoProd’s integrated production tools.'}
-              </p>
             </div>
 
-            {/* 4 Vertical Slices (Black Torch Inspired) */}
+            {/* 4 Columnas Interactivas */}
             <div className="flex flex-col lg:flex-row gap-3 min-h-[500px]">
 
               {/* ── 1. CREATIVO (Cyan / Electric Blue) ── */}
@@ -165,18 +139,17 @@ export default function Home() {
                 onMouseEnter={() => setHoveredPillar('creative')}
                 onMouseLeave={() => setHoveredPillar(null)}
                 onClick={() => setHoveredPillar(hoveredPillar === 'creative' ? null : 'creative')}
-                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
-                  hoveredPillar === 'creative'
-                    ? 'lg:flex-[2.2] border-cyan-400/80 bg-gradient-to-b from-cyan-950/50 via-cyan-900/20 to-[#0c0e17] shadow-2xl shadow-cyan-950/80'
-                    : hoveredPillar !== null
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'creative'
+                  ? 'lg:flex-[2.2] border-cyan-400/80 bg-gradient-to-b from-cyan-950/50 via-cyan-900/20 to-[#0c0e17] shadow-2xl shadow-cyan-950/80'
+                  : hoveredPillar !== null
                     ? 'lg:flex-[0.7] border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                     : 'lg:flex-1 border-cyan-500/30 bg-gradient-to-b from-cyan-950/25 via-zinc-950/40 to-[#08090f] hover:border-cyan-400/60'
-                }`}
+                  }`}
               >
                 {/* Background Aura Glow */}
                 <div className="absolute top-0 left-0 right-0 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/20 transition-all" />
-                
-                {/* Background Watermark Vertical Typography (Black Torch Vibe) */}
+
+                {/* Background Watermark Vertical Typography */}
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-cyan-300 tracking-tighter uppercase leading-none block">
                     CREATE
@@ -186,10 +159,6 @@ export default function Home() {
                 {/* Top Section */}
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
-                      {t.pillarCreativeTag}
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
                   </div>
 
                   <div className="flex items-center gap-3 mb-2">
@@ -256,22 +225,6 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-
-                {/* Bottom Trigger to Demo */}
-                <div className="relative z-10 pt-3 border-t border-cyan-500/20 flex items-center justify-between text-[11px] text-cyan-300">
-                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD CREATIVE</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMockupTab('agent');
-                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                  >
-                    <span>Ver demo</span>
-                    <span>↓</span>
-                  </button>
-                </div>
               </div>
 
               {/* ── 2. PRODUCCIÓN (Neon Purple / Violet #8629FE) ── */}
@@ -279,16 +232,15 @@ export default function Home() {
                 onMouseEnter={() => setHoveredPillar('production')}
                 onMouseLeave={() => setHoveredPillar(null)}
                 onClick={() => setHoveredPillar(hoveredPillar === 'production' ? null : 'production')}
-                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
-                  hoveredPillar === 'production'
-                    ? 'lg:flex-[2.2] border-purple-400/80 bg-gradient-to-b from-purple-950/50 via-[#8629FE]/15 to-[#0c0e17] shadow-2xl shadow-purple-950/80'
-                    : hoveredPillar !== null
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'production'
+                  ? 'lg:flex-[2.2] border-purple-400/80 bg-gradient-to-b from-purple-950/50 via-[#8629FE]/15 to-[#0c0e17] shadow-2xl shadow-purple-950/80'
+                  : hoveredPillar !== null
                     ? 'lg:flex-[0.7] border-purple-500/20 bg-gradient-to-b from-purple-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                     : 'lg:flex-1 border-purple-500/30 bg-gradient-to-b from-purple-950/25 via-zinc-950/40 to-[#08090f] hover:border-purple-400/60'
-                }`}
+                  }`}
               >
                 <div className="absolute top-0 left-0 right-0 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/20 transition-all" />
-                
+
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-purple-300 tracking-tighter uppercase leading-none block">
                     RENDER
@@ -297,10 +249,6 @@ export default function Home() {
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-purple-500/40 bg-purple-500/10 text-purple-300">
-                      {t.pillarProductionTag}
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
                   </div>
 
                   <div className="flex items-center gap-3 mb-2">
@@ -367,20 +315,6 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="relative z-10 pt-3 border-t border-purple-500/20 flex items-center justify-between text-[11px] text-purple-300">
-                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD STUDIO</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMockupTab('looper');
-                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                  >
-                    <span>Ver demo</span>
-                    <span>↓</span>
-                  </button>
-                </div>
               </div>
 
               {/* ── 3. ANALYTICS (Amber / Golden Orange) ── */}
@@ -388,16 +322,15 @@ export default function Home() {
                 onMouseEnter={() => setHoveredPillar('analytics')}
                 onMouseLeave={() => setHoveredPillar(null)}
                 onClick={() => setHoveredPillar(hoveredPillar === 'analytics' ? null : 'analytics')}
-                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
-                  hoveredPillar === 'analytics'
-                    ? 'lg:flex-[2.2] border-amber-400/80 bg-gradient-to-b from-amber-950/50 via-amber-900/20 to-[#0c0e17] shadow-2xl shadow-amber-950/80'
-                    : hoveredPillar !== null
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'analytics'
+                  ? 'lg:flex-[2.2] border-amber-400/80 bg-gradient-to-b from-amber-950/50 via-amber-900/20 to-[#0c0e17] shadow-2xl shadow-amber-950/80'
+                  : hoveredPillar !== null
                     ? 'lg:flex-[0.7] border-amber-500/20 bg-gradient-to-b from-amber-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                     : 'lg:flex-1 border-amber-500/30 bg-gradient-to-b from-amber-950/25 via-zinc-950/40 to-[#08090f] hover:border-amber-400/60'
-                }`}
+                  }`}
               >
                 <div className="absolute top-0 left-0 right-0 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all" />
-                
+
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-amber-300 tracking-tighter uppercase leading-none block">
                     METRICS
@@ -406,10 +339,6 @@ export default function Home() {
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-amber-500/40 bg-amber-500/10 text-amber-300">
-                      {t.pillarAnalyticsTag}
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
                   </div>
 
                   <div className="flex items-center gap-3 mb-2">
@@ -476,20 +405,6 @@ export default function Home() {
                   )}
                 </div>
 
-                <div className="relative z-10 pt-3 border-t border-amber-500/20 flex items-center justify-between text-[11px] text-amber-300">
-                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD INTELLIGENCE</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMockupTab('workspace');
-                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                  >
-                    <span>Ver demo</span>
-                    <span>↓</span>
-                  </button>
-                </div>
               </div>
 
               {/* ── 4. AUTOMATIZACIÓN (Emerald / Mint Green) ── */}
@@ -497,16 +412,15 @@ export default function Home() {
                 onMouseEnter={() => setHoveredPillar('automation')}
                 onMouseLeave={() => setHoveredPillar(null)}
                 onClick={() => setHoveredPillar(hoveredPillar === 'automation' ? null : 'automation')}
-                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${
-                  hoveredPillar === 'automation'
-                    ? 'lg:flex-[2.2] border-emerald-400/80 bg-gradient-to-b from-emerald-950/50 via-emerald-900/20 to-[#0c0e17] shadow-2xl shadow-emerald-950/80'
-                    : hoveredPillar !== null
+                className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'automation'
+                  ? 'lg:flex-[2.2] border-emerald-400/80 bg-gradient-to-b from-emerald-950/50 via-emerald-900/20 to-[#0c0e17] shadow-2xl shadow-emerald-950/80'
+                  : hoveredPillar !== null
                     ? 'lg:flex-[0.7] border-emerald-500/20 bg-gradient-to-b from-emerald-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                     : 'lg:flex-1 border-emerald-500/30 bg-gradient-to-b from-emerald-950/25 via-zinc-950/40 to-[#08090f] hover:border-emerald-400/60'
-                }`}
+                  }`}
               >
                 <div className="absolute top-0 left-0 right-0 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/20 transition-all" />
-                
+
                 <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
                   <span className="font-title text-8xl font-black text-emerald-300 tracking-tighter uppercase leading-none block">
                     AUTO
@@ -515,10 +429,6 @@ export default function Home() {
 
                 <div className="relative z-10">
                   <div className="flex items-center justify-between gap-2 mb-4">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">
-                      {t.pillarAutomationTag}
-                    </span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                   </div>
 
                   <div className="flex items-center gap-3 mb-2">
@@ -606,23 +516,7 @@ export default function Home() {
                     </div>
                   )}
                 </div>
-
-                <div className="relative z-10 pt-3 border-t border-emerald-500/20 flex items-center justify-between text-[11px] text-emerald-300">
-                  <span className="font-mono text-[10px] text-zinc-500">AUTOPROD PIPELINE</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMockupTab('workspace');
-                      document.getElementById('interactive-demo')?.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    className="hover:underline flex items-center gap-1 font-semibold cursor-pointer"
-                  >
-                    <span>Ver demo</span>
-                    <span>↓</span>
-                  </button>
-                </div>
               </div>
-
             </div>
           </div>
 

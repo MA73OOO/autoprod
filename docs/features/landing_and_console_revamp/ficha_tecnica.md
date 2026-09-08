@@ -4,6 +4,8 @@
 > **Estado:** `✅ HECHO`  
 > **Archivos Modificados:**  
 > - `public/brand/` (Directorio oficial con `logo-monogram.svg`, `logo-monogram.png` y `logo-lockup.png`)  
+> - `public/references/` (Referencia de diseño `four-pillars-reference.png`)  
+> - `docs/features/landing_and_console_revamp/assets/` (Referencias de diseño: `four-pillars-reference.png`, `mockup-section-reference.png`, `hero-branding-feedback.png`)  
 > - `public/logo.svg` y `public/logo.png` (Archivos raíz para acceso directo estático)  
 > - `app/icon.svg` (Favicon e icono de aplicación nativo de Next.js App Router)  
 > - `components/AutoProdLogo.tsx` (Componente React reutilizable del monograma AP)  
@@ -41,6 +43,13 @@
 - **Posicionamiento Transversal para Creadores:**
   - Orientado a creadores con cámara propia, editores, generadores de clips para Shorts/Reels/TikTok y canales automatizados.
   - Cero hipérboles irreales: Especificación precisa de bucles de 1 a 3 horas, sincronización de audio, subtitulado palabra por palabra, diseño de portadas 16:9 y 9:16, y optimización de metraje.
+- **4 Pilares Interactivos (Creativo, Producción, Analytics, Automatización):**
+  - Composición vertical de 4 columnas cromáticas de alto impacto:
+    1. 💡 **Creativo (Cyan / Electric Blue):** Exploración de ideas, diseño de portadas y biblioteca multimedia.
+    2. 🎬 **Producción (Neon Purple / Violet #8629FE):** Bucles de 1 a 3 Horas en 4K, Recortes y Clips Rápidos, Subtítulos Dinámicos.
+    3. 📊 **Analytics (Amber / Gold):** Extractor de Canales YouTube, Exploración de temas y enfoques, Memoria Histórica del Canal.
+    4. 🤖 **Automatización (Emerald / Mint Green):** Calendario de Publicación con slots programados por canal, Cola de Render Desatendido y Pipeline End-to-End.
+  - **Mecánica Hover Interactiva:** En reposo exhibe tipografía monumental, slogans y auras de color; al pasar el cursor o hacer clic, la columna se expande (`lg:flex-[2.2]`) y revela las tarjetas de herramientas correspondientes.
 - **Showcase Interactivo del IDE:**
   - Pestañas funcionales con previsualización en tiempo real de Asistente de Guiones, Bucles y Clips, Subtitulador Dinámico, Miniaturas y Gestión de Canales.
 - **FAQ y Sección Comparativa:**
