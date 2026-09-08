@@ -33,10 +33,20 @@ export const translations = {
     heroTrust3: "Tus archivos siempre bajo tu control",
     heroTrust4: "Gestión multicanal independiente",
 
-    // 02 — LOS 4 PILARES: CREA, PRODUCE, ANALIZA, ESCALA
-    pillarsBadge: "LOS 4 PILARES DEL SISTEMA",
+    // 02 — LOS 5 PILARES: ORGANIZA, CREA, PRODUCE, ANALIZA, ESCALA
+    pillarsBadge: "LOS 5 PILARES DEL SISTEMA",
     pillarsHeadline: "Diseñado para cómo se produce contenido hoy",
-    pillarsSubtitle: "Cuatro fundamentos conectados para llevar una idea desde el concepto hasta la publicación sin perder el control.",
+    pillarsSubtitle: "Cinco fundamentos conectados para estructurar tus canales y llevar una idea desde el concepto hasta la publicación sin perder el control.",
+
+    pillarOrganizeTitle: "ORGANIZA",
+    pillarOrganizeSlogan: "Canales, memoria y proyectos.",
+    pillarOrganizeF1Title: "Espacio de Trabajo por Canal",
+    pillarOrganizeF1Desc: "Separa proyectos, recursos, escaletas y archivos de forma independiente para cada canal.",
+    pillarOrganizeF2Title: "Memoria de Identidad y Directivas",
+    pillarOrganizeF2Desc: "Registra tono, audiencia, directivas creativas y branding sin repetir configuraciones.",
+    pillarOrganizeF3Title: "Gestión de Entregas y Estados",
+    pillarOrganizeF3Desc: "Mantén el control de videos producidos, piezas en curso y recursos asociados a cada entrega.",
+    pillarOrganizePreview: "Centraliza tus canales, proyectos y recursos en una estructura limpia y ordenada, dejando atrás el caos de carpetas y archivos dispersos.",
 
     pillarCreativeTitle: "CREA",
     pillarCreativeSlogan: "Ideas y desarrollo.",
@@ -288,10 +298,20 @@ export const translations = {
     heroTrust3: "Your files always under your control",
     heroTrust4: "Independent multi-channel management",
 
-    // 02 — THE 4 PILLARS: CREATE, PRODUCE, ANALYZE, SCALE
-    pillarsBadge: "THE 4 CORE PILLARS",
+    // 02 — THE 5 CORE PILLARS: ORGANIZE, CREATE, PRODUCE, ANALYZE, SCALE
+    pillarsBadge: "THE 5 CORE PILLARS",
     pillarsHeadline: "Designed for how modern content is produced",
-    pillarsSubtitle: "Four connected foundations to take an idea from concept to publication without losing control.",
+    pillarsSubtitle: "Five connected foundations to structure your channels and take an idea from concept to publication without losing control.",
+
+    pillarOrganizeTitle: "ORGANIZE",
+    pillarOrganizeSlogan: "Channels, memory & projects.",
+    pillarOrganizeF1Title: "Workspace per Channel",
+    pillarOrganizeF1Desc: "Keep projects, assets, outlines, and raw files strictly separated for each channel.",
+    pillarOrganizeF2Title: "Brand Voice & Identity Memory",
+    pillarOrganizeF2Desc: "Store tone, target audience, style guidelines, and visual branding in persistent memory.",
+    pillarOrganizeF3Title: "Delivery & Pipeline Tracking",
+    pillarOrganizeF3Desc: "Track completed videos, in-progress drafts, and media assets linked to every release.",
+    pillarOrganizePreview: "Centralize your channels, projects, and assets in a clean, structured workspace, leaving behind the chaos of scattered folders.",
 
     pillarCreativeTitle: "CREATE",
     pillarCreativeSlogan: "Ideas & development.",

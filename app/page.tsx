@@ -7,7 +7,7 @@ import { AutoProdLogo } from "@/components/AutoProdLogo";
 
 export default function Home() {
   const [lang, setLang] = useState<Language>('es');
-  const [hoveredPillar, setHoveredPillar] = useState<'creative' | 'production' | 'analytics' | 'automation' | null>(null);
+  const [hoveredPillar, setHoveredPillar] = useState<'organize' | 'creative' | 'production' | 'analytics' | 'automation' | null>(null);
   const [activeCycleStep, setActiveCycleStep] = useState<number>(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -128,46 +128,130 @@ export default function Home() {
             </p>
           </div>
 
-          {/* 4 Columnas Interactivas con su Iluminación y Estructura Original */}
+          {/* 5 Columnas Interactivas con su Iluminación y Estructura Original */}
           <div className="flex flex-col lg:flex-row gap-3 min-h-[500px]">
 
-            {/* ── 1. CREA (Cyan) ── */}
+            {/* ── 1. ORGANIZA (Indigo) ── */}
+            <div
+              onMouseEnter={() => setHoveredPillar('organize')}
+              onMouseLeave={() => setHoveredPillar(null)}
+              onClick={() => setHoveredPillar(hoveredPillar === 'organize' ? null : 'organize')}
+              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-5 sm:p-6 cursor-pointer group ${hoveredPillar === 'organize'
+                ? 'lg:flex-[2.0] border-indigo-400/80 bg-gradient-to-b from-indigo-950/50 via-indigo-900/20 to-[#0c0e17] shadow-2xl shadow-indigo-950/80'
+                : hoveredPillar !== null
+                  ? 'lg:flex-[0.75] border-indigo-500/20 bg-gradient-to-b from-indigo-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                  : 'lg:flex-1 border-indigo-500/30 bg-gradient-to-b from-indigo-950/25 via-zinc-950/40 to-[#08090f] hover:border-indigo-400/60'
+                }`}
+            >
+              <div className="absolute top-0 left-0 right-0 h-44 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all" />
+
+              <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
+                <span className="text-7xl xl:text-8xl font-black text-indigo-300 tracking-tighter uppercase leading-none block">
+                  ORGANIZE
+                </span>
+              </div>
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
+                    🗂️
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg xl:text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-indigo-300 transition-colors truncate">
+                      {t.pillarOrganizeTitle}
+                    </h3>
+                    <p className="text-[11px] sm:text-xs text-indigo-300/80 font-medium truncate">
+                      {t.pillarOrganizeSlogan}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative z-10 my-auto py-3">
+                {hoveredPillar === 'organize' ? (
+                  <div className="space-y-2.5 animate-fadeIn">
+                    <div className="p-3 rounded-xl border border-indigo-500/30 bg-black/40 backdrop-blur-md">
+                      <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold">
+                        <span>📁</span>
+                        <span>{t.pillarOrganizeF1Title}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                        {t.pillarOrganizeF1Desc}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-indigo-500/30 bg-black/40 backdrop-blur-md">
+                      <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold">
+                        <span>🧠</span>
+                        <span>{t.pillarOrganizeF2Title}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                        {t.pillarOrganizeF2Desc}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl border border-indigo-500/30 bg-black/40 backdrop-blur-md">
+                      <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold">
+                        <span>📋</span>
+                        <span>{t.pillarOrganizeF3Title}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300 mt-1 leading-relaxed">
+                        {t.pillarOrganizeF3Desc}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="h-1 w-10 bg-indigo-400/40 rounded-full" />
+                    <p className="text-xs text-zinc-300 leading-relaxed">
+                      {t.pillarOrganizePreview}
+                    </p>
+                    <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-400/80">
+                      <span>✦</span>
+                      <span>{lang === 'es' ? 'Ver herramientas' : 'Hover for tools'}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ── 2. CREA (Cyan) ── */}
             <div
               onMouseEnter={() => setHoveredPillar('creative')}
               onMouseLeave={() => setHoveredPillar(null)}
               onClick={() => setHoveredPillar(hoveredPillar === 'creative' ? null : 'creative')}
-              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'creative'
-                ? 'lg:flex-[2.2] border-cyan-400/80 bg-gradient-to-b from-cyan-950/50 via-cyan-900/20 to-[#0c0e17] shadow-2xl shadow-cyan-950/80'
+              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-5 sm:p-6 cursor-pointer group ${hoveredPillar === 'creative'
+                ? 'lg:flex-[2.0] border-cyan-400/80 bg-gradient-to-b from-cyan-950/50 via-cyan-900/20 to-[#0c0e17] shadow-2xl shadow-cyan-950/80'
                 : hoveredPillar !== null
-                  ? 'lg:flex-[0.7] border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                  ? 'lg:flex-[0.75] border-cyan-500/20 bg-gradient-to-b from-cyan-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                   : 'lg:flex-1 border-cyan-500/30 bg-gradient-to-b from-cyan-950/25 via-zinc-950/40 to-[#08090f] hover:border-cyan-400/60'
                 }`}
             >
               <div className="absolute top-0 left-0 right-0 h-44 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-cyan-500/20 transition-all" />
 
               <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl font-black text-cyan-300 tracking-tighter uppercase leading-none block">
+                <span className="text-7xl xl:text-8xl font-black text-cyan-300 tracking-tighter uppercase leading-none block">
                   CREATE
                 </span>
               </div>
 
               <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
                     💡
                   </div>
-                  <div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-cyan-300 transition-colors">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg xl:text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-cyan-300 transition-colors truncate">
                       {t.pillarCreativeTitle}
                     </h3>
-                    <p className="text-xs text-cyan-300/80 font-medium">
+                    <p className="text-[11px] sm:text-xs text-cyan-300/80 font-medium truncate">
                       {t.pillarCreativeSlogan}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="relative z-10 my-auto py-4">
+              <div className="relative z-10 my-auto py-3">
                 {hoveredPillar === 'creative' ? (
                   <div className="space-y-2.5 animate-fadeIn">
                     <div className="p-3 rounded-xl border border-cyan-500/30 bg-black/40 backdrop-blur-md">
@@ -201,57 +285,57 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="h-1 w-12 bg-cyan-400/40 rounded-full" />
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="h-1 w-10 bg-cyan-400/40 rounded-full" />
+                    <p className="text-xs text-zinc-300 leading-relaxed">
                       {t.pillarCreativePreview}
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-cyan-400/80">
                       <span>✦</span>
-                      <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      <span>{lang === 'es' ? 'Ver herramientas' : 'Hover for tools'}</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ── 2. PRODUCE (Neon Purple #8629FE) ── */}
+            {/* ── 3. PRODUCE (Neon Purple #8629FE) ── */}
             <div
               onMouseEnter={() => setHoveredPillar('production')}
               onMouseLeave={() => setHoveredPillar(null)}
               onClick={() => setHoveredPillar(hoveredPillar === 'production' ? null : 'production')}
-              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'production'
-                ? 'lg:flex-[2.2] border-purple-400/80 bg-gradient-to-b from-purple-950/50 via-[#8629FE]/15 to-[#0c0e17] shadow-2xl shadow-purple-950/80'
+              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-5 sm:p-6 cursor-pointer group ${hoveredPillar === 'production'
+                ? 'lg:flex-[2.0] border-purple-400/80 bg-gradient-to-b from-purple-950/50 via-[#8629FE]/15 to-[#0c0e17] shadow-2xl shadow-purple-950/80'
                 : hoveredPillar !== null
-                  ? 'lg:flex-[0.7] border-purple-500/20 bg-gradient-to-b from-purple-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                  ? 'lg:flex-[0.75] border-purple-500/20 bg-gradient-to-b from-purple-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                   : 'lg:flex-1 border-purple-500/30 bg-gradient-to-b from-purple-950/25 via-zinc-950/40 to-[#08090f] hover:border-purple-400/60'
                 }`}
             >
               <div className="absolute top-0 left-0 right-0 h-44 bg-purple-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-purple-500/20 transition-all" />
 
               <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl font-black text-purple-300 tracking-tighter uppercase leading-none block">
+                <span className="text-7xl xl:text-8xl font-black text-purple-300 tracking-tighter uppercase leading-none block">
                   PRODUCE
                 </span>
               </div>
 
               <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
                     🎬
                   </div>
-                  <div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-purple-300 transition-colors">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg xl:text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-purple-300 transition-colors truncate">
                       {t.pillarProductionTitle}
                     </h3>
-                    <p className="text-xs text-purple-300/80 font-medium">
+                    <p className="text-[11px] sm:text-xs text-purple-300/80 font-medium truncate">
                       {t.pillarProductionSlogan}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="relative z-10 my-auto py-4">
+              <div className="relative z-10 my-auto py-3">
                 {hoveredPillar === 'production' ? (
                   <div className="space-y-2.5 animate-fadeIn">
                     <div className="p-3 rounded-xl border border-purple-500/30 bg-black/40 backdrop-blur-md">
@@ -285,57 +369,57 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="h-1 w-12 bg-purple-400/40 rounded-full" />
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="h-1 w-10 bg-purple-400/40 rounded-full" />
+                    <p className="text-xs text-zinc-300 leading-relaxed">
                       {t.pillarProductionPreview}
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-purple-400/80">
                       <span>✦</span>
-                      <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      <span>{lang === 'es' ? 'Ver herramientas' : 'Hover for tools'}</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ── 3. ANALIZA (Amber) ── */}
+            {/* ── 4. ANALIZA (Amber) ── */}
             <div
               onMouseEnter={() => setHoveredPillar('analytics')}
               onMouseLeave={() => setHoveredPillar(null)}
               onClick={() => setHoveredPillar(hoveredPillar === 'analytics' ? null : 'analytics')}
-              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'analytics'
-                ? 'lg:flex-[2.2] border-amber-400/80 bg-gradient-to-b from-amber-950/50 via-amber-900/20 to-[#0c0e17] shadow-2xl shadow-amber-950/80'
+              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-5 sm:p-6 cursor-pointer group ${hoveredPillar === 'analytics'
+                ? 'lg:flex-[2.0] border-amber-400/80 bg-gradient-to-b from-amber-950/50 via-amber-900/20 to-[#0c0e17] shadow-2xl shadow-amber-950/80'
                 : hoveredPillar !== null
-                  ? 'lg:flex-[0.7] border-amber-500/20 bg-gradient-to-b from-amber-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                  ? 'lg:flex-[0.75] border-amber-500/20 bg-gradient-to-b from-amber-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                   : 'lg:flex-1 border-amber-500/30 bg-gradient-to-b from-amber-950/25 via-zinc-950/40 to-[#08090f] hover:border-amber-400/60'
                 }`}
             >
               <div className="absolute top-0 left-0 right-0 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/20 transition-all" />
 
               <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl font-black text-amber-300 tracking-tighter uppercase leading-none block">
+                <span className="text-7xl xl:text-8xl font-black text-amber-300 tracking-tighter uppercase leading-none block">
                   ANALYZE
                 </span>
               </div>
 
               <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
                     📊
                   </div>
-                  <div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-amber-300 transition-colors">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg xl:text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-amber-300 transition-colors truncate">
                       {t.pillarAnalyticsTitle}
                     </h3>
-                    <p className="text-xs text-amber-300/80 font-medium">
+                    <p className="text-[11px] sm:text-xs text-amber-300/80 font-medium truncate">
                       {t.pillarAnalyticsSlogan}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="relative z-10 my-auto py-4">
+              <div className="relative z-10 my-auto py-3">
                 {hoveredPillar === 'analytics' ? (
                   <div className="space-y-2.5 animate-fadeIn">
                     <div className="p-3 rounded-xl border border-amber-500/30 bg-black/40 backdrop-blur-md">
@@ -369,57 +453,57 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="h-1 w-12 bg-amber-400/40 rounded-full" />
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="h-1 w-10 bg-amber-400/40 rounded-full" />
+                    <p className="text-xs text-zinc-300 leading-relaxed">
                       {t.pillarAnalyticsPreview}
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-400/80">
                       <span>✦</span>
-                      <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      <span>{lang === 'es' ? 'Ver herramientas' : 'Hover for tools'}</span>
                     </div>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ── 4. ESCALA (Emerald) ── */}
+            {/* ── 5. ESCALA (Emerald) ── */}
             <div
               onMouseEnter={() => setHoveredPillar('automation')}
               onMouseLeave={() => setHoveredPillar(null)}
               onClick={() => setHoveredPillar(hoveredPillar === 'automation' ? null : 'automation')}
-              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-6 cursor-pointer group ${hoveredPillar === 'automation'
-                ? 'lg:flex-[2.2] border-emerald-400/80 bg-gradient-to-b from-emerald-950/50 via-emerald-900/20 to-[#0c0e17] shadow-2xl shadow-emerald-950/80'
+              className={`relative rounded-2xl border transition-all duration-500 ease-out overflow-hidden flex flex-col justify-between p-5 sm:p-6 cursor-pointer group ${hoveredPillar === 'automation'
+                ? 'lg:flex-[2.0] border-emerald-400/80 bg-gradient-to-b from-emerald-950/50 via-emerald-900/20 to-[#0c0e17] shadow-2xl shadow-emerald-950/80'
                 : hoveredPillar !== null
-                  ? 'lg:flex-[0.7] border-emerald-500/20 bg-gradient-to-b from-emerald-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
+                  ? 'lg:flex-[0.75] border-emerald-500/20 bg-gradient-to-b from-emerald-950/20 via-zinc-950/60 to-[#07070a] opacity-60 hover:opacity-100'
                   : 'lg:flex-1 border-emerald-500/30 bg-gradient-to-b from-emerald-950/25 via-zinc-950/40 to-[#08090f] hover:border-emerald-400/60'
                 }`}
             >
               <div className="absolute top-0 left-0 right-0 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-emerald-500/20 transition-all" />
 
               <div className="absolute -right-6 bottom-4 select-none pointer-events-none text-right opacity-5 group-hover:opacity-10 transition-opacity">
-                <span className="text-8xl font-black text-emerald-300 tracking-tighter uppercase leading-none block">
+                <span className="text-7xl xl:text-8xl font-black text-emerald-300 tracking-tighter uppercase leading-none block">
                   SCALE
                 </span>
               </div>
 
               <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-2xl shadow-inner group-hover:scale-110 transition-transform">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl shadow-inner group-hover:scale-110 transition-transform flex-shrink-0">
                     🚀
                   </div>
-                  <div>
-                    <h3 className="text-2xl sm:text-3xl font-extrabold uppercase tracking-tight text-white group-hover:text-emerald-300 transition-colors">
+                  <div className="min-w-0">
+                    <h3 className="text-base sm:text-lg xl:text-xl font-extrabold uppercase tracking-tight text-white group-hover:text-emerald-300 transition-colors truncate">
                       {t.pillarAutomationTitle}
                     </h3>
-                    <p className="text-xs text-emerald-300/80 font-medium">
+                    <p className="text-[11px] sm:text-xs text-emerald-300/80 font-medium truncate">
                       {t.pillarAutomationSlogan}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="relative z-10 my-auto py-4">
+              <div className="relative z-10 my-auto py-3">
                 {hoveredPillar === 'automation' ? (
                   <div className="space-y-2.5 animate-fadeIn">
                     <div className="p-3 rounded-xl border border-emerald-500/40 bg-emerald-950/30 backdrop-blur-md">
@@ -453,14 +537,14 @@ export default function Home() {
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    <div className="h-1 w-12 bg-emerald-400/40 rounded-full" />
-                    <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                  <div className="space-y-3">
+                    <div className="h-1 w-10 bg-emerald-400/40 rounded-full" />
+                    <p className="text-xs text-zinc-300 leading-relaxed">
                       {t.pillarAutomationPreview}
                     </p>
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-400/80">
                       <span>✦</span>
-                      <span>{lang === 'es' ? 'Pasa el cursor para ver herramientas' : 'Hover to see tools'}</span>
+                      <span>{lang === 'es' ? 'Ver herramientas' : 'Hover for tools'}</span>
                     </div>
                   </div>
                 )}
