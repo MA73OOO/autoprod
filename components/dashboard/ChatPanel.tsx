@@ -32,6 +32,7 @@ interface Props {
   onSuccess?: () => void;
   isDeepThinking?: boolean;
   onToggleDeepThinking?: (val: boolean) => void;
+  promptTemplates?: any[];
 }
 
 export default function ChatPanel({
@@ -52,6 +53,7 @@ export default function ChatPanel({
   onSuccess,
   isDeepThinking = false,
   onToggleDeepThinking,
+  promptTemplates = [],
 }: Props) {
   const t = translations[lang];
 
@@ -107,9 +109,19 @@ export default function ChatPanel({
   };
 
   const handleInsertTemplate = (key: string) => {
-    const template = PROMPT_TEMPLATES[key];
-    if (template) {
-      onInputChange(template);
+    const nameMap: Record<string, string> = {
+      channel: 'crear_canal',
+      video: 'crear_video',
+      script: 'crear_guion',
+      prompt: 'crear_prompt',
+      import_channel: 'extraer_canal_youtube'
+    };
+    const targetName = nameMap[key] || key;
+    const dbTpl = promptTemplates?.find((p: any) => p.name === targetName);
+    const templateText = dbTpl?.welcomeText || PROMPT_TEMPLATES[key];
+
+    if (templateText) {
+      onInputChange(templateText);
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.focus();
@@ -165,20 +177,6 @@ export default function ChatPanel({
     }
     return () => clearInterval(interval);
   }, [timerStart]);
-
-  // Determinar si debemos renderizar una consola de agente especial
-  if (activeConversation?.title.includes('Crear Canal')) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center relative p-6 h-full">
-        <ChannelCreatorConsole
-          workspacePath={workspacePath || ''}
-          onSuccess={() => {
-            if (onSuccess) onSuccess();
-          }}
-        />
-      </div>
-    );
-  }
 
   const activeChannelObj = channels.find(c => 
     c.id === activeConversation?.channelId || 

@@ -453,44 +453,10 @@ export default function Dashboard() {
     const FALLBACKS: Record<string, { title: { es: string; en: string }; systemPrompt: string; welcomeText: { es: string; en: string } }> = {
       import_channel: {
         title: { es: 'Extraer Canal 📥', en: 'Extract Channel 📥' },
-        systemPrompt: 'Eres un analista y productor experto de YouTube en AutoProd. Cuando el usuario te proporcione una URL o @handle de un canal, ejecuta extraer_canal_youtube. Si te pregunta qué harás o cómo funciona, explícaselo detalladamente con el diagrama de árbol de carpetas de su workspace, mencionando sus canales existentes (ej: FinanzasReales) y cómo se creará la nueva carpeta NombreCanal con InfoCanal para no duplicar ideas y aprovechar las etiquetas ganadoras.',
+        systemPrompt: 'Eres un analista y asistente de producción de YouTube en AutoProd. Tu objetivo es ayudar al usuario a importar y conectar canales de YouTube. Habla siempre de forma sencilla, amigable y cercana, evitando tecnicismos complejos o jerga técnica innecesaria. Cuando el usuario te proporcione una URL o @handle de un canal de YouTube, ejecuta de inmediato la herramienta extraer_canal_youtube. Una vez finalizada la extracción, felicítalo y dale un resumen claro y sencillo de los temas ganadores analizados y cómo pueden empezar a crear videos juntos para ese canal.',
         welcomeText: { 
-          es: `¡Hola! Conecta tu canal existente de YouTube a AutoProd. 🚀
-
-Al proporcionarme la URL o @handle de tu canal (ejemplo: \`https://youtube.com/@micanal\` o \`@micanal\`), extraeremos toda la data oficial de YouTube y crearemos una nueva carpeta de canal en tu workspace:
-
-\`\`\`text
-/Workspace
-├── /FinanzasReales (Tu canal existente)
-└── /NombreCanal (Nuevo canal extraído de YouTube)
-    ├── /InfoCanal
-    │   ├── Contexto_canal.md    # Identidad, nicho y audiencia
-    │   ├── Metricas_canal.md    # Ranking de etiquetas ganadoras
-    │   └── Historial_canal.md   # Catálogo anti-duplicados de videos
-    └── /Futuras_Carpetas_de_Videos (Creadas sin repetir ideas)
-\`\`\`
-
-**Beneficios clave:**
-• 🚫 **Cero ideas repetidas:** Sabremos con exactitud qué títulos ya publicaste para nunca duplicar contenido.
-• 📈 **Data comprobada:** Reutilizaremos las etiquetas (tags) con mayor promedio de reproducciones para maximizar el alcance.
-
-👉 **Pega aquí la URL o @handle de tu canal para comenzar:**`, 
-          en: `Hello! Connect your existing YouTube channel to AutoProd. 🚀
-
-Provide your channel URL or @handle (example: \`https://youtube.com/@mychannel\` or \`@mychannel\`) to extract past videos, tags and build your channel context:
-
-\`\`\`text
-/Workspace
-├── /FinanzasReales (Existing channel)
-└── /ChannelName (Newly extracted from YouTube)
-    ├── /InfoCanal
-    │   ├── Contexto_canal.md    # Niche & audience profile
-    │   ├── Metricas_canal.md    # Winning tags ranking
-    │   └── Historial_canal.md   # Anti-duplication catalog
-    └── /Future_Video_Folders    # Created without repeating ideas
-\`\`\`
-
-👉 **Paste your channel URL or @handle here to start:**` 
+          es: `¡Hola! Vamos a conectar e importar un canal de YouTube a AutoProd. 🚀\n\n**¿Qué debes hacer?**\nSolo **pega aquí abajo el enlace (URL) o el @nombre del canal** que deseas trabajar (por ejemplo: \`https://youtube.com/@micanal\` o simplemente \`@micanal\`).\n*(Puede ser tu propio canal o el canal de un competidor que quieras analizar)*.\n\n**¿Qué haré automáticamente por ti?**\n1. **Analizar sus mejores videos:** Detectaré los temas y etiquetas que más visitas consiguen.\n2. **Historial inteligente:** Guardaré los títulos ya publicados para asegurarnos de que tus próximos videos sean siempre originales y nunca repitas una idea.\n3. **Tu espacio de trabajo listo:** Dejaré todo organizado para que podamos empezar a planear nuevos videos para este canal de inmediato.\n\n👉 **Pega aquí abajo el enlace o @nombre de tu canal y comenzamos:**`,
+          en: `Hello! Let's connect and import a YouTube channel to AutoProd. 🚀\n\n**What should you do?**\nJust **paste below the link (URL) or the @handle of the channel** you want to work with (for example: \`https://youtube.com/@mychannel\` or simply \`@mychannel\`).\n*(It can be your own channel or a competitor channel you want to analyze)*.\n\n**What will I do automatically for you?**\n1. **Analyze top videos:** Identify the topics and tags that drive the most views.\n2. **Smart history:** Save existing published videos so your future ideas are always original and never duplicated.\n3. **Workspace setup:** Organize everything so we can immediately start planning new videos for this channel.\n\n👉 **Paste your channel link or @handle below to get started:**`
         },
       },
       channel: {

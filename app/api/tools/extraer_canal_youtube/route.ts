@@ -17,6 +17,21 @@ async function getYouTubeApiKey(supabase: any, userId: string): Promise<string> 
     return process.env.YOUTUBE_API_KEY.trim();
   }
 
+  // 1b. Fallback leyendo archivo .env o .env.local directamente
+  try {
+    for (const envFile of ['.env', '.env.local']) {
+      const envFilePath = path.join(process.cwd(), envFile);
+      const exists = await fs.access(envFilePath).then(() => true).catch(() => false);
+      if (exists) {
+        const content = await fs.readFile(envFilePath, 'utf-8');
+        const match = content.match(/^YOUTUBE_API_KEY=["']?([^"'\r\n]+)["']?/m);
+        if (match && match[1]?.trim()) {
+          return match[1].trim();
+        }
+      }
+    }
+  } catch {}
+
   // 2. Vault de Supabase a través del RPC get_api_key
   try {
     const { data: ytKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'youtube' });

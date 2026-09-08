@@ -362,106 +362,35 @@ export async function POST(req: Request) {
         }
 
         const isAtChannelLimit = !isAdmin && existingChannels.length >= maxChannels;
-        const planLimitsDirective = `\n\n=== REGLAS COMERCIALES Y LÍMITES DE SUSCRIPCIÓN DEL USUARIO ===
+        const planLimitsDirective = `\n\n=== REGLAS Y LÍMITES DE SUSCRIPCIÓN DEL USUARIO ===
 - Plan de Suscripción Actual: ${userPlan} (${planConfig.displayName})
 - Límite de canales permitidos por su plan: ${maxChannels >= 9999 ? 'Ilimitados' : `${maxChannels} canal(es)`}
 - Canales existentes actualmente en su workspace (${existingChannels.length}): ${existingChannels.length > 0 ? existingChannels.join(', ') : 'Ninguno'}
-
-⚠️ REGLA CRÍTICA DE GESTIÓN DE CANALES:
 ${isAtChannelLimit ? `
-¡ATENCIÓN! El usuario ya ha alcanzado el límite máximo de canales permitidos por su plan (${existingChannels.length} de ${maxChannels} canal(es)).
-Si el usuario te solicita crear un nuevo canal, abrir un canal adicional, o generar una nueva carpeta raíz para otro canal (ejemplo: "crear otro canal", "ayúdame a crear el canal X"):
-1. TIENES ESTRICTAMENTE PROHIBIDO ejecutar herramientas de creación de carpetas o canales en la raíz del workspace (NO llames a "crear_carpetas" para un nuevo canal, ni a "extraer_canal_youtube").
-2. NUNCA digas que creaste el canal ni inventes que ya existe la carpeta o que vas a proceder a crearla.
-3. Debes responderle de forma muy amable, empática y profesional informándole:
-   "Actualmente te encuentras en el plan ${planConfig.displayName}, el cual permite un máximo de ${maxChannels} canal(es) de YouTube. Tu espacio de trabajo ya tiene activo el canal '${existingChannels[0] || 'existente'}'.
-   Para gestionar más canales simultáneos sin borrar el actual:
-   • Plan Pro ($100 USD/mes): Hasta 3 canales profesionales simultáneos (Multi-nicho).
-   • Plan Enterprise ($150 USD/mes): Canales ILIMITADOS.
-   Puedes actualizar tu plan en cualquier momento desde la ventana de Planes & Suscripciones o en la barra superior."
-` : `
-El usuario tiene disponibilidad para crear canales (${existingChannels.length} de ${maxChannels >= 9999 ? 'ilimitados' : maxChannels}). Puedes proceder con la creación cuando lo solicite.
-`}
+⚠️ ATENCIÓN: El usuario ha alcanzado el límite máximo de canales permitidos por su plan (${existingChannels.length} de ${maxChannels}).
+Si solicita crear o extraer un nuevo canal adicional, no ejecutes herramientas de creación de canales e infórmale de forma muy amable y profesional que ha alcanzado el límite de canales de su plan ${planConfig.displayName} y sugiérele los planes superiores (Pro o Enterprise).` : ''}
 `;
         systemPrompt += planLimitsDirective;
-
-        const channelExtractionDirective = `\n\n--- INSTRUCCIÓN PARA EXPLICAR EXTRACCIÓN DE CANALES ---
-Si el usuario te pregunta qué harás al pasarle una URL, cómo funciona la extracción de un canal o qué pasará en su espacio de trabajo:
-1. Explícale de forma muy clara, profesional y amigable usando un diagrama de árbol de carpetas Markdown.
-2. Menciona sus canales existentes como referencia (por ejemplo, si ves "FinanzasReales" en su workspace actual, úsalo como ejemplo directo).
-3. Muestra el diagrama de cómo quedará su workspace:
-\`\`\`text
-/Workspace
-├── /FinanzasReales (Tu canal actual)
-└── /NombreCanal (Nuevo canal traído desde YouTube)
-    ├── /InfoCanal
-    │   ├── Contexto_canal.md    # Identidad, nicho, tono y audiencia
-    │   ├── Metricas_canal.md    # Ranking de etiquetas (tags) ganadoras
-    │   └── Historial_canal.md   # Catálogo anti-duplicación de videos
-    └── /Futuras_Carpetas_de_Videos (Creadas sin repetir ideas)
-\`\`\`
-4. Resalta los dos beneficios clave para el creador:
-   • 🚫 CERO IDEAS DUPLICADAS: Analizaremos todos los videos publicados para que las nuevas carpetas que creemos en AutoProd exploren ángulos frescos y nunca repitan un tema ya realizado.
-   • 📈 APROVECHAR LO QUE YA FUNCIONÓ: Minaremos las etiquetas (tags) y fórmulas de títulos con mayor volumen de reproducciones para incorporarlas en los nuevos videos.
-5. Invítalo amablemente a compartirte la URL o @handle de su canal para comenzar la extracción de inmediato.`;
-
-        systemPrompt += channelExtractionDirective;
 
         if (activeChannel) {
           const channelNiche = activeChannel.niche || activeChannelContext?.title || activeChannel.name;
           const channelSummary = activeChannelContext?.contextSummary || activeChannelContext?.description || `Canal enfocado en el nicho: ${channelNiche}.`;
           const channelLocal = activeChannel.localPath || (currentWorkspacePath ? path.join(currentWorkspacePath, activeChannel.name) : `Workspace/${activeChannel.name}`);
 
-          const channelSpecificDirective = `\n\n=== CANAL ACTIVO SELECCIONADO EN EL CHAT: "${activeChannel.name}" ===
-- CANAL ACTIVO: "${activeChannel.name}"
-- NICHO Y TEMÁTICA PERMITIDA: "${channelNiche}"
-- RUTA FÍSICA ASOCIADA: "${channelLocal}"
-- RESUMEN DEL CANAL:
-${channelSummary}
+          const channelSpecificDirective = `\n\n=== CANAL ACTIVO SELECCIONADO: "${activeChannel.name}" ===
+- Canal: "${activeChannel.name}"
+- Nicho / Temática: "${channelNiche}"
+- Ubicación física: "${channelLocal}"
+- Resumen de identidad: ${channelSummary}
 
-⚠️ REGLA CRÍTICA DE CONTEXTO:
-El usuario ha seleccionado expresamente el canal "${activeChannel.name}".
-1. NUNCA hables de forma genérica ni le preguntes al usuario "¿de cuál de tus canales quieres hablar?" ni menciones los otros canales como si no supieras cuál está seleccionado.
-2. Reconoce directamente que estás operando dentro de "${activeChannel.name}".
-3. Todo el contenido generado (ideas, guiones, hooks, títulos, miniaturas, videos en bucle y carpetas) DEBE pertenecer ESTRICTAMENTE al nicho de "${channelNiche}" para este canal.
-
-=== PRESENTACIÓN DE CAPACIDADES PARA EL CANAL "${activeChannel.name}" ===
-Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", o pida ideas:
-Responde como el socio creativo y director de contenido de su canal "${activeChannel.name}".
-Usa un tono CERCANO, AMIGABLE Y MUY FÁCIL DE ENTENDER. 
-⛔ ESTRICTAMENTE PROHIBIDO USAR JERGA TÉCNICA: NUNCA uses términos como "Copia Directa 1:1", "línea de tiempo multiclip", "catálogo anti-duplicados", "concatenación", "CRF", "codec", "bitrate", etc. Explica todo pensando en un creador de contenido que solo quiere que sus videos queden profesionales, consigan más visitas y le ahorren horas de trabajo:
-
-ESTRUCTURA DE RESPUESTA SENCILLA Y CLARA:
-• **Saludo y Enfoque:**
-  "¡Hola! Aquí estamos para hacer crecer tu canal **${activeChannel.name}** (temática: ${channelNiche})."
-
-• **Lo que podemos hacer juntos para este canal:**
-  - 🎬 **Videos Largos y Fondos Musicales:** Convertimos clips en videos largos (de 30 minutos a varias horas) con música de fondo que nunca se corta ni se pixela. Ideal para que la gente los deje sonando mientras estudia, duerme o se relaja.
-  - ✍️ **Ideas y Guiones Atrapantes:** Escribimos historias y guiones con ganchos en los primeros segundos para enganchar a tu audiencia y evitar que se vayan de tus videos.
-  - 🎨 **Miniaturas que Dan Ganas de Hacer Clic:** Diseñamos portadas llamativas para tus videos. Si tienes una imagen de referencia que te guste de YouTube, la analizamos para crear algo igual de atractivo.
-  - 🔍 **Inspiración y Análisis de Competencia:** Pásame el link de un canal de YouTube que admires en tu temática y revisamos qué videos y etiquetas le están funcionando mejor, asegurándonos de que tus temas sean frescos y originales.
-  - 📂 **Todo en Orden:** Guardamos automáticamente cada guion, imagen y video organizado en su carpeta para que no pierdas nada.
-
-• **3 Formas Fáciles de Arrancar:**
-  1. ¿Escribimos la idea o el guion de tu próximo video?
-  2. ¿Revisamos un canal de YouTube que te guste para ver qué le funciona?
-  3. ¿O armamos un video largo con música de fondo o una miniatura?
-
-Dime cuál de estas opciones te gustaría arrancar hoy.`;
+DIRECTIVA OPERATIVA:
+Estás operando directamente dentro de "${activeChannel.name}". Mantén tus respuestas claras, humanas, amigables y enfocadas en este nicho. Para consultar procedimientos, preguntas clave o plantillas paso a paso para guiones, videos o miniaturas, ejecuta la herramienta "consultar_prompts".`;
 
           systemPrompt += channelSpecificDirective;
         } else {
-          const generalCapabilitiesDirective = `\n\n=== DIRECTIVA DE PRESENTACIÓN DE CAPACIDADES (MODO GENERAL / SIN CANAL SELECCIONADO) ===
-Cuando el usuario salude, pregunte "¿en qué me puedes ayudar?", "¿qué puedes hacer?", o pida orientación:
-Responde con un lenguaje sencillo, cercano y sin tecnicismos complejos:
-1. Menciona los canales que tiene disponibles en su espacio de trabajo (${existingChannels.length > 0 ? existingChannels.join(', ') : 'tus canales'}).
-2. Explica de forma clara y directa lo que AutoProd resuelve:
-   - 🎬 Videos largos en bucle con música de fondo (para dejar sonando horas sin cortes ni pixelado).
-   - ✍️ Guiones con ganchos al inicio para retener a los espectadores.
-   - 🎨 Miniaturas atractivas que aumenten los clics de tus videos.
-   - 🔍 Análisis de canales de la competencia para ver qué títulos y etiquetas generan más visitas.
-   - 📂 Organización automática de archivos y proyectos.
-3. Invítalo a seleccionar o indicar en cuál de sus canales le gustaría trabajar hoy.`;
+          const generalCapabilitiesDirective = `\n\n=== CONTEXTO GENERAL DEL WORKSPACE ===
+- Canales detectados: ${existingChannels.length > 0 ? existingChannels.join(', ') : 'Ninguno aún'}.
+(Habla siempre con lenguaje sencillo y cercano. Si necesitas consultar procedimientos o plantillas para guiar al usuario, invoca la herramienta "consultar_prompts").`;
 
           systemPrompt += generalCapabilitiesDirective;
         }
@@ -877,6 +806,7 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
     });
 
     // Guardar token usage y descontar créditos si usó llave maestra
+    let updatedBalance: number | null = null;
     if (userId) {
       if (result.usage && result.usage.totalTokens > 0) {
         try {
@@ -896,7 +826,6 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
       }
 
       // Descuento de créditos
-      let updatedBalance: number | null = null;
       if (usedSystemKey && userWalletId && requiredCredits > 0) {
         try {
           const [updatedWallet] = await prisma.$transaction([
@@ -968,14 +897,12 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
       }
     }
 
-    const MUTATING_TOOLS = new Set([
-      'crear_carpetas',
-      'eliminar_carpetas',
-      'guardar_archivo',
-      'generar_info_canal',
-      'generar_metadatos_subida'
-    ]);
-    const workspaceModified = executedTools.some(t => MUTATING_TOOLS.has(t));
+    // Detección dinámica de mutaciones en el workspace basada en las herramientas ejecutadas
+    const readOnlyToolPrefixes = ['listar_', 'leer_', 'consultar_', 'workspace_default', 'verificar_'];
+    const workspaceModified = executedTools.some(toolName => {
+      const isReadOnly = readOnlyToolPrefixes.some(prefix => toolName.startsWith(prefix));
+      return !isReadOnly;
+    });
 
     return NextResponse.json({ 
       text: finalOutput, 
