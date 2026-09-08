@@ -673,7 +673,7 @@ export default function Dashboard() {
             toast.success(lang === 'es' ? 'Workspace sincronizado con los cambios de la IA' : 'Workspace synchronized with AI changes');
           }
 
-          // Update UI with AI response
+          // Update UI with AI response and bind channelId if newly detected
           setConversations(prev => prev.map(c => {
             if (c.id !== conversationId) return c;
             const newMsgs = [...c.messages];
@@ -683,8 +683,20 @@ export default function Dashboard() {
               modelName: data.modelName || friendlyModelName,
               isDeepThinking: data.isDeepThinking !== undefined ? data.isDeepThinking : isDeepThinking
             };
-            return { ...c, messages: newMsgs };
+            return { 
+              ...c, 
+              messages: newMsgs,
+              channelId: data.channelId || c.channelId
+            };
           }));
+
+          if (data.channelId && data.channelId !== activeConversation?.channelId) {
+            fetch(`/api/conversations/${conversationId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ channelId: data.channelId })
+            }).catch(() => {});
+          }
         }
       } catch (e: any) {
         if (e.name === 'AbortError') {

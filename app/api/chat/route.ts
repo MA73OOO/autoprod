@@ -237,6 +237,8 @@ export async function POST(req: Request) {
     let systemPrompt = baseSystemPrompt;
     const aiTools: Record<string, any> = {};
     const executedTools: string[] = [];
+    let activeChannel: any = null;
+    let activeChannelContext: any = null;
 
     try {
       // Obtener el agente orquestador desde la BD
@@ -309,27 +311,23 @@ export async function POST(req: Request) {
 
         systemPrompt += workspaceStructureSnapshot;
 
-        // Resolver canal activo de forma segura (sin relación Prisma context inexistente)
-        let activeChannel: any = null;
-        let activeChannelContext: any = null;
+        // ──────────────────────────────────────────────
+        // RESOLVER CANAL ACTIVO (DETECCIÓN INTELIGENTE)
+        // ──────────────────────────────────────────────
+        activeChannel = null;
+        activeChannelContext = null;
+
+        const allUserChannels = userId ? await prisma.channel.findMany({ where: { userId } }) : [];
+
+        // 1. Por channelId explícito en la petición
         if (channelId) {
           const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channelId);
-          try {
-            if (isUuid) {
-              activeChannel = await prisma.channel.findFirst({
-                where: { id: channelId }
-              });
-            }
-            if (!activeChannel) {
-              activeChannel = await prisma.channel.findFirst({
-                where: { name: { equals: channelId, mode: 'insensitive' } }
-              });
-            }
-          } catch (findErr) {
-            console.warn('[Channel lookup error]:', findErr);
+          if (isUuid) {
+            activeChannel = allUserChannels.find(c => c.id === channelId) || await prisma.channel.findFirst({ where: { id: channelId } });
           }
-
-          // Si no está en BD aún pero es una carpeta seleccionada en workspace:
+          if (!activeChannel) {
+            activeChannel = allUserChannels.find(c => c.name.toLowerCase() === String(channelId).toLowerCase());
+          }
           if (!activeChannel && typeof channelId === 'string' && channelId.trim()) {
             activeChannel = {
               id: channelId,
@@ -338,26 +336,162 @@ export async function POST(req: Request) {
               localPath: currentWorkspacePath ? path.join(currentWorkspacePath, channelId) : null
             };
           }
-        } else if (userId) {
-          const userChannels = await prisma.channel.findMany({
-            where: { userId },
-            take: 2
-          });
-          if (userChannels.length === 1) {
-            activeChannel = userChannels[0];
+        }
+
+        // 2. Detección inteligente por lenguaje natural en el mensaje del usuario si no vino channelId
+        if (!activeChannel && messages && messages.length > 0) {
+          const recentUserText = messages
+            .filter((m: any) => m.role === 'user')
+            .slice(-2)
+            .map((m: any) => (m.content || '').toLowerCase())
+            .join(' ');
+
+          const normUserText = recentUserText.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+          // a) Match contra canales del usuario en Base de Datos
+          for (const ch of allUserChannels) {
+            const normName = ch.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            if (normUserText.includes(normName)) {
+              activeChannel = ch;
+              break;
+            }
+          }
+
+          // b) Match por palabras clave distintivas (ej: "padre" o "abrazo" para "El Abrazo del Padre worship")
+          if (!activeChannel) {
+            const stopWords = new Set(['canal', 'para', 'el', 'la', 'los', 'las', 'de', 'del', 'un', 'una', 'en', 'con', 'video', 'videos', 'nuevo', 'crear', 'hacer', 'puedes', 'ayudarme', 'quiero']);
+            for (const ch of allUserChannels) {
+              const words = ch.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/\s+/).filter((w: string) => w.length > 3 && !stopWords.has(w));
+              if (words.some((w: string) => normUserText.includes(w))) {
+                activeChannel = ch;
+                break;
+              }
+            }
+          }
+
+          // c) Match contra carpetas físicas en disco del workspace
+          if (!activeChannel && existingChannels.length > 0) {
+            const stopWords = new Set(['canal', 'para', 'el', 'la', 'los', 'las', 'de', 'del', 'un', 'una', 'en', 'con', 'video', 'videos', 'nuevo', 'crear', 'hacer', 'puedes', 'ayudarme', 'quiero']);
+            for (const folderName of existingChannels) {
+              const normFolder = folderName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+              if (normUserText.includes(normFolder)) {
+                activeChannel = allUserChannels.find(c => c.name.toLowerCase() === folderName.toLowerCase()) || {
+                  id: folderName,
+                  name: folderName,
+                  niche: folderName,
+                  localPath: currentWorkspacePath ? path.join(currentWorkspacePath, folderName) : null
+                };
+                break;
+              }
+              const words = normFolder.split(/\s+/).filter((w: string) => w.length > 3 && !stopWords.has(w));
+              if (words.some((w: string) => normUserText.includes(w))) {
+                activeChannel = allUserChannels.find(c => c.name.toLowerCase() === folderName.toLowerCase()) || {
+                  id: folderName,
+                  name: folderName,
+                  niche: folderName,
+                  localPath: currentWorkspacePath ? path.join(currentWorkspacePath, folderName) : null
+                };
+                break;
+              }
+            }
           }
         }
 
+        // 3. Fallback: Si el usuario tiene exactamente 1 canal registrado, asumirlo por defecto
+        if (!activeChannel && allUserChannels.length === 1) {
+          activeChannel = allUserChannels[0];
+        }
+
+        // ──────────────────────────────────────────────
+        // CARGA PROFUNDA DE ADN, MÉTRICAS E HISTORIAL
+        // ──────────────────────────────────────────────
+        let topTagsFormatted = '';
+        let recentVideosFormatted = '';
+        let channelSummary = '';
+        let channelNiche = '';
+        let channelLocal = '';
+
         if (activeChannel) {
-          try {
-            const { data: ctxData } = await supabase
-              .from('channelContext')
-              .select('*')
-              .eq('channelId', activeChannel.id)
-              .maybeSingle();
-            activeChannelContext = ctxData;
-          } catch (sbErr: any) {
-            console.warn('[Supabase channelContext error]:', sbErr?.message);
+          channelNiche = activeChannel.niche || activeChannel.name;
+          channelLocal = activeChannel.localPath || (currentWorkspacePath ? path.join(currentWorkspacePath, activeChannel.name) : `Workspace/${activeChannel.name}`);
+
+          // Cargar channelContext directamente desde Postgres con raw query (bypasea RLS)
+          if (activeChannel.id) {
+            try {
+              const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(activeChannel.id);
+              let rows: any[] = [];
+              if (isUuid) {
+                rows = await prisma.$queryRawUnsafe(
+                  `SELECT * FROM public."channelContext" WHERE "channelId" = $1::uuid LIMIT 1`,
+                  activeChannel.id
+                );
+              } else {
+                rows = await prisma.$queryRawUnsafe(
+                  `SELECT * FROM public."channelContext" WHERE "title" ILIKE $1 LIMIT 1`,
+                  `%${activeChannel.name}%`
+                );
+              }
+              if (rows && rows.length > 0) {
+                activeChannelContext = rows[0];
+              }
+            } catch (queryErr: any) {
+              console.warn('[DB channelContext query error]:', queryErr?.message);
+            }
+          }
+
+          // Cargar archivos locales de InfoCanal si existen físicamente en disco
+          let localContextText = '';
+          let localMetricasText = '';
+          let localHistorialText = '';
+          if (currentWorkspacePath && activeChannel.name) {
+            const infoCanalPath = path.join(currentWorkspacePath, activeChannel.name, 'InfoCanal');
+            try {
+              if (fs.existsSync(infoCanalPath)) {
+                const ctxFile = path.join(infoCanalPath, 'Contexto_canal.md');
+                if (fs.existsSync(ctxFile)) localContextText = fs.readFileSync(ctxFile, 'utf-8');
+                const metFile = path.join(infoCanalPath, 'Metricas_canal.md');
+                if (fs.existsSync(metFile)) localMetricasText = fs.readFileSync(metFile, 'utf-8');
+                const histFile = path.join(infoCanalPath, 'Historial_canal.md');
+                if (fs.existsSync(histFile)) localHistorialText = fs.readFileSync(histFile, 'utf-8');
+              }
+            } catch (fsErr: any) {
+              console.warn('[InfoCanal physical read error]:', fsErr.message);
+            }
+          }
+
+          // Resumen de identidad y nicho
+          channelSummary = activeChannelContext?.contextSummary
+            || activeChannelContext?.description
+            || (localContextText ? localContextText.slice(0, 1200) : `Canal de YouTube enfocado en el nicho: ${channelNiche}`);
+
+          if (activeChannelContext?.title && !channelNiche.includes(activeChannelContext.title)) {
+            channelNiche = `${channelNiche} (Nombre oficial en YouTube: "${activeChannelContext.title}")`;
+          }
+
+          // Formatear mejores etiquetas
+          let bestTagsList: any[] = [];
+          if (activeChannelContext?.bestTags) {
+            bestTagsList = Array.isArray(activeChannelContext.bestTags)
+              ? activeChannelContext.bestTags
+              : (typeof activeChannelContext.bestTags === 'string' ? JSON.parse(activeChannelContext.bestTags) : []);
+          }
+          if (bestTagsList.length > 0) {
+            topTagsFormatted = bestTagsList.slice(0, 12).map((t: any) => `• "${t.tag}" (Promedio vistas: ${Number(t.avgViews || 0).toLocaleString()} | Total: ${Number(t.totalViews || 0).toLocaleString()})`).join('\n');
+          } else if (localMetricasText) {
+            topTagsFormatted = localMetricasText.slice(0, 1000);
+          }
+
+          // Formatear historial de videos ya publicados
+          let coveredList: any[] = [];
+          if (activeChannelContext?.topicsCovered) {
+            coveredList = Array.isArray(activeChannelContext.topicsCovered)
+              ? activeChannelContext.topicsCovered
+              : (typeof activeChannelContext.topicsCovered === 'string' ? JSON.parse(activeChannelContext.topicsCovered) : []);
+          }
+          if (coveredList.length > 0) {
+            recentVideosFormatted = coveredList.slice(0, 15).map((v: any) => `• "${v.title}" (${Number(v.views || 0).toLocaleString()} vistas)`).join('\n');
+          } else if (localHistorialText) {
+            recentVideosFormatted = localHistorialText.slice(0, 1000);
           }
         }
 
@@ -373,24 +507,40 @@ Si solicita crear o extraer un nuevo canal adicional, no ejecutes herramientas d
         systemPrompt += planLimitsDirective;
 
         if (activeChannel) {
-          const channelNiche = activeChannel.niche || activeChannelContext?.title || activeChannel.name;
-          const channelSummary = activeChannelContext?.contextSummary || activeChannelContext?.description || `Canal enfocado en el nicho: ${channelNiche}.`;
-          const channelLocal = activeChannel.localPath || (currentWorkspacePath ? path.join(currentWorkspacePath, activeChannel.name) : `Workspace/${activeChannel.name}`);
-
-          const channelSpecificDirective = `\n\n=== CANAL ACTIVO SELECCIONADO: "${activeChannel.name}" ===
+          const channelSpecificDirective = `\n\n=== 🧠 ADN Y MEMORIA ACTIVA DEL CANAL: "${activeChannel.name}" ===
 - Canal: "${activeChannel.name}"
-- Nicho / Temática: "${channelNiche}"
-- Ubicación física: "${channelLocal}"
-- Resumen de identidad: ${channelSummary}
+- Nicho / Enfoque: "${channelNiche}"
+- Resumen de Identidad: ${channelSummary}
+- Ubicación física en Disco: "${channelLocal}"
 
-DIRECTIVA OPERATIVA:
-Estás operando directamente dentro de "${activeChannel.name}". Mantén tus respuestas claras, humanas, amigables y enfocadas en este nicho. Para consultar procedimientos, preguntas clave o plantillas paso a paso para guiones, videos o miniaturas, ejecuta la herramienta "consultar_prompts".`;
+${topTagsFormatted ? `🔥 TEMAS Y ETIQUETAS MÁS EXITOSAS (DATOS REALES DE AUDIENCIA EN YOUTUBE):
+${topTagsFormatted}` : ''}
+
+${recentVideosFormatted ? `🚫 HISTORIAL DE VIDEOS YA PUBLICADOS (PROHIBIDO DUPLICAR O REPETIR ESTOS TEMAS/TÍTULOS):
+${recentVideosFormatted}` : ''}
+
+⚡ DIRECTIVA MANDATORIA DE PRODUCCIÓN (CERO PREGUNTAS EN BLANCO):
+El usuario te ha pedido crear un video o planificar contenido para "${activeChannel.name}".
+⛔ ESTÁ ESTRICTAMENTE PROHIBIDO hacer preguntas genéricas o en blanco como:
+- "¿Sobre qué debería tratar el video?"
+- "¿Qué estilo buscas (reflexivo, educativo, musical, etc.)?"
+- "¿Cuánto debería durar?"
+- "¿Qué detalles específicos quieres incluir?"
+
+¡Tú eres el Director Ejecutivo de AutoProd y YA TIENES el ADN y las métricas de este canal en tu memoria!
+TU CONDUCTA OBLIGATORIA:
+1. Saluda reconociendo con entusiasmo el canal "${activeChannel.name}" y destacando su estilo y audiencia (basándote en su resumen y etiquetas con más visitas).
+2. PROPÓN PROACTIVAMENTE 2 O 3 CONCEPTOS O TÍTULOS DE VIDEO GANADORES:
+   - Diseñados específicamente utilizando sus mejores etiquetas y temas más vistos.
+   - Garantizando que sean ideas NUEVAS y frescas que NO dupliquen ninguno de los videos de su historial.
+   - Con una breve explicación de 1 línea de por qué cada idea tendrá éxito basándote en la audiencia del canal.
+3. Pregúntale amablemente al usuario cuál de las 3 opciones le gusta más o cómo desea personalizarla para proceder a crear la carpeta del video en su disco (Guiones, Videos, Miniatura, Musica, Ambiente) y redactar el guion.`;
 
           systemPrompt += channelSpecificDirective;
         } else {
           const generalCapabilitiesDirective = `\n\n=== CONTEXTO GENERAL DEL WORKSPACE ===
-- Canales detectados: ${existingChannels.length > 0 ? existingChannels.join(', ') : 'Ninguno aún'}.
-(Habla siempre con lenguaje sencillo y cercano. Si necesitas consultar procedimientos o plantillas para guiar al usuario, invoca la herramienta "consultar_prompts").`;
+- Canales detectados en tu workspace: ${existingChannels.length > 0 ? existingChannels.join(', ') : 'Ninguno aún'}.
+Si el usuario dice que desea crear o producir un video pero no ha especificado claramente para cuál de sus canales lo desea, pregúntale amablemente: "¿Para cuál de tus canales (${existingChannels.join(', ')}) te gustaría que preparemos este video?". En cuanto el usuario lo indique, utilizarás de inmediato su memoria y métricas para proponerle ideas ganadoras sin hacer preguntas en blanco.`;
 
           systemPrompt += generalCapabilitiesDirective;
         }
@@ -431,6 +581,14 @@ Estás operando directamente dentro de "${activeChannel.name}". Mantén tus resp
                   }
                   if (!payload.channel_name && (payload.channel || payload.canal || payload.nombre_canal)) {
                     payload.channel_name = payload.channel || payload.canal || payload.nombre_canal;
+                  }
+
+                  // Sanitizar nombres de carpetas para evitar caracteres ilegales en Windows/POSIX (: * ? " < > |)
+                  if (payload.folder_name && typeof payload.folder_name === 'string') {
+                    payload.folder_name = payload.folder_name.replace(/[\\/:*?"<>|]/g, ' - ').replace(/\s+/g, ' ').trim();
+                  }
+                  if (payload.channel_name && typeof payload.channel_name === 'string') {
+                    payload.channel_name = payload.channel_name.replace(/[\\/:*?"<>|]/g, ' - ').replace(/\s+/g, ' ').trim();
                   }
                   if (!payload.base_path) {
                     if (payload.path) payload.base_path = payload.path;
@@ -910,7 +1068,9 @@ DIRECTIVA ESTRATÉGICA PARA PENSAMIENTO PROFUNDO:
       workspaceModified,
       executedTools,
       isDeepThinking,
-      newBalance: updatedBalance
+      newBalance: updatedBalance,
+      channelId: activeChannel?.id,
+      channelName: activeChannel?.name
     });
   } catch (error: any) {
     console.error('Chat API Error:', error);
