@@ -31,10 +31,12 @@ flowchart TD
 2. **Traducción Dinámica de Schemas JSON a Zod:**
    - Lee definiciones de herramientas desde la tabla `Tool` de Prisma y las adapta al vuelo usando `jsonSchema` de `ai-core`.
 3. **Loop Multi-Paso (`maxSteps: 5`):**
-   - Permite que el modelo encadene hasta 5 operaciones consecutivas (ej: listar carpetas $\to$ leer archivo $\to$ crear carpeta nueva $\to$ escribir guion $\to$ responder).
-4. **Sincronización Bidireccional (`workspaceModified`):**
+   - Permite que el modelo encadene hasta 5 operaciones consecutivas (ej: `consultar_prompts` para cargar SOPs de creación de canales o videos $\to$ verificar workspace $\to$ ejecutar `crear_carpetas` $\to$ generar metadatos $\to$ responder).
+4. **Carga Dinámica de SOPs y Taxonomía (`consultar_prompts`):**
+   - El orquestador ya no almacena directivas extensas hardcodeadas en TypeScript. Consulta dinámicamente plantillas maestras y esquemas de carpetas desde la tabla `PromptTemplate` a través de la herramienta `/api/tools/prompts`.
+5. **Sincronización Bidireccional (`workspaceModified`):**
    - Si una herramienta altera el sistema de archivos, el endpoint emite la señal para que el componente `FileTree.tsx` recargue automáticamente el árbol de archivos.
-5. **Modo Pensamiento Profundo (Deep Reasoning):**
+6. **Modo Pensamiento Profundo (Deep Reasoning):**
    - Enrutamiento a modelos de razonamiento riguroso con inyección de reglas de retención y psicología de audiencia.
 
 ---
@@ -42,6 +44,7 @@ flowchart TD
 ## 📂 3. Archivos Involucrados
 
 - [`app/api/chat/route.ts`](file:///e:/autoprod/app/api/chat/route.ts): Endpoint central del orquestador.
-- [`components/dashboard/ChatPanel.tsx`](file:///e:/autoprod/components/dashboard/ChatPanel.tsx): Panel de chat con selector de modo de razonamiento y plantillas guiadas.
-- [`prisma/schema.prisma`](file:///e:/autoprod/prisma/schema.prisma): Modelos `Agent`, `Tool` y `AgentTool`.
-- [`scripts/seed-orchestrator.ts`](file:///e:/autoprod/scripts/seed-orchestrator.ts): Catálogo de herramientas base registradas.
+- [`app/api/tools/prompts/route.ts`](file:///e:/autoprod/app/api/tools/prompts/route.ts): Herramienta `consultar_prompts` para SOPs dinámicos.
+- [`migrations/003_baseline_orchestrator_and_prompts.sql`](file:///e:/autoprod/migrations/003_baseline_orchestrator_and_prompts.sql): Migración SQL declarativa de infraestructura y prompts.
+- [`components/dashboard/ChatPanel.tsx`](file:///e:/autoprod/components/dashboard/ChatPanel.tsx): Panel de chat conectado a plantillas dinámicas de BD.
+- [`prisma/schema.prisma`](file:///e:/autoprod/prisma/schema.prisma): Modelos `Agent`, `Tool`, `AgentTool` y `PromptTemplate`.

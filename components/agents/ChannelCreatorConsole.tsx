@@ -36,17 +36,13 @@ export default function ChannelCreatorConsole({ workspacePath, onSuccess }: Prop
     const toastId = toast.loading('Construyendo estructura del canal...');
 
     try {
-      const res = await fetch('/api/agents/channel-creator', {
+      const res = await fetch('/api/tools/generar_info_canal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspacePath,
-          channelName,
-          theme,
-          style,
-          audience,
-          includeConfigPrompt,
-          includeVisualPrompts,
+          nombre_canal: channelName,
+          contexto_del_usuario: `Tema: ${theme}. Estilo: ${style || 'General'}. Audiencia: ${audience || 'Público general'}.`,
+          _userContext: { workspacePath },
         }),
       });
 

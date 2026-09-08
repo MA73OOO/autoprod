@@ -36,14 +36,16 @@ Herramientas de bajo nivel registradas en el catálogo de Prisma:
 
 ---
 
-## ⚡ 3. Sub-Agentes Especialistas (Cloud Premium)
+## ⚡ 3. Herramientas de Alto Nivel del Orquestador (`/api/tools/`)
 
-Agentes que usan modelos pesados y se activan por delegación del Orquestador:
+Herramientas especializadas invocadas autónomamente por el Orquestador central mediante Function Calling:
 
-| Slug | Nombre | Endpoint | Modelo | Estado |
+| Slug | Nombre | Endpoint | Descripción | Estado |
 |---|---|---|---|:---:|
-| `channel_architect` | Arquitecto de Canales | `/api/agents/channel-creator` | Gemini Flash | `✅ ACTIVO` |
-| `gestor_movement` | Gestor Movement | `/api/agents/movement` | Gemini Flash + AI SDK Tools | `✅ ACTIVO` |
+| `consultar_prompts` | Consultor de SOPs y Plantillas | `/api/tools/prompts` | Permite al cerebro consultar guías operativas, plantillas y taxonomía de carpetas bajo demanda | `✅ ACTIVA` |
+| `generar_info_canal` | Generador de Identidad de Canal | `/api/tools/generar_info_canal` | Diseña guía de branding (logo, banner) y crea `InfoCanal/Contexto_canal.md` | `✅ ACTIVA` |
+| `generar_metadatos_subida` | Generador de Metadatos y Estructura | `/api/tools/generar_metadatos_subida` | Genera títulos, tags, descripción y crea las 5 carpetas de producción del video | `✅ ACTIVA` |
+| `estado_sistema` | Verificador de Diagnóstico | `/api/tools/estado_sistema` | Reporta dependencias locales instaladas (FFmpeg, Python, Node) | `✅ ACTIVA` |
 
 ---
 

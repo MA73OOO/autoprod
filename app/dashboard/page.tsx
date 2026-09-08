@@ -308,7 +308,7 @@ export default function Dashboard() {
     const load = async () => {
       try {
         const [pr, co, ch] = await Promise.all([
-          fetch('/api/prompts'),
+          fetch('/api/tools/prompts'),
           fetch('/api/conversations'),
           fetch('/api/channels'),
         ]);
@@ -447,44 +447,27 @@ export default function Dashboard() {
       return;
     }
 
-    const nameMap: Record<string, string> = { channel: 'crear_canal', video: 'crear_video', script: 'crear_guion', prompt: 'crear_prompt', import_channel: 'extraer_canal_youtube' };
-    const template = promptTemplates.find(p => p.name === nameMap[roleType]);
+    const nameMap: Record<string, string> = { 
+      channel: 'crear_canal', 
+      video: 'crear_video', 
+      script: 'crear_guion', 
+      prompt: 'crear_prompt', 
+      import_channel: 'extraer_canal_youtube' 
+    };
+    const targetTemplateName = nameMap[roleType] || roleType;
+    const template = promptTemplates.find(p => p.name === targetTemplateName);
 
-    const FALLBACKS: Record<string, { title: { es: string; en: string }; systemPrompt: string; welcomeText: { es: string; en: string } }> = {
-      import_channel: {
-        title: { es: 'Extraer Canal 📥', en: 'Extract Channel 📥' },
-        systemPrompt: 'Eres un analista y asistente de producción de YouTube en AutoProd. Tu objetivo es ayudar al usuario a importar y conectar canales de YouTube. Habla siempre de forma sencilla, amigable y cercana, evitando tecnicismos complejos o jerga técnica innecesaria. Cuando el usuario te proporcione una URL o @handle de un canal de YouTube, ejecuta de inmediato la herramienta extraer_canal_youtube. Una vez finalizada la extracción, felicítalo y dale un resumen claro y sencillo de los temas ganadores analizados y cómo pueden empezar a crear videos juntos para ese canal.',
-        welcomeText: { 
-          es: `¡Hola! Vamos a conectar e importar un canal de YouTube a AutoProd. 🚀\n\n**¿Qué debes hacer?**\nSolo **pega aquí abajo el enlace (URL) o el @nombre del canal** que deseas trabajar (por ejemplo: \`https://youtube.com/@micanal\` o simplemente \`@micanal\`).\n*(Puede ser tu propio canal o el canal de un competidor que quieras analizar)*.\n\n**¿Qué haré automáticamente por ti?**\n1. **Analizar sus mejores videos:** Detectaré los temas y etiquetas que más visitas consiguen.\n2. **Historial inteligente:** Guardaré los títulos ya publicados para asegurarnos de que tus próximos videos sean siempre originales y nunca repitas una idea.\n3. **Tu espacio de trabajo listo:** Dejaré todo organizado para que podamos empezar a planear nuevos videos para este canal de inmediato.\n\n👉 **Pega aquí abajo el enlace o @nombre de tu canal y comenzamos:**`,
-          en: `Hello! Let's connect and import a YouTube channel to AutoProd. 🚀\n\n**What should you do?**\nJust **paste below the link (URL) or the @handle of the channel** you want to work with (for example: \`https://youtube.com/@mychannel\` or simply \`@mychannel\`).\n*(It can be your own channel or a competitor channel you want to analyze)*.\n\n**What will I do automatically for you?**\n1. **Analyze top videos:** Identify the topics and tags that drive the most views.\n2. **Smart history:** Save existing published videos so your future ideas are always original and never duplicated.\n3. **Workspace setup:** Organize everything so we can immediately start planning new videos for this channel.\n\n👉 **Paste your channel link or @handle below to get started:**`
-        },
-      },
-      channel: {
-        title: { es: 'Crear Canal 📺', en: 'Create Channel 📺' },
-        systemPrompt: 'Eres un especialista en optimización y configuración de canales de YouTube.',
-        welcomeText: { es: '¡Hola! Diseñemos la estructura de tu nuevo canal. ¿De qué temática o nicho te gustaría que sea?', en: "Hello! Let's design your new channel. What topic or niche?" },
-      },
-      video: {
-        title: { es: 'Crear Video 🎬', en: 'Create Video 🎬' },
-        systemPrompt: 'Eres un experto productor de video para YouTube.',
-        welcomeText: { es: '¡Hola! Planifiquemos la estructura para tu nuevo video.', en: "Hello! Let's plan the structure for your new video." },
-      },
-      script: {
-        title: { es: 'Crear Guion 📄', en: 'Create Script 📄' },
-        systemPrompt: 'Eres un guionista profesional especializado en videos virales de YouTube.',
-        welcomeText: { es: '¡Hola! Redactemos el guion para tu próximo video.', en: "Hello! Let's write the script for your next video." },
-      },
-      prompt: {
-        title: { es: 'Crear Prompt ✨', en: 'Create Prompt ✨' },
-        systemPrompt: 'Eres un experto en prompt engineering para producción de contenido de YouTube.',
-        welcomeText: { es: '¡Hola! Construyamos un prompt maestro para tu flujo de producción.', en: "Hello! Let's build a master prompt for your production workflow." },
-      },
+    const titleMap: Record<string, { es: string; en: string }> = {
+      crear_canal: { es: 'Crear Canal 📺', en: 'Create Channel 📺' },
+      crear_video: { es: 'Crear Video 🎬', en: 'Create Video 🎬' },
+      crear_guion: { es: 'Crear Guion 📄', en: 'Create Script 📄' },
+      crear_prompt: { es: 'Crear Prompt ✨', en: 'Create Prompt ✨' },
+      extraer_canal_youtube: { es: 'Extraer Canal 📥', en: 'Extract Channel 📥' },
     };
 
-    const fb = FALLBACKS[roleType];
-    const title = template?.title ?? (lang === 'es' ? fb.title.es : fb.title.en);
-    const systemPrompt = template?.systemPrompt ?? fb.systemPrompt;
-    const welcomeText = template?.welcomeText ?? (lang === 'es' ? fb.welcomeText.es : fb.welcomeText.en);
+    const title = titleMap[targetTemplateName]?.[lang] || template?.name || (lang === 'es' ? 'Nueva conversación' : 'New conversation');
+    const systemPrompt = template?.systemPrompt || '';
+    const welcomeText = template?.welcomeText || (lang === 'es' ? '¡Hola! ¿En qué te puedo colaborar hoy?' : 'Hello! How can I help you today?');
 
     try {
       const res = await fetch('/api/conversations', {
@@ -533,9 +516,9 @@ export default function Dashboard() {
   const [isDeepThinking, setIsDeepThinking] = useState(false);
   const [checklist, setChecklist] = useState({ cta: true, timestamps: false, tags: true, saveThumbnail: true });
   const [seoOutput, setSeoOutput] = useState({
-    title: 'Aprende Next.js 15 en 10 Minutos - Guía Definitiva de App Router',
-    tags: 'nextjs 15, react 19, web development, typescript, tutorial nextjs',
-    description: 'En este tutorial aprenderás a dominar Next.js 15 utilizando el App Router.\n\n⏱️ Marcas de tiempo:\n0:00 - Introducción\n2:15 - Configuración inicial\n5:40 - Rutas Dinámicas',
+    title: '',
+    tags: '',
+    description: '',
   });
 
   const handleSendMessage = async (customText?: string, agentSlug?: string) => {
@@ -1032,6 +1015,7 @@ export default function Dashboard() {
               }}
               isDeepThinking={isDeepThinking}
               onToggleDeepThinking={setIsDeepThinking}
+              promptTemplates={promptTemplates}
             />
           )}
 

@@ -43,22 +43,27 @@ El backend está dividido en dos capas optimizadas para mantener el costo operat
 4. Utiliza **Function Calling Nativo** (`generateText` con `maxSteps: 5`) para que Gemini/OpenAI/Anthropic interactúe con el Motor de Python, delegando exploración y edición del Workspace de manera autónoma.
 5. Registro asíncrono de `TokenUsage` en la BD.
 
-### Agentes Especialistas (`/api/agents/`)
+### Herramientas del Cerebro (`/api/tools/`)
+
+Todas las acciones ejecutables del sistema se implementan como herramientas nativas consumidas por el Orquestador y el Frontend:
 
 | Endpoint | Método | Descripción |
 |---|---|---|
-| `/api/agents/channel-creator` | POST | Crea estructura de carpetas de un canal + genera contenido con Gemini. Parámetros: `workspacePath`, `channelName`, `superPrompt` |
-| `/api/agents/movement` | POST | Ejecuta Súper Prompt con Gemini + AI SDK tools nativos (`read_file`, `write_file`, `create_folder`). Parámetros: `superPrompt`, `workspacePath` |
+| `/api/tools/prompts` | GET / POST | Consulta de plantillas y SOPs operativos (`consultar_prompts`) para el Orquestador y Frontend |
+| `/api/tools/prompts/[id]` | PATCH / DELETE | Edición y eliminación dinámica de plantillas de prompts |
+| `/api/tools/extraer_canal_youtube` | POST | Extrae videos, métricas, tags e indexa contexto pgvector y crea `InfoCanal/` local |
+| `/api/tools/generar_info_canal` | POST | Genera identidad visual (`logo`, `banner`) y `Contexto_canal.md` en el disco local |
+| `/api/tools/generar_metadatos_subida` | POST | Genera títulos, descripción, tags y crea la estructura física del video |
+| `/api/tools/estado_sistema` | POST | Diagnóstico de dependencias locales instaladas |
 
 ### CRUD de Datos
 
 | Endpoint | Método | Descripción |
 |---|---|---|
 | `/api/conversations` | GET | Lista conversaciones del usuario |
-| `/api/conversations` | POST | Crea conversación con systemPrompt + mensaje de bienvenida automático |
+| `/api/conversations` | POST | Crea conversación con systemPrompt + mensaje de bienvenida dinámico |
 | `/api/conversations/[id]/messages` | GET/POST | CRUD de mensajes de una conversación |
 | `/api/channels` | GET | Lista canales del usuario con sus videos |
-| `/api/prompts` | GET | Lista prompt templates (auto-seed si tabla vacía) |
 
 ### Configuración
 

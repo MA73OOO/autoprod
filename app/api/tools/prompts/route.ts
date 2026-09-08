@@ -8,13 +8,6 @@ import { db } from '@/src/prisma/db';
 // ──────────────────────────────────────────────
 export async function GET(req: Request) {
   try {
-    const supabase = await createClient();
-    const { data: { user }, error } = await supabase.auth.getUser();
-
-    if (error || !user) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-    }
-
     const url = new URL(req.url);
     const tipo = url.searchParams.get('tipo') || url.searchParams.get('name');
 

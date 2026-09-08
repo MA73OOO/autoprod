@@ -5,6 +5,57 @@ No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea
 
 ---
 
+## 🏛️ REGLAS CARDINALES DE ARQUITECTURA DE AUTOPROD
+
+### 1. UN SOLO CEREBRO ORQUESTADOR (`app/api/chat/route.ts`)
+- AutoProd opera bajo un modelo de **Orquestador Central** (Agentic Brain).
+- **PROHIBIDO** crear sub-agentes dispersos o rutas paralelas de chat/razonamiento en `app/api/agents/...` o `app/api/chat/ask/...`.
+- Toda interacción de usuario y ejecución coordinada ocurre a través de `/api/chat`.
+
+### 2. TODAS LAS HERRAMIENTAS EJECUTABLES DEBEN RESIDIR EN `app/api/tools/`
+- Cualquier endpoint que realice una acción (crear carpetas, extraer datos, generar metadatos, consultar SOPs) es una **Tool del Cerebro**.
+- Su ruta obligatoria es: `app/api/tools/[nombre_tool]/route.ts`.
+- Las tools se registran en la tabla `Tool` de la base de datos y se vinculan al agente en `AgentTool`.
+- **PROHIBIDO** crear carpetas de utilidades o endpoints sueltos fuera de `app/api/tools/`.
+
+### 3. CERO HARDCODING Y PROMPTS DINÁMICOS VÍA `consultar_prompts`
+- **PROHIBIDO** quemar directivas operativas extensas, prompts de roles o guías paso a paso (SOPs) en archivos de código TypeScript (`.ts` o `.tsx`).
+- Las directivas y plantillas viven en la tabla `PromptTemplate` de la base de datos.
+- El Orquestador utiliza la tool `consultar_prompts` (`app/api/tools/prompts/route.ts`) mediante Function Calling para cargar bajo demanda las reglas específicas cuando atiende una tarea (ej: `crear_canal`, `crear_video`, `crear_guion`).
+
+### 4. INFRAESTRUCTURA Y BASELINE VÍA MIGRACIONES SQL
+- La configuración base, herramientas del sistema y plantillas de prompts no se crean con seeds manuales en tiempo de ejecución (`db:seed` o `GET` endpoints de desarrollo).
+- Todo cambio en esquema o datos de arranque debe declararse de forma idempotente en `migrations/*.sql` para su despliegue gestionado por Terraform / Supabase.
+
+---
+
+## 📁 TAXONOMÍA Y ORGANIZACIÓN DEL ESPACIO DE TRABAJO (WORKSPACE)
+
+El sistema de archivos de AutoProd se organiza de forma estricta en 3 niveles jerárquicos:
+
+```
+📁 {workspace}/                                 <-- [NIVEL 0: Raíz del Workspace]
+└── 📁 NombreDelCanal/                          <-- [NIVEL 1: CANAL] (Cada carpeta en la raíz es un canal)
+    ├── 📁 InfoCanal/                            <-- [NIVEL 2: MEMORIA Y ADN DEL CANAL] (¡NO es un video!)
+    │   ├── Contexto_canal.md                   (Nicho, audiencia objetivo, tono y directivas)
+    │   ├── Metricas_canal.md                   (Estadísticas y rendimiento de YouTube)
+    │   ├── Historial_canal.md                  (Títulos y tags ya cubiertos para no repetir)
+    │   └── [Recursos Gráficos: logo.jpg, banner.jpg, marca_de_agua.jpg]
+    └── 📁 Titulo_Del_Video/                     <-- [NIVEL 2: PROYECTO DE VIDEO] (Hermanos de InfoCanal)
+        ├── 📁 Guiones/                         <-- [NIVEL 3: Recursos de Producción] (Guion en Markdown)
+        ├── 📁 Videos/                          (Metraje bruto, clips y render final .mp4)
+        ├── 📁 Miniatura/                       (Prompts, conceptos y portada final)
+        ├── 📁 Musica/                          (Pistas de audio y música de fondo)
+        └── 📁 Ambiente/                        (Efectos SFX y atmósferas sonoras)
+```
+
+**Reglas de Reconocimiento:**
+- **Canal:** Carpeta de Nivel 1 en la raíz del Workspace.
+- **`InfoCanal/`:** Carpeta de Nivel 2 exclusiva para la memoria e identidad del canal. **NUNCA** es un video.
+- **Video:** Carpeta de Nivel 2 dentro de un canal (hermana de `InfoCanal/`) que contiene los 5 subdirectorios de producción.
+
+---
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

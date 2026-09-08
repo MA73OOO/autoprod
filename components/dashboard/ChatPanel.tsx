@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
-import ChannelCreatorConsole from '@/components/agents/ChannelCreatorConsole';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
