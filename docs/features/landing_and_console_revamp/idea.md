@@ -1,27 +1,22 @@
 # 💡 Visión y Negocio: Landing Page & Console UX/UI Revamp (FEAT-13)
 
-> **Propósito:** Posicionar a AutoProd como el **Estudio Integral de Producción y Utilidades de Video para Creadores de Contenido**, automatizadores, editores y podcasters, comunicando valor tangible (bucles fluidos, recortes rápidos, compresión local, subtitulado palabra por palabra, miniaturas de alto CTR y guiones con gancho) con branding oficial y cero humo publicitario.
+> **Propósito:** Posicionar a AutoProd como **el sistema operativo para canales de contenido**. Unificar el flujo creativo, de producción, análisis y escala en un solo lugar, dejando atrás el caos de 10 herramientas desconectadas y comunicando el valor de la plataforma bajo el principio: *«La automatización no reemplaza al creador. Le devuelve tiempo para crear.»*
 
 ---
 
 ## 🎯 1. El Problema que Resolvemos
-1. **Falso encasillamiento en nichos mínimos:** AutoProd no es únicamente para "canales de lofi o relajación"; es una suite de herramientas audiovisuales de alto rendimiento que sirve para cualquier persona que cree contenido en video (automatizado, grabado en cámara, streams recortados o compilaciones).
-2. **Promesas absurdas eliminadas:** Se erradicaron frases hiperbólicas de marketing engañoso como "sin límites de duración" o "videos infinitos", reemplazándolas por beneficios técnicos reales: bucles continuos de 1 a 3 horas sincronizados con música, renderizado GPU local en 1080p/4K, y compresión rápida sin perder nitidez.
-3. **Identidad Visual Oficial:** Sustitución de cajas genéricas con la letra "A" por el logotipo vectorial oficial de AutoProd (monograma geométrico `AP` estilizado).
-4. **Fricción en la Consola:** Navegación fluida con acceso directo a todos los estudios (Bucles & Clips, Subtítulos, Miniaturas, Recursos y Asistente).
+1. **El Caos de 10 Herramientas Fragmentadas:** Los creadores y dueños de canales gastan tiempo, energía y múltiples suscripciones saltando entre redactores de IA, editores pesados, apps de subtítulos, carpetas perdidas en disco y consolas de analítica. AutoProd reúne todo el proceso en un solo entorno de trabajo.
+2. **Promesas Irreales vs. Empoderamiento Real:** Erradicamos la jerga de "hacer canales con 1 clic" o "fórmulas mágicas de retención". La plataforma se vende por lo que permite lograr: mayor capacidad, control creativo, velocidad de ensamble y consistencia de publicación.
+3. **Identidad Visual Oficial y Experiencia Premium:** Jerarquía tipográfica sólida (Plus Jakarta Sans, Space Grotesk, Inter) y logotipo monograma oficial `AP` (`#8629FE`).
+4. **La Ventaja del Procesamiento Local:** Presentar el motor como el beneficio supremo para el usuario: *«Tu contenido. Tu equipo. Tu control»* (velocidad sin colas remotas, costo cero de servidor para renders largos y privacidad total de archivos).
 
 ---
 
-## 🚀 2. Lo que Logramos (`✅ HECHO`)
-- **Branding Oficial:**
-  - Logotipo vectorial `public/logo.svg` (monograma `AP` morado #8629FE) desplegado en Navbar, Footer, Login y Dashboard Console.
-  - Sistema tipográfico de 3 niveles: Plus Jakarta Sans (Logo y Botones), Space Grotesk (Títulos y Subtítulos) e Inter (Cuerpo y UI).
-- **Copywriting Realista y Centrado en el Creador:**
-  - Enfoque transversal: Útil para quien automatiza, quien se graba en cámara, editores que cortan clips de directos y creadores que quieren comprimir o crear loops sin software pesado.
-  - Explicación concreta de especificaciones: bucles de 1 a 3 horas, subtítulos palabra por palabra exportables para CapCut/Premiere, miniaturas 16:9 y 9:16, y guiones con ganchos de retención.
-- **Navegación Unificada en la App:**
-  - Header superior del Dashboard con conmutador rápido de estudios en 1 clic.
-  - Launchpad modularizado con tarjetas de acción directa y diagnóstico de workspace.
+## 🚀 2. Los 4 Pilares del Sistema en la Landing (`✅ EN PROCESO`)
+- **CREA:** Convierte tus ideas en contenido con intención (investigación de temas, desarrollo de guiones y diseño de portadas).
+- **PRODUCE:** Todo lo que necesitas para crear, en un solo lugar (bucles de 1 a 3 horas en 4K, clips rápidos y subtítulos palabra por palabra).
+- **ANALIZA:** Entiende qué está pasando con tus canales (referencias de nicho, ángulos temáticos y memoria histórica).
+- **ESCALA:** Más capacidad. Más control. Menos trabajo repetitivo (gestión multicanal, cronograma de producción y workflow ágil).
 
 ---
 

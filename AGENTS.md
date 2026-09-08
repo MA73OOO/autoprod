@@ -27,6 +27,13 @@ No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea
 - La configuración base, herramientas del sistema y plantillas de prompts no se crean con seeds manuales en tiempo de ejecución (`db:seed` o `GET` endpoints de desarrollo).
 - Todo cambio en esquema o datos de arranque debe declararse de forma idempotente en `migrations/*.sql` para su despliegue gestionado por Terraform / Supabase.
 
+### 5. DEFINICIÓN DE PRODUCTO Y TONO DE VOZ (CERO HUMO, CERO TECNICISMOS)
+- **Definición Oficial:** AutoProd es el **sistema operativo para canales de contenido**. Un espacio donde los creadores organizan sus proyectos, desarrollan ideas con intención, producen con sus propios recursos, analizan resultados y construyen un workflow que se adapta a su forma de crear.
+- **Manifiesto de Marca:** *«La automatización no reemplaza al creador. Le devuelve tiempo para crear.»* | *«Automatiza el trabajo. Conserva el control.»*
+- **Los 4 Pilares:** `CREA` • `PRODUCE` • `ANALIZA` • `ESCALA`.
+- **Diferencial de Ejecución:** *«Tu contenido. Tu equipo. Tu control»* (velocidad nativa, costo predecible y soberanía absoluta sobre los archivos).
+- **PROHIBIDO:** En cualquier texto visible al usuario (landing, dashboard, tooltips, modales), exponer tecnologías internas (FastAPI, Python, FFmpeg, Whisper, CUDA, DALL-E, pgvector, tokens) o recurrir a clichés de marketing agresivo ("viral", "ganchos de retención", "fórmulas mágicas", "bots que hacen videos solos"). Comunicar siempre desde la capacidad, la organización y el beneficio real para el creador.
+
 ---
 
 ## 📁 TAXONOMÍA Y ORGANIZACIÓN DEL ESPACIO DE TRABAJO (WORKSPACE)

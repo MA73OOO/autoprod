@@ -1,19 +1,32 @@
-# 💡 Visión Macro: AutoProd — Lo que Tenemos vs. Hacia Dónde Vamos
+# 💡 Visión Macro: AutoProd — El Sistema Operativo para Canales de Contenido
 
-> **Visión:** Convertir a AutoProd en el **Sistema Operativo y Entorno de Desarrollo Integrado (IDE)** definitivo para creadores, productores y agencias de automatización de contenidos para YouTube.
+> **Definición Oficial de Producto:**  
+> **AutoProd es el sistema operativo para canales de contenido.**  
+> Un espacio donde los creadores y operadores de canales organizan sus proyectos, desarrollan ideas, producen contenido de alta calidad con sus propios recursos, analizan resultados y construyen un workflow de producción que se adapta a su forma de crear.
+
+> **Manifiesto de Marca:**  
+> *«La automatización no reemplaza al creador. Le devuelve tiempo para crear.»*  
+> *«Automatiza el trabajo. Conserva el control.»*
 
 ---
 
 ## 🧭 1. El Propósito Central de AutoProd
 
-La producción de videos para YouTube hoy en día está rota:
+La producción de videos para YouTube hoy en día está fragmentada y rota:
 - Un creador pasa horas saltando entre Premiere/CapCut, ChatGPT, generadores de miniaturas, herramientas de SEO, carpetas desordenadas en Windows y la consola de YouTube Studio.
 - Las plataformas en la nube existentes cobran suscripciones carísimas ($50-$200/mes) porque intentan renderizar video en servidores remotos (lo cual dispara sus costos en AWS/GCP y limita la calidad del video a 1080p comprimido).
+- **El verdadero diferencial de AutoProd no es "hacer videos con un bot", sino reunir todo el proceso en un solo sistema operativo.**
 
-### La Disrupción de AutoProd:
-AutoProd cambia las reglas del juego mediante una **arquitectura híbrida descentralizada**:
-1. **La inteligencia y la UX viven en la nube y en el navegador:** Un IDE moderno y elegante (Next.js) que orquesta agentes de IA.
-2. **El músculo pesado vive en la máquina del usuario:** Un motor local en Python (`localhost:8000`) aprovecha la GPU (NVIDIA CUDA), CPU y disco duro del cliente para renderizar loops en 4K, transcribir con Whisper y organizar archivos a **$0 costo de servidor para AutoProd**.
+### Los 4 Pilares del Sistema Operativo:
+1. **CREA (Convierte tus ideas en contenido con intención):** Investiga temas, desarrolla conceptos, contempla distintos escenarios narrativos y dale estructura a tus guiones sin perder la identidad de cada canal.
+2. **PRODUCE (Todo lo que necesitas para crear, en un solo lugar):** Ensambla bucles continuos de 1 a 3 horas, recorta clips rápidos para Shorts y genera subtítulos palabra por palabra sin depender de un flujo fragmentado.
+3. **ANALIZA (Entiende qué está pasando con tus canales):** Consulta referencias, explora enfoques de otros creadores y encuentra información que te ayude a decidir qué crear, qué mejorar y dónde existen nuevas oportunidades.
+4. **ESCALA (Más capacidad. Más control. Menos trabajo repetitivo):** Organiza múltiples canales de forma independiente y construye un workflow de producción predecible para dedicar más tiempo a las decisiones importantes y menos a las tareas mecánicas.
+
+### La Ventaja de Ejecución: Tu Contenido. Tu Equipo. Tu Control.
+1. **Velocidad real:** Renders hasta 4K aprovechando la potencia del computador del usuario, sin esperas ni colas remotas.
+2. **Costos predecibles:** Sin tarifas arbitrarias por segundo o minuto de video renderizado.
+3. **Control y Privacidad absoluta:** Los archivos originales, metraje y recursos del creador jamás se secuestran en servidores externos; permanecen bajo su soberanía.
 
 ---
 

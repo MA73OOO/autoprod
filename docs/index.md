@@ -5,12 +5,24 @@ Si estás leyendo esto, es porque has sido instruido a consultar el contexto del
 
 ## 🧠 ¿Cómo entender este repositorio?
 
-AutoProd no es solo un gestor de contenido; es un **IDE Avanzado para el Desarrollo y Automatización de Tareas** impulsado por Inteligencia Artificial y agentes autónomos. Su visión principal es potenciar la producción diaria con tecnología disruptiva, buscando siempre reducir los costos operativos al mínimo posible (aunque existen costos de APIs de IA, la arquitectura busca descentralizar el procesamiento).
+> **Definición Oficial de Producto:**  
+> **AutoProd es el sistema operativo para canales de contenido.**  
+> Un espacio donde los creadores y operadores de canales organizan sus proyectos, desarrollan ideas, producen contenido con sus propios recursos, analizan resultados y construyen un workflow que se adapta a su forma de crear.
 
-Para lograr un sistema totalmente funcional y trabajable de manera agéntica, AutoProd está compuesto por dos capas principales que reflejan sus decisiones técnicas y arquitectónicas:
+> **Manifiesto:**  
+> *«La automatización no reemplaza al creador. Le devuelve tiempo para crear.»*  
+> *«Automatiza el trabajo. Conserva el control.»*
 
-1. **Frontend / Backend Cloud (Next.js):** Maneja la interfaz de usuario estilo IDE (TailwindCSS v4), autenticación (Supabase SSR), base de datos (Prisma 7.10) y orquestación de Agentes de IA usando el SDK de Vercel AI (Function Calling). Esta capa delega el trabajo pesado para no incurrir en altos costos de servidor.
-2. **Motor Local (FastAPI Python):** La verdadera disrupción de AutoProd. Corre directamente en la máquina del cliente (`localhost:8000`), permitiendo interactuar con el sistema operativo y el sistema de archivos del usuario. Esta decisión arquitectónica **reduce drásticamente los costos de servidor y procesamiento**, al mismo tiempo que **disminuye los tiempos de ejecución** en el desarrollo de las tareas.
+### Los 4 Pilares del Sistema:
+- **CREA:** Convierte ideas en contenido con intención (temas, guiones y portadas respetando la identidad del canal).
+- **PRODUCE:** Ensamble audiovisual, bucles de 1 a 3 horas, clips y subtítulos en un solo lugar.
+- **ANALIZA:** Referencias de nicho, enfoques temáticos y memoria histórica de contenidos cubiertos.
+- **ESCALA:** Gestión multicanal ordenada, cronograma de producción y workflow predecible sin tareas mecánicas.
+
+Para lograr una plataforma ágil, privada y sin costos exorbitantes de servidor, AutoProd opera bajo una arquitectura híbrida de dos capas:
+
+1. **Frontend / Backend Cloud (Next.js):** Maneja la interfaz de usuario estilo IDE (TailwindCSS v4), autenticación (Supabase SSR), base de datos (Prisma) y orquestación inteligente de asistencia creativa.
+2. **Motor de Procesamiento Local (FastAPI Python):** La ventaja de ejecución (*"Tu contenido. Tu equipo. Tu control"*). Corre directamente en la máquina del usuario (`localhost:8000`), permitiendo renderizar video en 4K y procesar subtítulos a costo de servidor cero para AutoProd y con máxima privacidad para el usuario.
 
 ---
 
