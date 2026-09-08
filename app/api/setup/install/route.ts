@@ -9,10 +9,11 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
 import fsSync from 'fs';
+import { PLANS_CONFIG } from '@/lib/pricing-config';
 
 export async function POST(req: NextRequest) {
   try {
-    // 1. Validar que el usuario tenga un plan de pago (Starter, Pro, Enterprise)
+    // 1. Validar permisos del plan para descargar el motor local
     const supabase = await createClient();
     const { data: { user: supabaseUser } } = await supabase.auth.getUser();
 
@@ -22,12 +23,13 @@ export async function POST(req: NextRequest) {
         include: { subscription: { include: { plan: true } } }
       });
 
-      const userPlan = userRecord?.subscription?.plan?.name || 'FREE';
-      if (userPlan === 'FREE' && userRecord?.role !== 'ADMIN') {
+      const userPlan = (userRecord?.subscription?.plan?.name || 'FREE') as keyof typeof PLANS_CONFIG;
+      const planConfig = PLANS_CONFIG[userPlan] || PLANS_CONFIG.FREE;
+      if (!planConfig.canDownloadLocalMotor && userRecord?.role !== 'ADMIN') {
         return NextResponse.json({
           success: false,
           requiresUpgrade: true,
-          error: 'La descarga e instalación del Motor Local es un beneficio exclusivo para planes de pago (Starter, Pro, Enterprise). Actualiza tu plan para desbloquear el motor.'
+          error: 'La descarga e instalación del Motor Local no está habilitada para tu plan. Actualiza tu plan para desbloquear el motor.'
         }, { status: 403 });
       }
     }

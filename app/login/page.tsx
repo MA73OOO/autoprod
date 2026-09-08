@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
@@ -13,10 +13,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('confirmed') === 'true') {
+        toast.success('¡Cuenta confirmada con éxito!', {
+          description: 'Tu correo ha sido verificado. Ya puedes iniciar sesión en tu cuenta.',
+        });
+      }
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,14 +36,41 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      if (isForgotPassword) {
+        if (!email) {
+          throw new Error('Por favor ingresa tu correo electrónico');
+        }
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/reset-password`,
+        });
+        if (resetError) throw resetError;
+
+        toast.success('¡Correo de recuperación enviado!', {
+          description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+        });
+        setIsForgotPassword(false);
+        return;
+      }
+
       if (isSignUp) {
+        // Detect language preference (from localStorage or browser)
+        const clientLang = typeof window !== 'undefined'
+          ? (localStorage.getItem('autoprod_lang') || (navigator.language.startsWith('es') ? 'es' : 'en'))
+          : 'es';
+
         // Sign Up with Supabase Auth
+        const redirectUrl = typeof window !== 'undefined'
+          ? `${window.location.origin}/login?confirmed=true`
+          : 'https://www.autoprodai.com/login?confirmed=true';
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: redirectUrl,
             data: {
               full_name: name,
+              lang: clientLang,
             },
           },
         });
@@ -109,7 +148,11 @@ export default function LoginPage() {
             </span>
           </Link>
           <p className="text-xs text-zinc-400">
-            {isSignUp ? 'Crea tu cuenta para comenzar' : 'Inicia sesión para continuar al panel'}
+            {isForgotPassword
+              ? 'Recupera el acceso a tu cuenta'
+              : isSignUp
+              ? 'Crea tu cuenta para comenzar'
+              : 'Inicia sesión para continuar al panel'}
           </p>
         </div>
 
@@ -120,7 +163,7 @@ export default function LoginPage() {
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
-          {isSignUp && (
+          {!isForgotPassword && isSignUp && (
             <div>
               <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
                 Nombre Completo
@@ -150,19 +193,35 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5">
-              Contraseña
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 focus:border-purple-500 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all"
-            />
-          </div>
+          {!isForgotPassword && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                  Contraseña
+                </label>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsForgotPassword(true);
+                      setError(null);
+                    }}
+                    className="text-xs text-purple-400 hover:text-purple-300 font-medium transition-colors"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
+                )}
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-zinc-900/60 border border-zinc-800 focus:border-purple-500 rounded-xl text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-all"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
@@ -171,6 +230,8 @@ export default function LoginPage() {
           >
             {loading ? (
               <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isForgotPassword ? (
+              'Enviar enlace de recuperación'
             ) : isSignUp ? (
               'Registrarse'
             ) : (
@@ -179,27 +240,45 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-zinc-900" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-zinc-950 px-2 text-zinc-500 font-semibold tracking-wider">O continuar con</span>
-          </div>
-        </div>
+        {!isForgotPassword && (
+          <>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-zinc-900" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-zinc-950 px-2 text-zinc-500 font-semibold tracking-wider">O continuar con</span>
+              </div>
+            </div>
 
-        <GoogleLoginButton onError={(msg) => setError(msg)} />
+            <GoogleLoginButton onError={(msg) => setError(msg)} />
+          </>
+        )}
 
         <div className="mt-8 pt-6 border-t border-zinc-900 text-center">
-          <button
-            onClick={() => {
-              setIsSignUp(!isSignUp);
-              setError(null);
-            }}
-            className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors"
-          >
-            {isSignUp ? '¿Ya tienes una cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}
-          </button>
+          {isForgotPassword ? (
+            <button
+              type="button"
+              onClick={() => {
+                setIsForgotPassword(false);
+                setError(null);
+              }}
+              className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+            >
+              ← Volver al inicio de sesión
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+              }}
+              className="text-xs text-purple-400 hover:text-purple-300 font-semibold transition-colors"
+            >
+              {isSignUp ? '¿Ya tienes una cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate aquí'}
+            </button>
+          )}
         </div>
       </div>
     </div>

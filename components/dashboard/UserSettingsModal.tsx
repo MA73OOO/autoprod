@@ -478,16 +478,8 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 </div>
 
                 <button
-                  disabled={isInstalling || (subscriptionInfo?.planName !== 'FREE' && (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed')))}
+                  disabled={isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))}
                   onClick={async () => {
-                    if (subscriptionInfo?.planName === 'FREE' && !isAdminMode) {
-                      toast.info(lang === 'es' ? 'La descarga del Motor Local es un beneficio exclusivo a partir del Plan Starter ($70 USD).' : 'Local Motor download is exclusive to Starter ($70 USD) and above.');
-                      if (onOpenPlans) {
-                        onClose();
-                        onOpenPlans();
-                      }
-                      return;
-                    }
                     if (!installPath && !(systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))) {
                       toast.error(lang === 'es' ? 'Selecciona una ruta de instalación primero.' : 'Select an installation path first.');
                       return;
@@ -523,16 +515,12 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     }
                   }}
                   className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
-                    subscriptionInfo?.planName === 'FREE' && !isAdminMode
-                      ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:opacity-95 text-white cursor-pointer shadow-purple-600/30 animate-pulse'
-                      : isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
+                    isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
                       ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                       : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
                   }`}
                 >
-                  {subscriptionInfo?.planName === 'FREE' && !isAdminMode
-                    ? (lang === 'es' ? '🔒 Desbloquear Motor Local (Requiere Plan Starter+)' : '🔒 Unlock Local Motor (Requires Starter+)')
-                    : isInstalling 
+                  {isInstalling 
                     ? (lang === 'es' ? 'Instalando...' : 'Installing...')
                     : (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
                       ? (lang === 'es' ? 'Todo Instalado' : 'All Installed')

@@ -4,14 +4,14 @@
 Esta funcionalidad implementa el sistema integral de monetización, suscripciones y economía de tokens de AutoProd:
 
 1. **Niveles de Suscripción (Tiers Comerciales):**
-   - **Prueba Gratuita (FREE):** $0 USD, 50 créditos iniciales de cortesía, 1 canal de YouTube para pruebas, Video Looper Web básico hasta 720p. **Sin descarga del Motor Local (exclusivo de planes pagos)**. AutoProd Brain™ descuenta 1 crédito por interacción como medida anti-abuso.
+   - **Prueba Gratuita (FREE):** $0 USD, 50 créditos iniciales de cortesía, 1 canal de YouTube para pruebas, Video Looper Web básico hasta 720p y descarga del Motor Local AutoProd para probar la experiencia completa en PC. AutoProd Brain™ descuenta 1 crédito por interacción como medida anti-abuso.
    - **Starter ($70 USD/mes):** Diseñado para creadores profesionales enfocados. **1 Canal de YouTube Profesional**, **Descarga del Motor Local AutoProd** (procesamiento GPU/CPU offline en PC y Whisper local ilimitado), Looper 1080p, 60 min de Whisper Cloud y una bolsa mensual de **1,800 créditos de IA netos** ($20 de presupuesto menos 10% de comisión AutoProd).
    - **Pro ($100 USD/mes - 🔥 Más Popular):** Diseñado para productores multi-nicho y agencias. **Hasta 3 Canales de YouTube simultáneos**, **Motor Local Completo con aceleración CUDA/GPU**, Looper 4K (3 hrs) + Batch, Modo Carpeta Canciones, Memoria Vectorial y bolsa mensual de **2,700 créditos de IA netos** ($30 de presupuesto menos 10% de comisión).
    - **Enterprise ($150 USD/mes - 👑 VIP):** Potencia máxima sin restricciones. **Canales de YouTube ILIMITADOS**, **Motor Local Enterprise** (rendimiento extremo sin compresión), Looper 4K 60fps, 500 min Whisper Cloud, soporte prioritario 1 a 1 y bolsa mensual de **4,500 créditos de IA netos** ($50 de presupuesto menos 10% de comisión).
 
 2. **Beneficio y Licenciamiento del Motor Local:**
-   - La descarga e instalación automatizada del **Motor Local (FastAPI Python en localhost:8000)** está estrictamente bloqueada para el plan gratuito a nivel de backend (`/api/setup/install`) y frontend (`UserSettingsModal.tsx`).
-   - Requiere como mínimo una suscripción activa a partir del Plan Starter ($70 USD), sirviendo como uno de los mayores incentivos de conversión por permitir procesamiento ilimitado en la GPU/CPU del usuario a costo $0 de servidor.
+   - La descarga e instalación automatizada del **Motor Local (FastAPI Python en localhost:8000)** está habilitada para todos los planes (incluyendo Free) para que cualquier creador configure su workspace físico a costo $0 para AutoProd.
+   - El incentivo de conversión y límite real del plan Free radica en la bolsa de 50 créditos de cortesía y el límite estricto a 1 solo canal de YouTube. Al agotar sus créditos o querer más canales, el usuario realiza el upgrade.
 
 3. **Regla de Negocio del Orquestador (AutoProd Brain™):**
    - Para todos los planes de pago (Starter, Pro, Enterprise), el copiloto autónomo **AutoProd Brain™** (impulsado por `gpt-4o-mini`) es **100% GRATIS e ILIMITADO** (0 créditos descontados). AutoProd asume el costo de API (~$0.75 - $1.00 USD por usuario intensivo al mes), garantizando un margen de ganancia neto superior al 98%.

@@ -897,68 +897,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Studio Quick Switcher Tabs */}
-        <div className="hidden md:flex items-center gap-1 bg-[#15151c] border border-zinc-800/80 rounded-xl p-1">
-          <button
-            onClick={() => { setActiveView('home'); setActiveConversationId(null); }}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'home' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>🏠</span>
-            <span>{t.viewHome || 'Inicio'}</span>
-          </button>
-          <button
-            onClick={() => {
-              if (conversations.length > 0 && !activeConversationId) {
-                setActiveConversationId(conversations[0].id);
-              }
-              setActiveView('chat');
-            }}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'chat' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>💡</span>
-            <span>{t.viewChat || 'Asistente'}</span>
-          </button>
-          <button
-            onClick={() => setActiveView('looper')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'looper' ? 'bg-purple-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>🎬</span>
-            <span>{t.viewLooper || 'Videos Largos'}</span>
-          </button>
-          <button
-            onClick={() => setActiveView('subtitles')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'subtitles' ? 'bg-emerald-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>🎙️</span>
-            <span>{t.viewSubtitles || 'Subtítulos'}</span>
-          </button>
-          <button
-            onClick={() => setActiveView('images')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'images' ? 'bg-indigo-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>🎯</span>
-            <span>{t.viewImages || 'Miniaturas'}</span>
-          </button>
-          <button
-            onClick={() => setActiveView('assets')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              activeView === 'assets' ? 'bg-cyan-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-            }`}
-          >
-            <span>🗂️</span>
-            <span>{t.viewAssets || 'Recursos'}</span>
-          </button>
-        </div>
+
 
         <div className="flex items-center gap-4">
           <button

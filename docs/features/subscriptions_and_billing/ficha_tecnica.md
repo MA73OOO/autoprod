@@ -54,8 +54,8 @@ erDiagram
    - Si el usuario solicita un modelo pesado (ej. GPT-4o = 3 créditos, Claude 3.5 = 4 créditos) o DALL-E 3 (5 créditos) sin saldo suficiente en su `Wallet`, el backend responde `402` con `{ requiresUpgrade: true }`, disparando reactivamente el modal [`SubscriptionPlansModal.tsx`](file:///e:/autoprod/components/dashboard/SubscriptionPlansModal.tsx).
 4. **Reactividad Inmediata en el Frontend:**
    - Cada endpoint de consumo retorna `newBalance` y emite el evento global del navegador `autoprod:wallet-updated`. El widget [`CreditCounter.tsx`](file:///e:/autoprod/components/dashboard/CreditCounter.tsx) lo escucha para reflejar la reducción de saldo de forma instantánea sin latencia.
-5. **Bloqueo Físico de Descarga del Motor Local:**
-   - La descarga del instalador del motor de Python está restringida a usuarios con plan activo $\ge$ `STARTER`.
+5. **Acceso al Motor Local:**
+   - La descarga e instalación automatizada del motor local de Python está habilitada para todos los planes (incluyendo `FREE`), permitiendo a cualquier creador ejecutar renders locales y gestión de archivos en su hardware a costo $0 para la plataforma. El candado de conversión en el plan Free se gestiona mediante la bolsa de 50 créditos y el límite de 1 canal.
 
 ---
 

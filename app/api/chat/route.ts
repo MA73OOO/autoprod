@@ -774,46 +774,57 @@ Si el usuario dice que desea crear o producir un video pero no ha especificado c
                       });
                     }
                   }
+                  // Para métodos GET, convertir argumentos a query params
+                  let url = dbTool.apiEndpoint;
+                  // Si es un endpoint interno de Next.js (/api/tools/...), resolver dinámicamente con el host actual
+                  if (url.includes('/api/tools/')) {
+                    const host = req.headers.get('host') || 'localhost:3000';
+                    const protocol = req.headers.get('x-forwarded-proto') || (host.startsWith('localhost') || host.startsWith('127.0.0.1') ? 'http' : 'https');
+                    const pathname = url.startsWith('http') ? new URL(url).pathname : url;
+                    url = `${protocol}://${host}${pathname}`;
+                  }
 
-                 // Para métodos GET, convertir argumentos a query params
-                 let url = dbTool.apiEndpoint;
-                 if (dbTool.method === 'GET' && payload && Object.keys(payload).length > 0) {
-                   const params = new URLSearchParams();
-                   for (const [key, val] of Object.entries(payload)) {
-                     if (key !== '_userContext' && val !== undefined && val !== null && typeof val !== 'object') {
-                       params.append(key, String(val));
-                     }
-                   }
-                   const qs = params.toString();
-                   if (qs) {
-                     url += (url.includes('?') ? '&' : '?') + qs;
-                   }
-                 }
-                 
-                 const response = await fetch(url, {
-                   method: dbTool.method,
-                   headers: {
-                     'Content-Type': 'application/json'
-                   },
-                   body: dbTool.method !== 'GET' ? JSON.stringify(payload) : undefined
-                 });
-                 
-                 if (!response.ok) {
-                   const errorJson = await response.json().catch(() => ({}));
-                   let detail = errorJson.detail;
-                   if (Array.isArray(detail)) {
-                     detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join(' | ');
-                   } else if (typeof detail === 'object') {
-                     detail = JSON.stringify(detail);
-                   }
-                   return `[Error en ${dbTool.name} (HTTP ${response.status})]: ${detail || response.statusText}. Por favor revisa los parámetros e inténtalo de nuevo con la ruta absoluta correcta.`;
-                 }
+                  if (dbTool.method === 'GET' && payload && Object.keys(payload).length > 0) {
+                    const params = new URLSearchParams();
+                    for (const [key, val] of Object.entries(payload)) {
+                      if (key !== '_userContext' && val !== undefined && val !== null && typeof val !== 'object') {
+                        params.append(key, String(val));
+                      }
+                    }
+                    const qs = params.toString();
+                    if (qs) {
+                      url += (url.includes('?') ? '&' : '?') + qs;
+                    }
+                  }
+                  
+                  const response = await fetch(url, {
+                    method: dbTool.method,
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: dbTool.method !== 'GET' ? JSON.stringify(payload) : undefined
+                  });
+                  
+                  if (!response.ok) {
+                    const errorJson = await response.json().catch(() => ({}));
+                    let detail = errorJson.detail || errorJson.error || errorJson.message;
+                    if (Array.isArray(detail)) {
+                      detail = detail.map((d: any) => `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg || JSON.stringify(d)}`).join(' | ');
+                    } else if (typeof detail === 'object') {
+                      detail = JSON.stringify(detail);
+                    }
+                    return `[Error en ${dbTool.name} (HTTP ${response.status})]: ${detail || response.statusText}.`;
+                  }
 
-                 const data = await response.json();
-                 return JSON.stringify(data);
-               } catch(e: any) {
-                 return `[Fallo de conexión en ${dbTool.name}]: ${e.message}. Verifica si el motor local está activo en el puerto 8000.`;
-               }
+                  const data = await response.json();
+                  return JSON.stringify(data);
+                } catch(e: any) {
+                  const isMotor = dbTool.apiEndpoint.includes(':8000');
+                  const hint = isMotor 
+                    ? 'Verifica si el motor local está activo en el puerto 8000.' 
+                    : 'Verifica la conexión y configuración de la herramienta del sistema.';
+                  return `[Fallo de conexión en ${dbTool.name}]: ${e.message}. ${hint}`;
+                }
             }
           });
         }

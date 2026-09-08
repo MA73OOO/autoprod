@@ -170,9 +170,9 @@ export default function SubscriptionPlansModal({
                         <span>🧠 AutoProd Brain™:</span>
                         <span>{isFree ? '1 crédito / acción' : '100% GRATIS'}</span>
                       </div>
-                      <div className={`flex justify-between font-semibold ${isFree ? 'text-zinc-500' : 'text-purple-300'}`}>
+                      <div className="flex justify-between font-semibold text-purple-300">
                         <span>⚙️ Motor Local (GPU/PC):</span>
-                        <span>{isFree ? '🔒 No disponible' : '⚡ Desbloqueado'}</span>
+                        <span>⚡ Desbloqueado</span>
                       </div>
                       <div className="flex justify-between text-zinc-400">
                         <span>🪙 Bolsa de Tokens:</span>
