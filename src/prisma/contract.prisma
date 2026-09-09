@@ -191,4 +191,14 @@ namespace public {
     updatedAt    temporal.updatedAtString()
   }
 
+  // 11. Registro de IPs y Control Anti-Multicuentas (HMAC-SHA256)
+  model IpRegistration {
+    id           Uuid              @id @default(uuid())
+    ipHash       String            @unique
+    accountCount Int               @default(1)
+    createdAt    TimestamptzString @default(now())
+    updatedAt    temporal.updatedAtString()
+  }
+
 }
+

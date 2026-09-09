@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { db } from '@/src/prisma/db';
+import { getClientIp, evaluateWelcomeBonusEligibility, recordIpBonusGranted } from '@/lib/anti-abuse';
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
     const supabase = await createClient();
     
@@ -54,16 +55,31 @@ export async function POST() {
       });
     }
 
-    // Ensure User has a Wallet (50 free trial credits for new users)
+    // Ensure User has a Wallet (Evaluate anti-abuse eligibility for 50 free trial credits)
     let wallet = user.wallet;
     if (!wallet) {
+      const clientIp = getClientIp(req);
+      const { eligible, ipHash, reason } = await evaluateWelcomeBonusEligibility(
+        supabaseUser.email!,
+        clientIp,
+        db
+      );
+
+      const initialBalance = eligible ? 50 : 0;
+      if (eligible) {
+        await recordIpBonusGranted(ipHash, db);
+      } else {
+        console.warn(`[AntiAbuse] Cuenta ${supabaseUser.email} no elegible para bono de cortesía. Razón: ${reason}`);
+      }
+
       wallet = await db.wallet.create({
         data: {
           userId: user.id,
-          balance: 50 // 50 tokens iniciales de cortesía para pruebas
+          balance: initialBalance
         }
       });
     }
+
 
     // Ensure User has a Subscription (fallback to FREE if not exists)
     let subscription = user.subscription;

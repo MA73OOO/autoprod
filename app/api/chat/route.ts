@@ -7,6 +7,7 @@ import { anthropic, createAnthropic } from '@ai-sdk/anthropic';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { db as prisma } from '@/src/prisma/db';
 import { isOrchestratorFreeForUser, PLANS_CONFIG } from '@/lib/pricing-config';
+import { checkChatRateLimit, attachRateLimitHeaders } from '@/lib/rate-limit';
 import { getWorkspacePath } from '@/harness/setup/detector';
 import path from 'path';
 import fs from 'fs';
@@ -82,8 +83,24 @@ export async function POST(req: Request) {
     const planConfig = PLANS_CONFIG[userPlan] || PLANS_CONFIG.FREE;
     const maxChannels = userRecord?.subscription?.plan?.limits?.maxChannels ?? planConfig.maxChannels;
     const isAdmin = userRecord?.role === 'ADMIN';
-    const existingChannels: string[] = [];
+    const isFreeTier = userPlan === 'FREE';
 
+    // ── RATE LIMITING & ANTI-ABUSE CHECK ──
+    const rateLimitResult = checkChatRateLimit(req, userId, isFreeTier);
+    if (!rateLimitResult.allowed) {
+      const response = NextResponse.json(
+        {
+          error: rateLimitResult.errorMessage || 'Límite de solicitudes excedido. Por favor espera antes de enviar más mensajes.',
+          reason: rateLimitResult.reason,
+          retryAfter: rateLimitResult.resetInSeconds
+        },
+        { status: 429 }
+      );
+      attachRateLimitHeaders(response.headers, rateLimitResult);
+      return response;
+    }
+
+    const existingChannels: string[] = [];
 
     let apiKey = '';
     let requiredCredits = 0;
@@ -131,9 +148,7 @@ export async function POST(req: Request) {
       const isFree = isOrchestratorFreeForUser(userPlanName, model);
 
       if (isFree) {
-        requiredCredits = 0; // Gratuito para usuarios de pago en gpt-4o-mini (Starter, Pro, Enterprise)
-      } else if (userPlanName === 'FREE' && (!model || model === 'default' || model === 'gpt-4o-mini')) {
-        requiredCredits = 1; // Para usuarios FREE, gpt-4o-mini cuesta 1 crédito de sus 50 tokens de prueba
+        requiredCredits = 0; // Gratuito para todos en gpt-4o-mini (Starter, Pro, Enterprise y FREE con Rate Limit)
       } else {
         // Modelos avanzados o de pago
         try {

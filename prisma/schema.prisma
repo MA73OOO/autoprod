@@ -961,3 +961,16 @@ model ServicePricing {
   @@map("servicePricing")
   @@schema("public")
 }
+
+model IpRegistration {
+  id           String   @id @default(uuid()) @db.Uuid
+  ipHash       String   @unique @map("ip_hash")
+  accountCount Int      @default(1) @map("account_count")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([ipHash], map: "idx_ip_registration_hash")
+  @@map("ip_registration")
+  @@schema("public")
+}
+

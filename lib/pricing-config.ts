@@ -35,9 +35,9 @@ export const PLANS_CONFIG: Record<'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE', Pla
     canDownloadLocalMotor: true,
     whisperCloudMinutes: 0,
     features: [
-      '50 créditos iniciales de cortesía',
+      '50 créditos iniciales para miniaturas y herramientas pesadas',
       '1 Canal de YouTube para pruebas',
-      'AutoProd Brain™ (Copiloto de Prueba - 1 crédito/acción)',
+      'AutoProd Brain™ (Copiloto de Prueba - Chat Base Gratuito con Rate Limiting)',
       '⚡ Descarga del Motor Local AutoProd (Render y gestión en tu PC)',
       'Video Looper Web hasta 720p (10 min)',
       'Soporte por documentación',
@@ -137,46 +137,43 @@ export function calculatePlanCredits(
 }
 
 /**
- * Determina si el orquestador base es gratuito para este usuario según su plan.
+ * Determina si el orquestador base es gratuito para este usuario según su plan y modelo.
  * Regla de negocio:
- * - Si el usuario es FREE: el orquestador NO es gratis, descuenta 1 crédito de sus 50 tokens de prueba.
- * - Si el usuario es de pago (STARTER, PRO, ENTERPRISE): el orquestador es 100% GRATIS (0 créditos).
+ * - El orquestador base (gpt-4o-mini, gemini-1.5-flash o default) es 100% GRATIS (0 créditos) para todos los usuarios
+ *   (incluyendo cuentas FREE, protegido con Rate Limiting de ráfaga y cuota diaria).
+ * - Los modelos pesados (gpt-4o, claude-3-5-sonnet, gemini-1.5-pro) y herramientas pesadas (DALL-E 3, Whisper Cloud)
+ *   consumen créditos de la billetera.
  */
 export function isOrchestratorFreeForUser(
   userPlanName: string | null | undefined,
   modelName: string | null | undefined
 ): boolean {
   const cleanModel = (modelName || '').toLowerCase().trim();
-  const isBaseOrchestrator = !cleanModel || cleanModel === 'default' || cleanModel === 'gpt-4o-mini';
+  const isBaseOrchestrator = !cleanModel || cleanModel === 'default' || cleanModel === 'gpt-4o-mini' || cleanModel === 'gemini-1.5-flash';
   
-  if (!isBaseOrchestrator) {
-    return false; // Modelos pesados (gpt-4o, claude, etc.) siempre cobran
+  if (isBaseOrchestrator) {
+    return true; // Gratuito para todos para que los créditos de prueba se usen en outputs reales (miniaturas, audio, etc.)
   }
 
-  // Para gpt-4o-mini:
-  const plan = (userPlanName || 'FREE').toUpperCase();
-  if (plan === 'FREE') {
-    return false; // A los gratis sí se les cobra de sus 50 tokens
-  }
-
-  return true; // A los usuarios de pago no se les cobra
+  return false; // Modelos pesados (gpt-4o, claude, etc.) descuentan créditos
 }
 
 export const DEFAULT_SERVICE_PRICING = [
   {
     serviceType: 'CHAT',
     modelName: 'gpt-4o-mini',
-    costPerUnit: 1, // Para usuarios FREE cuesta 1 crédito; para de pago se anula a 0
+    costPerUnit: 0, // Orquestador base 100% gratuito (protegido con Rate Limit)
     unitType: 'PER_REQUEST',
-    description: 'Orquestador Base (Gratuito para planes de pago, 1 crédito en Free Trial)',
+    description: 'Orquestador Base (Gratuito para todos los planes con Rate Limiting)',
   },
   {
     serviceType: 'CHAT',
     modelName: 'gemini-1.5-flash',
-    costPerUnit: 1,
+    costPerUnit: 0, // Flash rápido gratuito
     unitType: 'PER_REQUEST',
-    description: 'Google Gemini Flash para respuestas rápidas',
+    description: 'Google Gemini Flash para respuestas ultra rápidas (Gratuito)',
   },
+
   {
     serviceType: 'CHAT',
     modelName: 'gpt-4o',
