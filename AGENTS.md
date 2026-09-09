@@ -26,6 +26,12 @@ No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea
 ### 4. INFRAESTRUCTURA Y BASELINE VÍA MIGRACIONES SQL
 - La configuración base, herramientas del sistema y plantillas de prompts no se crean con seeds manuales en tiempo de ejecución (`db:seed` o `GET` endpoints de desarrollo).
 - Todo cambio en esquema o datos de arranque debe declararse de forma idempotente en `migrations/*.sql` para su despliegue gestionado por Terraform / Supabase.
+- **Nomenclatura Estricta y Secuencial (`005_...`, `006_...`):** Toda nueva migración SQL DEBE seguir el prefijo secuencial de 3 dígitos con ceros a la izquierda. Actualmente el baseline se encuentra en `004_ip_registration_and_anti_abuse.sql`, por lo que las siguientes migraciones **DEBEN** ser obligatoriamente:
+  - `migrations/005_nombre_descriptivo.sql`
+  - `migrations/006_nombre_descriptivo.sql`
+  - y así sucesivamente.
+- **Idempotencia Obligatoria:** Todo archivo `.sql` debe ser idempotente (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `ON CONFLICT DO NOTHING / UPDATE`).
+- **Sincronización con Prisma:** Cualquier cambio en tablas o modelos SQL debe replicarse inmediatamente en `prisma/schema.prisma` y ejecutarse `pnpm exec prisma generate`.
 
 ### 5. DEFINICIÓN DE PRODUCTO Y TONO DE VOZ (CERO HUMO, CERO TECNICISMOS)
 - **Definición Oficial:** AutoProd es el **sistema operativo para canales de contenido**. Un espacio donde los creadores organizan sus proyectos, desarrollan ideas con intención, producen con sus propios recursos, analizan resultados y construyen un workflow que se adapta a su forma de crear.

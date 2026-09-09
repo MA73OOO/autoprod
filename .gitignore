@@ -1,6 +1,8 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ==============================================================================
+# AutoProd - Git Ignore Configuration
+# ==============================================================================
 
-# dependencies
+# Dependencies
 /node_modules
 /.pnp
 .pnp.*
@@ -10,82 +12,84 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# Next.js build & outputs
 /.next/
 /out/
-
-# production
 /build
+*.tsbuildinfo
+next-env.d.ts
 
-# misc
+# Testing & Coverage
+/coverage
+
+# Environment & Secrets (Ensure .env.example remains committed)
+.env
+.env*.local
+.env.development
+.env.production
+.env.test
+.env.motor
+!.env.example
+
+# OS & System files
 .DS_Store
+Thumbs.db
 *.pem
+*.key
 
-# debug
+# Logs & Debugging
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+motor.log
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
+# Vercel deployment cache
 .vercel
 
-# terraform
+# Terraform (State files & Provider locks)
 *.tfstate
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
 terraform.tfvars
 *.tfvars
+terraform/.temp/
+.temp/
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# docs / config guides
-/docs/database/conexion_supabase_vercel.md
-/docs/database/README.md
-node_modules/
-dist/
-.env
-
-
-# AI Agents / Claude local cache
-/.claude/
-/.agents/
-/.cursor/
-/.devin/
-
-# Python / Motor Local & PyInstaller
+# Python & Motor Local Caches
 __pycache__/
 *.py[cod]
+*.pyo
+*.pyd
+.Python
 venv/
 env/
-.env.motor
-/.autoprod/
-*.log
-motor.log
-*.spec
+.venv/
+.pytest_cache/
+*.egg-info/
+.autoprod/
+
+# PyInstaller & Compilation Artifacts
 build/
 dist/
 **/build/
 **/dist/
-**/*.spec
-**/*.toc
-**/*.pkg
-*.cjs
-scripts/seed-orchestrator.ts
-# Executables and Binaries
+*.toc
+*.pkg
+
+# Binaries & Executables (Avoid heavy binaries in git repository)
 *.exe
 *.dll
-terraform/terraform.exe
-terraform/.temp/
-.temp/
-terraform_1.16.1_windows_amd64/terraform.exe
-terraform_1.16.1_windows_amd64/LICENSE.txt
+*.dylib
+*.so
+*.dmg
+*.iso
+
+# AI IDE & Local Workspace Cache
+.claude/
+.agents/
+.cursor/
+.devin/
+.gemini/

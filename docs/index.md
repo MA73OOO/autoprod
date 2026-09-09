@@ -58,6 +58,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
 - 🖥️ **[Frontend (UI)](file:///e:/autoprod/docs/frontend/README.md):** Componentes React, Tailwind v4, drag handlers.
 - 🌐 **[Backend (Next.js)](file:///e:/autoprod/docs/backend/README.md):** API Routes, Supabase, Vercel AI SDK.
 - 🗄️ **[Base de Datos (Prisma)](file:///e:/autoprod/docs/database/README.md):** Esquemas, migraciones, sincronización con auth de Supabase.
+- 🛡️ **[Seguridad & Compatibilidad Multiplataforma](file:///e:/autoprod/docs/architecture/security_and_compatibility.md):** Estándares de rutas, I/O seguro en Python/Next.js y prevención de Directory Traversal.
 - 🎯 **[Master Feature Tracker](file:///e:/autoprod/docs/features/README.md):** Control central de alcance, estado y banco de ideas.
 - 🔧 **[Catálogo de Funciones & Protocolo de Ideas](file:///e:/autoprod/docs/functions/README.md):** Herramientas activas del Orquestador, sub-agentes y lista de capacidades **no implementadas**. Si el usuario pide algo que no existe aquí, el agente DEBE preguntar si quiere gestionarlo.
 
