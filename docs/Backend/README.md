@@ -51,8 +51,9 @@ Todas las acciones ejecutables del sistema se implementan como herramientas nati
 | `/api/tools/prompts` | GET / POST | Consulta de plantillas y SOPs operativos (`consultar_prompts`) para el Orquestador y Frontend |
 | `/api/tools/prompts/[id]` | PATCH / DELETE | Edición y eliminación dinámica de plantillas de prompts |
 | `/api/tools/extraer_canal_youtube` | POST | Extrae videos, métricas, tags e indexa contexto pgvector y crea `InfoCanal/` local |
-| `/api/tools/generar_info_canal` | POST | Genera identidad visual (`logo`, `banner`) y `Contexto_canal.md` en el disco local |
-| `/api/tools/generar_metadatos_subida` | POST | Genera títulos, descripción, tags y crea la estructura física del video |
+| `/api/tools/crear_canal` | POST | Valida plan, registra en BD y crea `InfoCanal/` con sus 4 archivos esenciales |
+| `/api/tools/generar_info_canal` | POST | Alias retrocompatible que delega a `crear_canal` |
+| `/api/tools/generar_locucion` | POST | Genera narraciones con Edge-TTS ($0) u OpenAI TTS |
 | `/api/tools/estado_sistema` | POST | Diagnóstico de dependencias locales instaladas |
 
 ### CRUD de Datos

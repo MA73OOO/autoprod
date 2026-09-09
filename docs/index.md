@@ -53,6 +53,7 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
 - 🚀 **Rediseño Integral de Frontend (FEAT-13):** [Ficha Técnica](file:///e:/autoprod/docs/features/landing_and_console_revamp/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/landing_and_console_revamp/idea.md)
 - 🛡️ **Anti-Abuso, Rate Limiting & HMAC IP Hashing (FEAT-14):** [Ficha Técnica](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/idea.md)
 - 🎙️ **Text-to-Speech Multi-Motor (FEAT-15):** [Ficha Técnica](file:///e:/autoprod/docs/features/text_to_speech/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/text_to_speech/idea.md)
+- 🎬 **Orquestación de Canales & Interactive Question Cards (FEAT-16):** [Ficha Técnica](file:///e:/autoprod/docs/features/channel_and_video_orchestration/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_and_video_orchestration/idea.md)
 
 
 ### 🏛️ Arquitectura General (`docs/`)

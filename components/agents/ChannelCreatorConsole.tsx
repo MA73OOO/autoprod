@@ -36,12 +36,14 @@ export default function ChannelCreatorConsole({ workspacePath, onSuccess }: Prop
     const toastId = toast.loading('Construyendo estructura del canal...');
 
     try {
-      const res = await fetch('/api/tools/generar_info_canal', {
+      const res = await fetch('/api/tools/crear_canal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nombre_canal: channelName,
-          contexto_del_usuario: `Tema: ${theme}. Estilo: ${style || 'General'}. Audiencia: ${audience || 'Público general'}.`,
+          tematica: theme,
+          estilo_tono: style || 'General',
+          audiencia: audience || 'Público general',
           _userContext: { workspacePath },
         }),
       });
@@ -49,7 +51,7 @@ export default function ChannelCreatorConsole({ workspacePath, onSuccess }: Prop
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al crear el canal');
 
-      toast.success(`Canal "${channelName}" inicializado correctamente.`, { id: toastId });
+      toast.success(`Canal "${channelName}" inicializado con su carpeta InfoCanal/.`, { id: toastId });
       
       // Reset form
       setChannelName('');
@@ -73,7 +75,7 @@ export default function ChannelCreatorConsole({ workspacePath, onSuccess }: Prop
           📺 Consola Agéntica: Arquitecto de Canales
         </h3>
         <p className="text-xs text-zinc-400 mt-1">
-          Ingresa los metadatos de tu nuevo canal. El sistema creará las carpetas locales y el archivo maestro de reglas (.autoprod_channel.md).
+          Ingresa los datos de tu nuevo canal. El sistema creará las carpetas locales, la memoria InfoCanal/ y sus archivos de ADN.
         </p>
       </div>
 

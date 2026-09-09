@@ -52,7 +52,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 | **FEAT-13** | **Rediseño Integral de Frontend (Landing & Consola)** | Next.js / React 19 / Tailwind | [Ficha Técnica](file:///e:/autoprod/docs/features/landing_and_console_revamp/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/landing_and_console_revamp/idea.md) |
 | **FEAT-14** | **Sistema Anti-Abuso, Rate Limiting & HMAC IP Hashing** | Next.js / Crypto / RAM Cache | [Ficha Técnica](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/idea.md) |
 | **FEAT-15** | **Text-to-Speech Multi-Motor (Edge-TTS & OpenAI)** | FastAPI / Edge-TTS / OpenAI | [Ficha Técnica](file:///e:/autoprod/docs/features/text_to_speech/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/text_to_speech/idea.md) |
-
+| **FEAT-16** | **Orquestación de Canales, Capa de Video (`config_video.md`) & Interactive Question Cards** | Next.js / React 19 / Prisma | [Ficha Técnica](file:///e:/autoprod/docs/features/channel_and_video_orchestration/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_and_video_orchestration/idea.md) |
 
 ---
 

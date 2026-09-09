@@ -552,6 +552,26 @@ Si el usuario dice que desea crear o producir un video pero no ha especificado c
 
           systemPrompt += generalCapabilitiesDirective;
         }
+
+        const interactiveQuestionsDirective = `\n\n=== INTERFAZ DE PREGUNTAS INTERACTIVAS (INTERACTIVE QUESTION CARDS) ===
+Cuando necesites que el creador elija entre opciones (ej. elegir modelo de IA para redactar un documento con su costo aproximado en créditos, confirmar si desea carpetas adicionales, o seleccionar entre 2 o 3 propuestas de títulos/temas), puedes incluir en tu mensaje un bloque interactivo con sintaxis:
+\`\`\`interactive-question
+{
+  "id": "identificador_unico",
+  "question": "Pregunta concisa y directa",
+  "description": "Explicación breve del contexto o decisión",
+  "options": [
+    { "id": "opt1", "label": "Nombre de la opción 1", "badge": "⚡ 0 créditos (Gratis)", "description": "Detalle breve", "recommended": true },
+    { "id": "opt2", "label": "Nombre de la opción 2", "badge": "🧠 ~2 créditos", "description": "Detalle breve" }
+  ],
+  "isMultiSelect": false,
+  "allowCustomInput": true,
+  "customInputPlaceholder": "Escribe otra opción personalizada..."
+}
+\`\`\`
+La interfaz de AutoProd renderizará automáticamente este bloque como una tarjeta interactiva con botones cliqueables de 1-clic, permitiendo al creador tomar decisiones fluidas sin tener que tipear.`;
+
+        systemPrompt += interactiveQuestionsDirective;
         
         // Mapear herramientas de la BD a Vercel AI SDK Tools
         const toolNames: string[] = [];
@@ -609,6 +629,22 @@ Si el usuario dice que desea crear o producir un video pero no ha especificado c
                   if (dbTool.name === 'extraer_canal_youtube') {
                     if (!payload.url_canal && (payload.url || payload.canal_url || payload.channel_url || payload.canal || payload.channel || payload.handle || payload.link)) {
                       payload.url_canal = payload.url || payload.canal_url || payload.channel_url || payload.canal || payload.channel || payload.handle || payload.link;
+                    }
+                  }
+
+                  // Normalización para crear_canal
+                  if (dbTool.name === 'crear_canal') {
+                    if (!payload.nombre_canal && (payload.canal || payload.channel || payload.name || payload.nombre)) {
+                      payload.nombre_canal = payload.canal || payload.channel || payload.name || payload.nombre;
+                    }
+                    if (!payload.tematica && (payload.niche || payload.nicho || payload.tema || payload.contexto_del_usuario || payload.description)) {
+                      payload.tematica = payload.niche || payload.nicho || payload.tema || payload.contexto_del_usuario || payload.description;
+                    }
+                    if (!payload.estilo_tono && (payload.estilo || payload.tono || payload.style)) {
+                      payload.estilo_tono = payload.estilo || payload.tono || payload.style;
+                    }
+                    if (!payload.audiencia && (payload.publico_objetivo || payload.audience)) {
+                      payload.audiencia = payload.publico_objetivo || payload.audience;
                     }
                   }
 
@@ -670,7 +706,7 @@ Si el usuario dice que desea crear o producir un video pero no ha especificado c
                   }
 
                   // GUARD DE LÍMITES DE SUSCRIPCIÓN PARA CREACIÓN DE CANALES
-                  if (dbTool.name === 'crear_carpetas' && !isAdmin && existingChannels.length >= maxChannels) {
+                  if ((dbTool.name === 'crear_carpetas' || dbTool.name === 'crear_canal') && !isAdmin && existingChannels.length >= maxChannels) {
                     let isNewChannelAttempt = false;
                     let requestedChannelName = '';
 

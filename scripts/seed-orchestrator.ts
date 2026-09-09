@@ -201,25 +201,37 @@ async function main() {
     }
   });
 
-  const toolGenerarMetadatosSubida = await prisma.tool.upsert({
-    where: { name: 'generar_metadatos_subida' },
+  const toolCrearCanal = await prisma.tool.upsert({
+    where: { name: 'crear_canal' },
     update: {
-      description: 'Crea un nuevo video dentro de un canal: genera toda la estructura de carpetas (Guiones, Videos, Imagenes, etc.) y los archivos config_video.md y comentario_fijado.md con metadatos SEO generados por IA. Úsala cuando el usuario quiera crear o preparar un video nuevo.',
-    },
-    create: {
-      name: 'generar_metadatos_subida',
-      description: 'Crea un nuevo video dentro de un canal: genera toda la estructura de carpetas (Guiones, Videos, Imagenes, etc.) y los archivos config_video.md y comentario_fijado.md con metadatos SEO generados por IA. Úsala cuando el usuario quiera crear o preparar un video nuevo.',
-      apiEndpoint: 'http://localhost:3000/api/tools/generar_metadatos_subida',
+      description: 'Crea e inicializa un nuevo canal de YouTube en AutoProd. Valida los límites de suscripción del usuario, registra el canal en base de datos y crea la estructura física en disco con la carpeta InfoCanal/ y sus 4 archivos esenciales de memoria y ADN (Contexto_canal.md, Metricas_canal.md, Historial_canal.md, Branding_canal.md).',
+      apiEndpoint: 'http://localhost:3000/api/tools/crear_canal',
       method: 'POST',
       schema: {
         type: 'object',
         properties: {
-          nombre_canal: { type: 'string', description: 'Nombre del canal donde va el video.' },
-          nombre_video: { type: 'string', description: 'Nombre del video (se usará como nombre de carpeta).' },
-          tematica: { type: 'string', description: 'Temática o tema específico del video.' },
-          contexto_del_usuario: { type: 'string', description: 'Indicaciones, estilo y requisitos del usuario para los metadatos.' }
+          nombre_canal: { type: 'string', description: 'Nombre oficial de la carpeta y marca del nuevo canal (ej. PawsAndPillows, FinanzasClaras).' },
+          tematica: { type: 'string', description: 'Nicho temático y enfoque principal del canal.' },
+          estilo_tono: { type: 'string', description: 'Estilo de comunicación, ritmo y tono de voz (opcional).' },
+          audiencia: { type: 'string', description: 'Público objetivo y perfil de la audiencia (opcional).' }
         },
-        required: ['nombre_canal', 'nombre_video', 'tematica', 'contexto_del_usuario']
+        required: ['nombre_canal', 'tematica']
+      }
+    },
+    create: {
+      name: 'crear_canal',
+      description: 'Crea e inicializa un nuevo canal de YouTube en AutoProd. Valida los límites de suscripción del usuario, registra el canal en base de datos y crea la estructura física en disco con la carpeta InfoCanal/ y sus 4 archivos esenciales de memoria y ADN (Contexto_canal.md, Metricas_canal.md, Historial_canal.md, Branding_canal.md).',
+      apiEndpoint: 'http://localhost:3000/api/tools/crear_canal',
+      method: 'POST',
+      schema: {
+        type: 'object',
+        properties: {
+          nombre_canal: { type: 'string', description: 'Nombre oficial de la carpeta y marca del nuevo canal (ej. PawsAndPillows, FinanzasClaras).' },
+          tematica: { type: 'string', description: 'Nicho temático y enfoque principal del canal.' },
+          estilo_tono: { type: 'string', description: 'Estilo de comunicación, ritmo y tono de voz (opcional).' },
+          audiencia: { type: 'string', description: 'Público objetivo y perfil de la audiencia (opcional).' }
+        },
+        required: ['nombre_canal', 'tematica']
       }
     }
   });
@@ -412,7 +424,7 @@ REGLAS CRÍTICAS:
     toolGuardarArchivo,
     toolVerificarEstado,
     toolGenerarInfoCanal,
-    toolGenerarMetadatosSubida,
+    toolCrearCanal,
     toolExtraerCanal,
   ];
 

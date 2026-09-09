@@ -5,6 +5,7 @@ import { Language, translations } from '@/app/translations';
 import { Channel, Conversation, Message } from './types';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import InteractiveQuestionCard from './InteractiveQuestionCard';
 
 interface Checklist {
   cta: boolean;
@@ -181,6 +182,26 @@ export default function ChatPanel({
     c.id === activeConversation?.channelId || 
     c.name.toLowerCase() === activeConversation?.channelId?.toLowerCase()
   );
+
+  const markdownComponents = {
+    code({ node, inline, className, children, ...props }: any) {
+      const match = /language-(\w+)/.exec(className || '');
+      const codeLang = match ? match[1] : '';
+      if (!inline && (codeLang === 'interactive-question' || codeLang === 'interactive_question' || codeLang === 'ask_question' || codeLang === 'question')) {
+        const jsonContent = String(children).replace(/\n$/, '');
+        return (
+          <InteractiveQuestionCard
+            dataJson={jsonContent}
+            onSelect={(selectedText) => {
+              onSend(selectedText);
+            }}
+          />
+        );
+      }
+      return <code className={className} {...props}>{children}</code>;
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col relative h-full">
       {/* Messages log */}
@@ -207,7 +228,7 @@ export default function ChatPanel({
               {msg.text.includes('🛑 Proceso cancelado por el usuario.') ? (
                 <>
                   <div className="prose prose-invert max-w-none text-sm leading-relaxed break-words">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {msg.text.replace('🛑 Proceso cancelado por el usuario.', '').trim()}
                     </ReactMarkdown>
                   </div>
@@ -217,7 +238,7 @@ export default function ChatPanel({
                 </>
               ) : (
                 <div className="prose prose-invert max-w-none text-sm leading-relaxed break-words">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {msg.text}
                   </ReactMarkdown>
                 </div>

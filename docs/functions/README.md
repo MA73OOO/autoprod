@@ -46,8 +46,8 @@ Herramientas especializadas invocadas autónomamente por el Orquestador central 
 | Slug | Nombre | Endpoint | Descripción | Estado |
 |---|---|---|---|:---:|
 | `consultar_prompts` | Consultor de SOPs y Plantillas | `/api/tools/prompts` | Permite al cerebro consultar guías operativas, plantillas y taxonomía de carpetas bajo demanda | `✅ ACTIVA` |
-| `generar_info_canal` | Generador de Identidad de Canal | `/api/tools/generar_info_canal` | Diseña guía de branding (logo, banner) y crea `InfoCanal/Contexto_canal.md` | `✅ ACTIVA` |
-| `generar_metadatos_subida` | Generador de Metadatos y Estructura | `/api/tools/generar_metadatos_subida` | Genera títulos, tags, descripción y crea las 5 carpetas de producción del video | `✅ ACTIVA` |
+| `crear_canal` | Creador e Inicializador de Canales | `/api/tools/crear_canal` | Valida límites de plan, registra en BD y crea `InfoCanal/` con `Contexto_canal.md`, `Metricas_canal.md`, `Historial_canal.md`, `Branding_canal.md` | `✅ ACTIVA` |
+| `generar_info_canal` | Alias Retrocompatible de `crear_canal` | `/api/tools/generar_info_canal` | Delega a `crear_canal` para compatibilidad de interfaces previas | `✅ ACTIVA` |
 | `generar_locucion` | Generador de Locución y Voz en Off | `/api/tools/generar_locucion` | Genera narraciones con Edge-TTS ($0) u OpenAI con control de créditos | `✅ ACTIVA` |
 | `estado_sistema` | Verificador de Diagnóstico | `/api/tools/estado_sistema` | Reporta dependencias locales instaladas (FFmpeg, Python, Node) | `✅ ACTIVA` |
 

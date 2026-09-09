@@ -221,23 +221,23 @@ export async function GET() {
       }
     });
 
-    const toolGenerarMetadatosSubida = await prisma.tool.upsert({
-      where: { name: 'generar_metadatos_subida' },
-      update: { description: 'Crea un nuevo video y genera config_video.md y comentario_fijado.md.' },
+    const toolCrearCanal = await prisma.tool.upsert({
+      where: { name: 'crear_canal' },
+      update: { description: 'Crea e inicializa un nuevo canal de YouTube con su carpeta InfoCanal/ y sus 4 archivos esenciales de memoria.' },
       create: {
-        name: 'generar_metadatos_subida',
-        description: 'Crea un nuevo video y genera config_video.md y comentario_fijado.md.',
-        apiEndpoint: 'http://localhost:3000/api/tools/generar_metadatos_subida',
+        name: 'crear_canal',
+        description: 'Crea e inicializa un nuevo canal de YouTube con su carpeta InfoCanal/ y sus 4 archivos esenciales de memoria.',
+        apiEndpoint: 'http://localhost:3000/api/tools/crear_canal',
         method: 'POST',
         schema: {
           type: 'object',
           properties: {
             nombre_canal: { type: 'string', description: 'Nombre del canal.' },
-            nombre_video: { type: 'string', description: 'Nombre del video.' },
-            tematica: { type: 'string', description: 'Temática.' },
-            contexto_del_usuario: { type: 'string', description: 'Indicaciones.' }
+            tematica: { type: 'string', description: 'Nicho temático del canal.' },
+            estilo_tono: { type: 'string', description: 'Tono o estilo (opcional).' },
+            audiencia: { type: 'string', description: 'Audiencia objetivo (opcional).' }
           },
-          required: ['nombre_canal', 'nombre_video', 'tematica', 'contexto_del_usuario']
+          required: ['nombre_canal', 'tematica']
         }
       }
     });
@@ -329,7 +329,7 @@ EXPLICACIÓN DE EXTRACCIÓN DE CANALES:
         toolGuardarArchivo,
         toolVerificarEstado,
         toolGenerarInfoCanal,
-        toolGenerarMetadatosSubida,
+        toolCrearCanal,
         toolExtraerCanal,
       ];
 
