@@ -381,9 +381,6 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                     </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Local Engines (Ollama) Removed */}
             </div>
           )}
 

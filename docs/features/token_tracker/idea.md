@@ -17,7 +17,7 @@
 | Capacidad | Estado | Descripción / Comentario |
 |---|:---:|---|
 | **Rastreo Asíncrono de Tokens (Fire-and-Forget)** | `✅ HECHO` | 0ms de penalización de latencia en la respuesta del chat. |
-| **Desglose por Proveedor y Modelo Específico** | `✅ HECHO` | Registra OpenAI, Gemini, Anthropic y Ollama por separado. |
+| **Desglose por Proveedor y Modelo Específico** | `✅ HECHO` | Registra OpenAI, Gemini y Anthropic por separado. |
 | **Asociación por Usuario y Conversación** | `✅ HECHO` | Permite rastrear qué proyecto o guion consumió más recursos. |
 | **Gráfica de Consumo Diario/Mensual en Dashboard** | `⏳ FALTANTE` | Visualización en gráficos de barras de gasto de tokens por canal. |
 | **Límites de Presupuesto Configurable por el Usuario** | `⏳ FALTANTE` | Fijar un tope (ej: "no gastar más de $10 USD este mes en GPT-4o"). |

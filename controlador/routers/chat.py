@@ -79,14 +79,6 @@ def detect_clis():
     
     known_clis = [
         {
-            "id": "ollama",
-            "name": "Ollama (Local)", 
-            "bin": "ollama", 
-            "template": 'ollama run llama3 "{prompt}"',
-            "ping_cmd": "ollama list",
-            "auth_cmd": None
-        },
-        {
             "id": "gemini",
             "name": "Google Gemini", 
             "bin": "gemini", 
@@ -112,51 +104,12 @@ def detect_clis():
         }
     ]
     
-    import os
-    import platform
-    import urllib.request
-    
     detected = []
     for cli in known_clis:
         bin_path = shutil.which(cli["bin"])
-        
-        # Fallback para Ollama en Windows si no está en el PATH
-        if not bin_path and cli["id"] == "ollama" and platform.system() == "Windows":
-            fallback_path = os.path.expanduser('~\\AppData\\Local\\Programs\\Ollama\\ollama.exe')
-            if os.path.exists(fallback_path):
-                bin_path = fallback_path
-                cli["ping_cmd"] = f'"{fallback_path}" list'
-                cli["template"] = cli["template"].replace('ollama run', f'"{fallback_path}" run')
-
-        # Si seguimos sin binario pero es ollama, intentemos ver si el servicio web está corriendo
-        ollama_running_http = False
-        if cli["id"] == "ollama":
-            def check_http():
-                import urllib.error
-                try:
-                    response = urllib.request.urlopen("http://127.0.0.1:11434/", timeout=1)
-                    return response.status == 200
-                except urllib.error.HTTPError:
-                    return True
-                except Exception:
-                    return False
-            
-            ollama_running_http = check_http()
-            
-            # Intento de despertar automático (Versión 2)
-            if not ollama_running_http and bin_path:
-                try:
-                    # Lanzar 'ollama serve' en segundo plano de manera silenciosa
-                    import time
-                    subprocess.Popen([bin_path, "serve"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    time.sleep(2.0) # Darle tiempo al servidor local para levantar
-                    ollama_running_http = check_http()
-                except Exception as e:
-                    pass
-
-        if bin_path or ollama_running_http:
+        if bin_path:
             is_auth = True
-            if not ollama_running_http and cli["ping_cmd"]:
+            if cli["ping_cmd"]:
                 try:
                     res = subprocess.run(
                         cli["ping_cmd"], 

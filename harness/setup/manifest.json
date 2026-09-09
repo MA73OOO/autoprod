@@ -39,13 +39,13 @@
       "local_path_mac": "yt-dlp"
     },
     {
-      "id": "openai-whisper",
-      "name": "Whisper (OpenAI)",
-      "description": "Inteligencia Artificial para transcribir audios a texto con alta precisión.",
+      "id": "faster-whisper",
+      "name": "Faster-Whisper (Motor Local)",
+      "description": "IA local ultrarrápida (CTranslate2) para transcribir audios y videos sin costo de API.",
       "type": "pip",
-      "min_version": "2023",
-      "pip_package": "openai-whisper",
-      "check_command": "whisper --help"
+      "min_version": "1.0.0",
+      "pip_package": "faster-whisper",
+      "check_command": "python -c \"import faster_whisper; print(faster_whisper.__version__)\""
     },
     {
       "id": "pillow",

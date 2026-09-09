@@ -181,16 +181,92 @@ def extract_optimized_audio(source_file: Path, temp_dir: Path, target_id: str) -
 # ──────────────────────────────────────────────
 # Modelos de Datos
 # ──────────────────────────────────────────────
+_LOADED_WHISPER_MODELS: Dict[str, Any] = {}
+
+def get_or_create_faster_whisper_model(model_size: str = "base", device: str = "cpu", compute_type: str = "int8", cpu_threads: int = 4):
+    """Carga y cachea en memoria el modelo de Faster-Whisper."""
+    key = f"{model_size}_{device}_{compute_type}_{cpu_threads}"
+    if key not in _LOADED_WHISPER_MODELS:
+        from faster_whisper import WhisperModel
+        _LOADED_WHISPER_MODELS[key] = WhisperModel(
+            model_size,
+            device=device,
+            compute_type=compute_type,
+            cpu_threads=cpu_threads
+        )
+    return _LOADED_WHISPER_MODELS[key]
+
+def transcribe_faster_whisper(
+    audio_path: Path,
+    language: Optional[str] = "es",
+    device: str = "cpu",
+    safe_threads: int = 4,
+    model_size: str = "base"
+) -> Dict[str, Any]:
+    """
+    Transcribe audio usando faster-whisper (CTranslate2) 100% en local.
+    Extrae marcas de tiempo a nivel de palabra para subtítulos estilo CapCut y usa Silero VAD para filtrar silencios.
+    """
+    compute_type = "float16" if device == "cuda" else "int8"
+    try:
+        model = get_or_create_faster_whisper_model(model_size, device, compute_type, safe_threads)
+    except Exception as e:
+        if device == "cuda":
+            # Fallback automático a CPU int8 si los drivers de GPU o cuDNN no están presentes
+            model = get_or_create_faster_whisper_model(model_size, "cpu", "int8", safe_threads)
+        else:
+            raise e
+
+    lang_param = language.lower() if (language and language.lower() not in ["auto", ""]) else None
+
+    segments_generator, info = model.transcribe(
+        str(audio_path),
+        language=lang_param,
+        word_timestamps=True,
+        vad_filter=True,
+        vad_parameters=dict(min_silence_duration_ms=400)
+    )
+
+    full_text_parts = []
+    segments_list = []
+
+    for seg in segments_generator:
+        seg_text = seg.text.strip()
+        full_text_parts.append(seg_text)
+        words_list = []
+        if seg.words:
+            for w in seg.words:
+                words_list.append({
+                    "word": w.word,
+                    "start": round(w.start, 3),
+                    "end": round(w.end, 3),
+                    "probability": round(w.probability, 3)
+                })
+        segments_list.append({
+            "id": seg.id,
+            "start": round(seg.start, 3),
+            "end": round(seg.end, 3),
+            "text": seg_text,
+            "words": words_list
+        })
+
+    return {
+        "text": " ".join(full_text_parts),
+        "segments": segments_list,
+        "language": getattr(info, "language", language or "es"),
+        "duration": getattr(info, "duration", 0.0)
+    }
+
 class SubtitlesEstimateRequest(BaseModel):
     target_type: str = "video"                   # "video" | "songs_folder"
     path: str
-    engine: str = "openai_api"                   # "openai_api" | "local_gpu" | "local_cpu"
+    engine: str = "local_cpu"                    # "local_cpu" | "local_gpu" | "openai_api"
 
 class SubtitlesGenerateRequest(BaseModel):
     target_type: str = "video"                   # "video" | "songs_folder"
     path: str
     channel_name: Optional[str] = None
-    engine: str = "openai_api"                   # "openai_api" | "local_gpu" | "local_cpu"
+    engine: str = "local_cpu"                    # "local_cpu" | "local_gpu" | "openai_api"
     language: str = "es"                         # "es" | "en" | "auto"
     formats: List[str] = [".srt", ".vtt", ".json"]
     burn_to_video: bool = False                  # Si es true y es video, quema subtítulos con FFmpeg
@@ -227,7 +303,7 @@ def run_subtitles_worker(job_id: str, req: SubtitlesGenerateRequest):
 
         if is_folder:
             audio_exts = {".mp3", ".wav", ".aac", ".m4a", ".flac", ".ogg", ".wma"}
-            for item in sorted(source_path.iterdir(), key=lambda x: x.name.lower()):
+            for item in sorted(target_files := sorted(source_path.iterdir(), key=lambda x: x.name.lower())):
                 if item.is_file() and item.suffix.lower() in audio_exts:
                     files_to_process.append(item)
             if not files_to_process:
@@ -264,43 +340,51 @@ def run_subtitles_worker(job_id: str, req: SubtitlesGenerateRequest):
             if req.engine == "openai_api":
                 if not api_key:
                     raise Exception("No se encontró la OPENAI_API_KEY en las variables de entorno o archivo .env.")
-                SUB_JOBS[job_id]["message"] = f"Transcribiendo con OpenAI Whisper API (ultrarrápido): {file_item.name}..."
+                SUB_JOBS[job_id]["message"] = f"Transcribiendo con OpenAI Whisper API (Cloud): {file_item.name}..."
                 transcription_data = call_openai_whisper(opt_audio, api_key, req.language)
             else:
-                # Motor local (GPU o CPU con limitación de hilos)
+                # Motor local (faster-whisper nativo con aceleración por CPU/GPU)
                 specs = governor.get_hardware_specs()
                 safe_threads = specs["safe_threads"]
                 device = "cuda" if (req.engine == "local_gpu" and specs["has_cuda"]) else "cpu"
                 
-                # Verificar si whisper CLI está disponible
-                whisper_bin = shutil.which("whisper")
-                if whisper_bin:
-                    cmd = [
-                        whisper_bin,
-                        str(opt_audio),
-                        "--model", "base",
-                        "--output_dir", str(temp_dir),
-                        "--output_format", "all",
-                        "--threads", str(safe_threads),
-                        "--device", device
-                    ]
-                    if req.language and req.language != "auto":
-                        cmd.extend(["--language", req.language])
+                try:
+                    SUB_JOBS[job_id]["message"] = f"Transcribiendo con Faster-Whisper ({device.upper()} - {safe_threads} hilos): {file_item.name}..."
+                    transcription_data = transcribe_faster_whisper(
+                        opt_audio,
+                        language=req.language,
+                        device=device,
+                        safe_threads=safe_threads,
+                        model_size="base"
+                    )
+                except ImportError:
+                    # Si faster-whisper no está instalado, intentar CLI de whisper clásico
+                    whisper_bin = shutil.which("whisper")
+                    if whisper_bin:
+                        cmd = [
+                            whisper_bin,
+                            str(opt_audio),
+                            "--model", "base",
+                            "--output_dir", str(temp_dir),
+                            "--output_format", "all",
+                            "--threads", str(safe_threads),
+                            "--device", device
+                        ]
+                        if req.language and req.language != "auto":
+                            cmd.extend(["--language", req.language])
 
-                    SUB_JOBS[job_id]["message"] = f"Transcribiendo en local ({device.upper()} - {safe_threads} hilos): {file_item.name}..."
-                    subprocess.run(cmd, capture_output=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
-                    
-                    json_out = temp_dir / f"{opt_audio.stem}.json"
-                    if json_out.exists():
-                        with open(json_out, "r", encoding="utf-8") as f:
-                            transcription_data = json.load(f)
-                else:
-                    # Fallback suave a Whisper API si está la key
-                    if api_key:
-                        SUB_JOBS[job_id]["message"] = f"Whisper local no detectado en PATH, usando OpenAI Whisper API: {file_item.name}..."
+                        SUB_JOBS[job_id]["message"] = f"Transcribiendo con Whisper CLI ({device.upper()}): {file_item.name}..."
+                        subprocess.run(cmd, capture_output=True, check=True, stdin=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW)
+                        
+                        json_out = temp_dir / f"{opt_audio.stem}.json"
+                        if json_out.exists():
+                            with open(json_out, "r", encoding="utf-8") as f:
+                                transcription_data = json.load(f)
+                    elif api_key:
+                        SUB_JOBS[job_id]["message"] = f"Faster-Whisper no detectado, usando OpenAI API: {file_item.name}..."
                         transcription_data = call_openai_whisper(opt_audio, api_key, req.language)
                     else:
-                        raise Exception("El binario de Whisper local no está en el PATH y no hay API Key de OpenAI configurada.")
+                        raise Exception("Faster-Whisper no está instalado en el entorno local. Ejecuta: pip install faster-whisper")
 
             # Limpiar archivo temporal de audio si se creó uno nuevo
             if opt_audio != file_item and opt_audio.exists():

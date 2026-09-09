@@ -570,14 +570,12 @@ export default function Dashboard() {
       } else {
         if (model.includes('gpt')) provider = 'openai';
         else if (model.includes('claude')) provider = 'anthropic';
-        else if (model.includes('llama')) provider = 'ollama';
         else if (model.includes('gemini')) provider = 'gemini';
       }
 
       if (provider === 'openai') friendlyModelName = actualModel.includes('mini') ? 'GPT-4o Mini' : 'GPT-4o';
       else if (provider === 'gemini') friendlyModelName = 'Gemini Flash';
       else if (provider === 'anthropic') friendlyModelName = 'Claude 3.5 Sonnet';
-      else if (provider === 'ollama') friendlyModelName = `${actualModel} (Local)`;
       else if (provider === 'imagen3') friendlyModelName = 'Imagen 3';
       
       const startTime = Date.now();
@@ -605,7 +603,7 @@ export default function Dashboard() {
           const commandTemplate = 'gemini-cli image "{prompt}"';
           aiResponseText = await ControladorClient.askConsoleAI(text, commandTemplate);
         } else {
-          // Motor Texto (Nube o Ollama Local) usando Vercel AI SDK
+          // Orquestador Central vía Vercel AI SDK
           // Build history, skipping the first assistant message which is a static UI greeting
           // and should not be sent to the model as it incorrectly primes its behavior.
           const allMessages = activeConversation?.messages || [];

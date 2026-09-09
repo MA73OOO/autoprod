@@ -23,7 +23,7 @@ flowchart LR
 - `id`: UUID.
 - `userId`: Relación con `User`.
 - `conversationId`: Relación opcional con `Conversation`.
-- `provider`: Enum / String (`openai`, `gemini`, `anthropic`, `ollama`).
+- `provider`: Enum / String (`openai`, `gemini`, `anthropic`).
 - `modelName`: Nombre exacto del modelo (`gpt-4o-mini`, `gemini-1.5-flash`, etc.).
 - `promptTokens`: Cantidad de tokens en la entrada (contexto, reglas, historial).
 - `completionTokens`: Cantidad de tokens generados en la respuesta.

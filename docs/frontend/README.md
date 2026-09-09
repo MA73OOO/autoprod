@@ -20,7 +20,6 @@ La capa de presentación es una aplicación web desarrollada en **Next.js 16.3.3
 | `@ai-sdk/google` | 4.0.56 | Provider Gemini |
 | `@ai-sdk/openai` | 4.0.50 | Provider OpenAI |
 | `@ai-sdk/anthropic` | 4.0.44 | Provider Anthropic |
-| `ollama-ai-provider` / `-v2` | 1.2.0 / 4.0.1 | Provider Ollama local |
 | `@supabase/ssr` | 0.12.5 | Auth SSR |
 | `@supabase/supabase-js` | 2.112.4 | Cliente Supabase |
 | `zod` | 4.4.3 | Validación de esquemas |
@@ -39,8 +38,8 @@ Componentes:
 ### 2. Panel Central — Chat Co-Pilot Multi-Provider
 Componente principal:
 - **[`ChatPanel.tsx`](file:///e:/AutoProd/components/dashboard/ChatPanel.tsx)**: Interfaz de chat con:
-  - Selector de provider (Ollama, Gemini, OpenAI, Anthropic).
-  - Selector de modelo (ej: `llama3.1:latest`, `gemini-3.6-flash`, `gpt-4o`).
+  - Selector de provider (Gemini, OpenAI, Anthropic).
+  - Selector de modelo (ej: `gemini-3.6-flash`, `gpt-4o`).
   - Selector de workspace (conectado al Motor Python via `WorkspaceModal`).
   - Historial de mensajes con renderizado Markdown.
   - Envío de mensajes al endpoint `/api/chat`.
@@ -67,7 +66,7 @@ Componentes:
 | FileTree | [`FileTree.tsx`](file:///e:/AutoProd/components/dashboard/FileTree.tsx) | Árbol de archivos conectado al Motor Python |
 | MarkdownEditor | [`MarkdownEditor.tsx`](file:///e:/AutoProd/components/dashboard/MarkdownEditor.tsx) | Editor de Markdown con guardado remoto |
 | RightInspector | [`RightInspector.tsx`](file:///e:/AutoProd/components/dashboard/RightInspector.tsx) | Panel inspector derecho |
-| UserSettingsModal | [`UserSettingsModal.tsx`](file:///e:/AutoProd/components/dashboard/UserSettingsModal.tsx) | Modal de configuración: providers de IA, API keys, detección de CLI local (Ollama) |
+| UserSettingsModal | [`UserSettingsModal.tsx`](file:///e:/AutoProd/components/dashboard/UserSettingsModal.tsx) | Modal de configuración: providers de IA y API keys |
 | WorkspaceModal | [`WorkspaceModal.tsx`](file:///e:/AutoProd/components/dashboard/WorkspaceModal.tsx) | Selector de workspace via explorador nativo del SO |
 | ConfirmDeleteModal | [`ConfirmDeleteModal.tsx`](file:///e:/AutoProd/components/dashboard/ConfirmDeleteModal.tsx) | Modal de confirmación para eliminaciones |
 | types | [`types.ts`](file:///e:/AutoProd/components/dashboard/types.ts) | Tipos TypeScript compartidos del dashboard |

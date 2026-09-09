@@ -22,7 +22,7 @@ flowchart TB
         Supabase["🗄️ Supabase PostgreSQL\nMulti-schema (public, auth, vault, pgvector)"]
         Prisma["💎 Prisma 7.10 / adapter-pg\nORM & Data Layer"]
         LemonSqueezy["💳 Lemon Squeezy\nWebhooks & Checkout"]
-        AIProviders["🤖 Proveedores de IA\nGemini / OpenAI / Anthropic / Ollama"]
+        AIProviders["🤖 Proveedores de IA\nGemini / OpenAI / Anthropic"]
     end
 
     UI <-->|HTTP / WebSocket| LocalMotor

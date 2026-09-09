@@ -2,7 +2,7 @@
 
 > **Ruta:** `docs/features/subtitles_whisper/ficha_tecnica.md`  
 > **Estado:** `✅ HECHO` (En producción / Operativo)  
-> **Capa Técnica:** Python FastAPI (Puerto 8000) + Whisper (OpenAI / Local) + Silero VAD + FFmpeg + Next.js
+> **Capa Técnica:** Python FastAPI (Puerto 8000) + Faster-Whisper (CTranslate2 Local / GPU / CPU) + Silero VAD + FFmpeg + Next.js
 
 ---
 
@@ -12,11 +12,11 @@
 flowchart TD
     A[Video / Carpeta Canciones] --> B[Extracción Audio WAV 16kHz Mono vía FFmpeg]
     B --> C[Silero VAD: Voice Activity Detection]
-    C -->|Segmentos de Voz Confirmados| D[Whisper Engine: Cloud API o Local]
+    C -->|Segmentos de Voz Confirmados| D[Faster-Whisper Engine: CTranslate2 Local int8/float16]
     D -->|Word Timestamps & Puntuación| E[Generador de Subtítulos]
     E --> F1[.srt: CapCut & Editores NLE]
     E --> F2[.vtt: Web & YouTube Captions]
-    E --> F3[.json: Timeline estructurado]
+    E --> F3[.json: Timeline estructurado con Word Timestamps]
     E -->|Opcional: FFmpeg Burn| G[Video con Subtítulos Quemados]
 ```
 

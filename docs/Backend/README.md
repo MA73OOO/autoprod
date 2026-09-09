@@ -6,17 +6,16 @@ El backend está dividido en dos capas optimizadas para mantener el costo operat
 1. **Cloud Backend (TypeScript — Next.js 16.3.3 API Routes / Vercel)**:
    * Gestiona autenticación de usuarios (Supabase Auth + Google OAuth).
    * Maneja el CRUD de Canales, Videos, Conversaciones y Mensajes mediante **Prisma 7.10** con `@prisma/adapter-pg`.
-   * Implementa el **Chat Universal Multi-Provider** (`universalChatWithTools`) con soporte para Ollama, Gemini, OpenAI y Anthropic.
-   * Orquesta los **Switches Cloud** (agentes especializados) que ejecutan tareas avanzadas con Gemini.
+   * Implementa el **Chat Universal Multi-Provider** (`universalChatWithTools`) con soporte para Gemini, OpenAI y Anthropic.
+   * Orquesta las **Herramientas del Cerebro** que ejecutan tareas avanzadas.
    * Gestiona API Keys cifradas en Supabase Vault.
    * Registra el consumo de tokens en la tabla `TokenUsage`.
 
 2. **Motor Local (Python FastAPI — `localhost:8000`)**:
    * Controlador local que corre en la máquina del usuario.
-   * Ejecuta operaciones CRUD en el sistema de archivos: leer, escribir, eliminar archivos `.md`/`.txt`, crear carpetas, listar workspace.
-   * Abre el explorador de archivos nativo del SO (PowerShell en Windows, osascript en macOS) para selección de workspace.
-   * Gestiona la instalación de Ollama según el SO.
-   * CORS configurado para `localhost:3000`, `autoprod.com` y `autoprod.vercel.app`.
+   * Ejecuta operaciones de archivos en el workspace (`workspace`), procesamiento de video con FFmpeg (`video_looper`) y transcripción local con Faster-Whisper (`subtitles`).
+   * Abre el explorador de archivos nativo del SO para selección de workspace.
+   * CORS universal para conectar fluidamente con la app.
 
 ---
 
@@ -86,14 +85,6 @@ Todas las acciones ejecutables del sistema se implementan como herramientas nati
 | `/workspace/create` | POST | Crea carpeta + subcarpetas. Body: `target_path`, `folder_name`, `subfolders[]` |
 | `/workspace/file` | GET | Lee contenido de archivo `.md`/`.txt`. Query param: `path` |
 | `/workspace/file` | POST | Guarda/sobrescribe archivo `.md`/`.txt`. Body: `path`, `content` |
-| `/workspace/file` | DELETE | Elimina archivo `.md`/`.txt`. Query param: `path` |
-
-### Ollama (`/ollama/`)
-
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/ollama/install` | POST | Instala Ollama según SO: Windows (descarga .exe), macOS/Linux (curl script) |
-
 ### Sistema
 
 | Endpoint | Método | Descripción |

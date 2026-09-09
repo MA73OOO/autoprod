@@ -114,7 +114,7 @@ export const VideoSubtitlesStudio: React.FC<VideoSubtitlesStudioProps> = ({
       const estimate = await ControladorClient.estimateSubtitles({
         targetType: activeTab,
         path: targetPath,
-        engine: 'openai_api',
+        engine: 'local_cpu',
       });
       setEstimateData(estimate);
       setIsEstimateModalOpen(true);

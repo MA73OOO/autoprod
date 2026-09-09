@@ -22,7 +22,9 @@ export const PreExecutionEstimateModal: React.FC<PreExecutionEstimateModalProps>
   title = '⚡ Estimación de Hardware y Tiempo de Proceso',
   actionButtonText = 'Comenzar Procesamiento Seguro',
 }) => {
-  const [selectedEngine, setSelectedEngine] = useState<'openai_api' | 'local_gpu' | 'local_cpu'>('openai_api');
+  const [selectedEngine, setSelectedEngine] = useState<'openai_api' | 'local_gpu' | 'local_cpu'>(
+    estimateData?.hardware_specs?.has_gpu ? 'local_gpu' : 'local_cpu'
+  );
 
   if (!isOpen) return null;
 
@@ -97,74 +99,75 @@ export const PreExecutionEstimateModal: React.FC<PreExecutionEstimateModalProps>
             </label>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               
-              {/* Opción 1: Cloud Whisper API */}
-              <div
-                onClick={() => setSelectedEngine('openai_api')}
-                className={`cursor-pointer p-4 rounded-xl border transition-all relative ${
-                  selectedEngine === 'openai_api'
-                    ? 'bg-emerald-500/10 border-emerald-500 shadow-md shadow-emerald-950/30'
-                    : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-emerald-400">⚡ Whisper API (Cloud)</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">
-                    Recomendado
-                  </span>
-                </div>
-                <div className="text-xl font-extrabold text-white">
-                  ~{estimates?.openai_api.formatted || 'Rápido'}
-                </div>
-                <p className="text-[11px] text-zinc-400 mt-1">
-                  0% impacto en tu PC. Procesamiento en la nube ultrarrápido (15x-20x).
-                </p>
-              </div>
-
-              {/* Opción 2: GPU Local */}
+              {/* Opción 1: Faster-Whisper GPU Local */}
               <div
                 onClick={() => setSelectedEngine('local_gpu')}
-                className={`cursor-pointer p-4 rounded-xl border transition-all ${
+                className={`cursor-pointer p-4 rounded-xl border transition-all relative ${
                   selectedEngine === 'local_gpu'
                     ? 'bg-indigo-500/10 border-indigo-500 shadow-md shadow-indigo-950/30'
                     : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-indigo-400">🚀 GPU Local</span>
-                  {specs?.has_gpu && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-medium">
-                      Detectada
+                  <span className="text-xs font-bold text-indigo-400">🚀 Faster-Whisper GPU</span>
+                  {specs?.has_gpu ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-semibold">
+                      Recomendado
+                    </span>
+                  ) : (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+                      $0 Costo
                     </span>
                   )}
                 </div>
                 <div className="text-xl font-extrabold text-white">
-                  ~{estimates?.local_gpu.formatted || 'Medio'}
+                  ~{estimates?.local_gpu.formatted || 'Rápido'}
                 </div>
                 <p className="text-[11px] text-zinc-400 mt-1">
-                  Acelerado por hardware gráfico. Menor carga en el CPU del sistema.
+                  100% local en tu GPU. Subtítulos palabra por palabra sin consumo de API.
                 </p>
               </div>
 
-              {/* Opción 3: CPU Local Equilibrada */}
+              {/* Opción 2: Faster-Whisper CPU Local */}
               <div
                 onClick={() => setSelectedEngine('local_cpu')}
-                className={`cursor-pointer p-4 rounded-xl border transition-all ${
+                className={`cursor-pointer p-4 rounded-xl border transition-all relative ${
                   selectedEngine === 'local_cpu'
                     ? 'bg-amber-500/10 border-amber-500 shadow-md shadow-amber-950/30'
                     : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs font-bold text-amber-400">⚖️ CPU Protegido</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-medium">
-                    Auto-limitado
+                  <span className="text-xs font-bold text-amber-400">⚖️ Faster-Whisper CPU</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-semibold">
+                    100% Local ($0)
                   </span>
                 </div>
                 <div className="text-xl font-extrabold text-white">
-                  ~{estimates?.local_cpu.formatted || 'Lento'}
+                  ~{estimates?.local_cpu.formatted || 'Equilibrado'}
                 </div>
                 <p className="text-[11px] text-zinc-400 mt-1">
-                  Limita hilos de CPU para que el computador nunca se cuelgue ni se congele.
+                  Hilos regulados automáticamente. No congela tu equipo ni requiere pagos.
+                </p>
+              </div>
+
+              {/* Opción 3: Cloud Whisper API */}
+              <div
+                onClick={() => setSelectedEngine('openai_api')}
+                className={`cursor-pointer p-4 rounded-xl border transition-all ${
+                  selectedEngine === 'openai_api'
+                    ? 'bg-emerald-500/10 border-emerald-500 shadow-md shadow-emerald-950/30'
+                    : 'bg-zinc-900/60 border-white/5 hover:border-white/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold text-emerald-400">☁️ OpenAI API (Cloud)</span>
+                </div>
+                <div className="text-xl font-extrabold text-white">
+                  ~{estimates?.openai_api.formatted || 'Nube'}
+                </div>
+                <p className="text-[11px] text-zinc-400 mt-1">
+                  Opcional. Requiere tu propia clave OPENAI_API_KEY en .env.
                 </p>
               </div>
 

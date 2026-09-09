@@ -12,7 +12,8 @@ Está construido en Python utilizando el framework web `FastAPI`.
 
 ## 📂 Archivos involucrados
 - `controlador/routers/workspace.py` -> Contiene los endpoints para leer archivos, listarlos, eliminarlos y el prompt nativo para seleccionar la carpeta base.
-- `controlador/routers/ollama.py` -> Endpoints para la instalación automática y control del modelo local Ollama.
+- `controlador/routers/video_looper.py` -> Endpoints para el procesamiento y renderizado de video con FFmpeg.
+- `controlador/routers/subtitles.py` -> Endpoints para subtitulado local con Faster-Whisper.
 - `main.py` -> Archivo de inicio del servidor FastAPI (usando uvicorn).
 
 ## 🔒 Licenciamiento y Acceso por Niveles

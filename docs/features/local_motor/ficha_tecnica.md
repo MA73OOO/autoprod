@@ -27,8 +27,7 @@ flowchart LR
 - **Routers Registrados en `main.py`:**
   - `/workspace`: Operaciones de directorios, lectura/escritura y selección nativa.
   - `/video`: Inspección de medios, escaneo de audio y render FFmpeg.
-  - `/subtitles`: Estimación y transcripción con Whisper.
-  - `/ollama`: Gestor e instalador automático de Ollama local.
+  - `/subtitles`: Estimación y transcripción con Faster-Whisper.
 
 ---
 
