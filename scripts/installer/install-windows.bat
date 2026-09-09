@@ -38,17 +38,32 @@ if errorlevel 1 (
 echo.
 echo [2/6] Creando estructura de directorios en: !INSTALL_DIR!
 if not exist "!INSTALL_DIR!\bin" mkdir "!INSTALL_DIR!\bin"
-if not exist "!INSTALL_DIR!\motor" mkdir "!INSTALL_DIR!\motor"
 if not exist "!INSTALL_DIR!\workspace" mkdir "!INSTALL_DIR!\workspace"
 
-:: Copiar archivos del motor si el instalador se ejecuta desde el repo o subcarpeta
-if exist "%~dp0..\..\controlador" (
-    echo Copiando archivos del motor local desde el repositorio...
-    xcopy /s /e /y /q "%~dp0..\..\controlador\*" "!INSTALL_DIR!\motor\" >nul
-) else if exist "%~dp0controlador" (
-    xcopy /s /e /y /q "%~dp0controlador\*" "!INSTALL_DIR!\motor\" >nul
-) else if exist "%~dp0motor" (
-    xcopy /s /e /y /q "%~dp0motor\*" "!INSTALL_DIR!\motor\" >nul
+:: Detectar si existe el ejecutable compilado autoprod-motor.exe
+set "MOTOR_EXE="
+if exist "%~dp0autoprod-motor.exe" (
+    set "MOTOR_EXE=%~dp0autoprod-motor.exe"
+) else if exist "%~dp0..\..\dist\autoprod-motor.exe" (
+    set "MOTOR_EXE=%~dp0..\..\dist\autoprod-motor.exe"
+) else if exist "%~dp0..\..\controlador\dist\autoprod-motor.exe" (
+    set "MOTOR_EXE=%~dp0..\..\controlador\dist\autoprod-motor.exe"
+)
+
+if defined MOTOR_EXE (
+    echo Instalando ejecutable compilado del motor local...
+    copy /y "!MOTOR_EXE!" "!INSTALL_DIR!\autoprod-motor.exe" >nul
+) else (
+    :: Modo desarrollo: Copiar archivos del motor si no hay binario compilado
+    if not exist "!INSTALL_DIR!\motor" mkdir "!INSTALL_DIR!\motor"
+    if exist "%~dp0..\..\controlador" (
+        echo Copiando archivos de desarrollo del motor local...
+        xcopy /s /e /y /q "%~dp0..\..\controlador\*" "!INSTALL_DIR!\motor\" >nul
+    ) else if exist "%~dp0controlador" (
+        xcopy /s /e /y /q "%~dp0controlador\*" "!INSTALL_DIR!\motor\" >nul
+    ) else if exist "%~dp0motor" (
+        xcopy /s /e /y /q "%~dp0motor\*" "!INSTALL_DIR!\motor\" >nul
+    )
 )
 
 :: 3. Descarga de Binarios Portables (ffmpeg y yt-dlp)
@@ -75,36 +90,40 @@ if not exist "!INSTALL_DIR!\bin\ffmpeg.exe" (
     del /f /q "!INSTALL_DIR!\bin\ffmpeg.zip" 2>nul
 )
 
-:: 4. Configuracion de Python y Entorno Virtual
+:: 4. Configuracion de Entorno (Solo si no hay binario .exe compilado)
 echo.
-echo [4/6] Verificando entorno de Python...
-set "PY_CMD=python"
-python --version >nul 2>&1
-if errorlevel 1 (
-    py --version >nul 2>&1
-    if not errorlevel 1 (
-        set "PY_CMD=py"
-    ) else (
-        echo [AVISO] No se detecto Python en el sistema.
-        echo Descargando e instalando Python 3.10...
-        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe' -OutFile '!INSTALL_DIR!\python_installer.exe'"
-        start /wait "" "!INSTALL_DIR!\python_installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
-        del /f /q "!INSTALL_DIR!\python_installer.exe" 2>nul
-    )
-)
-
-echo Creando entorno virtual aislado (venv)...
-if not exist "!INSTALL_DIR!\venv" (
-    !PY_CMD! -m venv "!INSTALL_DIR!\venv"
-)
-
-echo Instalando dependencias del motor local...
-call "!INSTALL_DIR!\venv\Scripts\activate.bat"
-python -m pip install --upgrade pip --quiet
-if exist "!INSTALL_DIR!\motor\requirements.txt" (
-    pip install -r "!INSTALL_DIR!\motor\requirements.txt" --quiet
+if exist "!INSTALL_DIR!\autoprod-motor.exe" (
+    echo [4/6] Motor compilado listo. No se requiere instalacion de Python.
 ) else (
-    pip install fastapi uvicorn pydantic requests --quiet
+    echo [4/6] Verificando entorno de Python (Modo desarrollo)...
+    set "PY_CMD=python"
+    python --version >nul 2>&1
+    if errorlevel 1 (
+        py --version >nul 2>&1
+        if not errorlevel 1 (
+            set "PY_CMD=py"
+        ) else (
+            echo [AVISO] No se detecto Python en el sistema.
+            echo Descargando e instalando Python 3.10...
+            powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe' -OutFile '!INSTALL_DIR!\python_installer.exe'"
+            start /wait "" "!INSTALL_DIR!\python_installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
+            del /f /q "!INSTALL_DIR!\python_installer.exe" 2>nul
+        )
+    )
+
+    echo Creando entorno virtual aislado (venv)...
+    if not exist "!INSTALL_DIR!\venv" (
+        !PY_CMD! -m venv "!INSTALL_DIR!\venv"
+    )
+
+    echo Instalando dependencias del motor local...
+    call "!INSTALL_DIR!\venv\Scripts\activate.bat"
+    python -m pip install --upgrade pip --quiet
+    if exist "!INSTALL_DIR!\motor\requirements.txt" (
+        pip install -r "!INSTALL_DIR!\motor\requirements.txt" --quiet
+    ) else (
+        pip install fastapi uvicorn pydantic requests --quiet
+    )
 )
 
 :: 5. Generacion de Archivo de Configuracion y Lanzador
@@ -120,6 +139,20 @@ echo }
 ) > "!INSTALL_DIR!\.autoprod-config.json"
 
 :: Crear start_motor.bat
+if exist "!INSTALL_DIR!\autoprod-motor.exe" (
+(
+echo @echo off
+echo title AutoProd Local Motor
+echo cd /d "%%~dp0"
+echo set "PATH=%%~dp0bin;%%PATH%%"
+echo echo ===================================================
+echo echo       AUTOPROD MOTOR LOCAL EN EJECUCION
+echo echo       Puerto: http://127.0.0.1:8000
+echo echo ===================================================
+echo autoprod-motor.exe
+echo pause
+) > "!INSTALL_DIR!\start_motor.bat"
+) else (
 (
 echo @echo off
 echo title AutoProd Local Motor
@@ -134,6 +167,7 @@ echo cd motor
 echo python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
 echo pause
 ) > "!INSTALL_DIR!\start_motor.bat"
+)
 
 :: Crear acceso directo en el Escritorio
 powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\AutoProd Motor.lnk'); $s.TargetPath = '!INSTALL_DIR!\start_motor.bat'; $s.WorkingDirectory = '!INSTALL_DIR!'; $s.IconLocation = 'shell32.dll,43'; $s.Save()" 2>nul

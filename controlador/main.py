@@ -7,8 +7,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import workspace, chat, ollama_manager, video_looper, subtitles
 from hardware import governor
 
-# Inyectar subcarpeta bin/ al PATH de entorno (para ffmpeg y yt-dlp portables)
-base_dir = os.path.dirname(os.path.abspath(__file__))
+import sys
+import multiprocessing
+
+# Determinar directorio base según si está empaquetado (.exe) o ejecutándose como script .py
+if getattr(sys, 'frozen', False):
+    base_dir = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
 possible_bin_dirs = [
     os.path.join(base_dir, "bin"),
     os.path.join(os.path.dirname(base_dir), "bin"),
@@ -60,5 +67,9 @@ def shutdown_server():
     return {"status": "success", "message": "Apagando el motor local..."}
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    if getattr(sys, 'frozen', False):
+        uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    else:
+        uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

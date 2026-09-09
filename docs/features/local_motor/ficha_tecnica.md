@@ -38,21 +38,25 @@ flowchart LR
 
 ---
 
-## 📦 4. Instalador Automático de 1-Clic (`autoprod-setup`)
+## 📦 4. Empaquetado y Distribución Binaria (PyInstaller)
 
-- **Windows:** [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat) — Abre `FolderBrowserDialog` nativo, crea carpetas (`bin`, `motor`, `workspace`), descarga `ffmpeg.exe` y `yt-dlp.exe`, crea `venv` y lanza `start_motor.bat`.
-- **macOS:** [`scripts/installer/install-macos.sh`](file:///e:/autoprod/scripts/installer/install-macos.sh) — Selector nativo de Finder vía AppleScript, soporte universal/Apple Silicon, descarga de binarios y genera `start_motor.sh`.
-- **Endpoint de Descarga:** [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts) con detección automática del SO del cliente.
+- **Compilador Automático:** [`scripts/build-motor.bat`](file:///e:/autoprod/scripts/build-motor.bat) — Empaqueta el servidor FastAPI, routers y dependencias en un único ejecutable independiente: `dist/autoprod-motor.exe`.
+- **Protección de Código:** El código fuente Python queda compilado en el binario sin exponer archivos `.py` planos al usuario final.
+- **Cero Dependencias para el Usuario:** Con `autoprod-motor.exe`, el usuario final **no necesita instalar Python, ni `venv`, ni ejecutar comandos `pip`**.
+- **Instalador Windows:** [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat) — Detecta y despliega automáticamente `autoprod-motor.exe` o recurre a modo desarrollo si no existe el binario.
+- **Instalador macOS:** [`scripts/installer/install-macos.sh`](file:///e:/autoprod/scripts/installer/install-macos.sh) — Selector nativo de Finder vía AppleScript, soporte universal/Apple Silicon y genera `start_motor.sh`.
+- **Endpoint de Descarga:** [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts) con detección automática del SO y formato CRLF estricto.
 
 ---
 
 ## 📂 5. Archivos Involucrados
 
-- [`controlador/main.py`](file:///e:/autoprod/controlador/main.py): Entrada de Uvicorn, configuración de CORS, inyección de PATH y montaje de routers.
+- [`controlador/main.py`](file:///e:/autoprod/controlador/main.py): Entrada de Uvicorn, soporte para binario congelado (`sys.frozen` / `freeze_support`), CORS y montaje de routers.
+- [`scripts/build-motor.bat`](file:///e:/autoprod/scripts/build-motor.bat): Script de construcción con PyInstaller a binario único `.exe`.
 - [`controlador/routers/workspace.py`](file:///e:/autoprod/controlador/routers/workspace.py): CRUD y lectura dinámica de `.autoprod-config.json`.
 - [`controlador/routers/video_looper.py`](file:///e:/autoprod/controlador/routers/video_looper.py): Procesamiento FFmpeg.
 - [`controlador/routers/subtitles.py`](file:///e:/autoprod/controlador/routers/subtitles.py): Transcripción de audio.
 - [`lib/controlador-client.ts`](file:///e:/autoprod/lib/controlador-client.ts): Conector HTTP TypeScript cliente.
-- [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat): Instalador Windows.
+- [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat): Instalador Windows optimizado.
 - [`scripts/installer/install-macos.sh`](file:///e:/autoprod/scripts/installer/install-macos.sh): Instalador macOS.
 
