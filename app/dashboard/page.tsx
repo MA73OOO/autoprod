@@ -95,23 +95,35 @@ export default function Dashboard() {
           let savedPath = localStorage.getItem('autoprod_workspace_path');
           if (!savedPath) {
             try {
-              const res = await fetch('/api/setup/workspace');
-              if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.path) {
-                  savedPath = data.path;
-                  localStorage.setItem('autoprod_workspace_path', savedPath!);
-                  setWorkspacePath(savedPath);
-                }
+              // 1. Intentar leer la ruta maestra directamente desde el Motor Local (localhost:8000)
+              const localWs = await ControladorClient.getDefaultWorkspace();
+              if (localWs && localWs.path) {
+                savedPath = localWs.path;
+                localStorage.setItem('autoprod_workspace_path', savedPath);
+                setWorkspacePath(savedPath);
               }
             } catch (e) {
-              console.warn("Could not get default workspace path");
+              // 2. Fallback a API de servidor
+              try {
+                const res = await fetch('/api/setup/workspace');
+                if (res.ok) {
+                  const data = await res.json();
+                  if (data.success && data.path) {
+                    savedPath = data.path;
+                    localStorage.setItem('autoprod_workspace_path', savedPath!);
+                    setWorkspacePath(savedPath);
+                  }
+                }
+              } catch (err) {
+                console.warn("Could not get default workspace path");
+              }
             }
           }
           if (savedPath) {
             loadWorkspaceTree(savedPath);
             treeLoaded = true;
           }
+
         }
       } else {
         treeLoaded = false;

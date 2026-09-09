@@ -25,16 +25,30 @@ def normalize_str(s: str) -> str:
     return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8').lower()
 
 def default_workspace_path() -> Path:
-    config_path = Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json"
-    if config_path.exists():
-        try:
-            with open(config_path, "r", encoding="utf-8") as f:
-                config = json.load(f)
-                if "basePath" in config:
-                    return (Path(config["basePath"]) / "youtube").resolve()
-        except Exception:
-            pass
-    return (Path.home() / "AutoProd" / "youtube").resolve()
+    possible_config_paths = [
+        Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json",
+        Path(__file__).resolve().parent.parent / ".autoprod-config.json",
+        Path.cwd() / ".autoprod-config.json",
+        Path.home() / "AutoProdAI" / ".autoprod-config.json",
+        Path.home() / ".autoprod-config.json",
+    ]
+    for config_path in possible_config_paths:
+        if config_path.exists():
+            try:
+                with open(config_path, "r", encoding="utf-8") as f:
+                    config = json.load(f)
+                    if "basePath" in config and config["basePath"]:
+                        bp = Path(config["basePath"]).resolve()
+                        # Si basePath ya apunta al workspace o contiene subcarpeta
+                        if (bp / "youtube").exists():
+                            return (bp / "youtube").resolve()
+                        if bp.name.lower() in ["youtube", "workspace"]:
+                            return bp
+                        return (bp / "workspace").resolve() if (bp / "workspace").exists() else bp
+            except Exception:
+                pass
+    return (Path.home() / "AutoProdAI" / "workspace").resolve()
+
 
 def resolve_target_dir(base_path: Optional[str] = None, channel_name: Optional[str] = None) -> Path:
     ws_root = default_workspace_path()

@@ -59,9 +59,10 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 
 | ID | Funcionalidad | Prioridad | Esfuerzo | Estado | Descripción & Dependencias |
 |---|---|:---:|:---:|:---:|---|
-| **PIPE-01** | **Instalador Automático de Dependencias (`autoprod-setup`)** | `P1` | `L` | `🔄 EN PROGRESO` | Detección e instalación asistida con un clic de FFmpeg, yt-dlp, Python libs y modelos Whisper para que el usuario no configure variables de entorno manuales. |
+| **PIPE-01** | **Instalador Automático 1-Clic (`autoprod-setup` Win/Mac)** | `P1` | `L` | `✅ HECHO` | Selector de carpeta nativo, creación de bin/ y workspace/, descarga de FFmpeg/yt-dlp, configuración venv y lanzador start_motor. |
 | **PIPE-02** | **Wizards Modales de Creación Rápida** | `P2` | `M` | `📋 PLANIFICADO` | Flujos paso a paso para nuevo canal, nuevo video y nuevo guion antes de iniciar el chat libre, inyectando respuestas al prompt maestro del sistema. |
 | **PIPE-03** | **Calendario de Publicación & Cron Automatizado** | `P2` | `L` | `📋 PLANIFICADO` | Vista de calendario mensual (`/dashboard/calendar`) con drag & drop para programar videos a fechas/horas específicas y disparo desatendido con cron. |
+
 
 ---
 

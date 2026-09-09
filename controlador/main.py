@@ -7,26 +7,31 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers import workspace, chat, ollama_manager, video_looper, subtitles
 from hardware import governor
 
+# Inyectar subcarpeta bin/ al PATH de entorno (para ffmpeg y yt-dlp portables)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+possible_bin_dirs = [
+    os.path.join(base_dir, "bin"),
+    os.path.join(os.path.dirname(base_dir), "bin"),
+]
+for b_dir in possible_bin_dirs:
+    if os.path.exists(b_dir) and b_dir not in os.environ.get("PATH", ""):
+        os.environ["PATH"] = b_dir + os.pathsep + os.environ["PATH"]
+
 app = FastAPI(
     title="AutoProd Local Controlador",
     description="Motor local para procesar video y gestionar workspace en AutoProd",
     version="1.0.0"
 )
 
-# Configuración de CORS
-origins = [
-    "http://localhost:3000",
-    "https://autoprod.com",
-    "https://autoprod.vercel.app" # Reemplazar con el real si es diferente
-]
-
+# Configuración de CORS universal para permitir conexión desde el dashboard (localhost o producción)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Registrar Routers
 app.include_router(workspace.router)
