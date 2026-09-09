@@ -12,27 +12,7 @@ import { PLANS_CONFIG } from '@/lib/pricing-config';
 
 // Función auxiliar para obtener la YouTube API Key
 async function getYouTubeApiKey(supabase: any, userId: string): Promise<string> {
-  // 1. Variable de entorno
-  if (process.env.YOUTUBE_API_KEY && process.env.YOUTUBE_API_KEY.trim() !== '') {
-    return process.env.YOUTUBE_API_KEY.trim();
-  }
-
-  // 1b. Fallback leyendo archivo .env o .env.local directamente
-  try {
-    for (const envFile of ['.env', '.env.local']) {
-      const envFilePath = path.join(process.cwd(), envFile);
-      const exists = await fs.access(envFilePath).then(() => true).catch(() => false);
-      if (exists) {
-        const content = await fs.readFile(envFilePath, 'utf-8');
-        const match = content.match(/^YOUTUBE_API_KEY=["']?([^"'\r\n]+)["']?/m);
-        if (match && match[1]?.trim()) {
-          return match[1].trim();
-        }
-      }
-    }
-  } catch {}
-
-  // 2. Vault de Supabase a través del RPC get_api_key
+  // 1. Vault de Supabase a través del RPC get_api_key (Prioridad de usuario / BYOK)
   try {
     const { data: ytKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'youtube' });
     if (ytKey && typeof ytKey === 'string' && ytKey.trim() !== '') {
@@ -40,6 +20,11 @@ async function getYouTubeApiKey(supabase: any, userId: string): Promise<string> 
     }
   } catch (e) {
     console.warn('Error consultando YouTube API Key en Vault:', e);
+  }
+
+  // 2. Variable de entorno cargada por Next.js
+  if (process.env.YOUTUBE_API_KEY && process.env.YOUTUBE_API_KEY.trim() !== '') {
+    return process.env.YOUTUBE_API_KEY.trim();
   }
 
   // 3. Fallback a GOOGLE_API_KEY si está disponible
@@ -52,10 +37,7 @@ async function getYouTubeApiKey(supabase: any, userId: string): Promise<string> 
 
 // Función auxiliar para obtener la OpenAI API Key para embeddings
 async function getOpenAiApiKey(supabase: any, userId: string): Promise<string> {
-  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
-    return process.env.OPENAI_API_KEY.trim();
-  }
-
+  // 1. Vault de Supabase (Prioridad BYOK por usuario)
   try {
     const { data: oaiKey } = await supabase.rpc('get_api_key', { p_user_id: userId, p_provider: 'openai' });
     if (oaiKey && typeof oaiKey === 'string' && oaiKey.trim() !== '') {
@@ -63,6 +45,11 @@ async function getOpenAiApiKey(supabase: any, userId: string): Promise<string> {
     }
   } catch (e) {
     console.warn('Error consultando OpenAI API Key en Vault:', e);
+  }
+
+  // 2. Variable de entorno del servidor (fallback)
+  if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '') {
+    return process.env.OPENAI_API_KEY.trim();
   }
 
   throw new Error('No se encontró ninguna clave de OpenAI (OPENAI_API_KEY) para generar el vector embedding.');

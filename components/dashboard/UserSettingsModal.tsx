@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Language, translations } from '@/app/translations';
+import { ControladorClient } from '@/lib/controlador-client';
+
 
 interface UserSettingsModalProps {
   isOpen: boolean;
@@ -438,43 +440,56 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      readOnly
                       value={installPath}
-                      placeholder={lang === 'es' ? "Selecciona una carpeta base..." : "Select a base folder..."}
-                      className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none cursor-not-allowed text-xs"
+                      onChange={(e) => setInstallPath(e.target.value)}
+                      placeholder={lang === 'es' ? "Ej: C:\\AutoProdAI o selecciona..." : "E.g. C:\\AutoProdAI or browse..."}
+                      className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none text-xs"
                     />
                     <button
                       type="button"
-                      disabled={isPickingPath || (subscriptionInfo?.planName === 'FREE' && !isAdminMode)}
+                      disabled={isPickingPath}
                       onClick={async () => {
-                        if (subscriptionInfo?.planName === 'FREE' && !isAdminMode) {
-                          toast.error(lang === 'es' ? 'La instalación del motor local requiere un plan de pago.' : 'Local motor installation requires a paid plan.');
-                          return;
-                        }
                         setIsPickingPath(true);
+                        let selectedPath = '';
+
+                        // 1. Intentar abrir explorador nativo a través del Motor Local (localhost:8000)
                         try {
-                          const res = await fetch('/api/setup/pick-folder');
-                          if (!res.ok) throw new Error('Error abriendo explorador');
-                          const data = await res.json();
-                          if (data.success && data.path) {
-                            let p = data.path;
-                            if (!p.toLowerCase().endsWith('autoprodai')) {
-                              const separator = p.includes('\\') ? '\\' : '/';
-                              p = p.endsWith(separator) ? `${p}AutoProdAI` : `${p}${separator}AutoProdAI`;
-                            }
-                            setInstallPath(p);
+                          const localPick = await ControladorClient.pickWorkspace();
+                          if (localPick && localPick.path) {
+                            selectedPath = localPick.path;
                           }
-                        } catch (e) {
-                          toast.error(lang === 'es' ? 'Error abriendo el explorador de carpetas' : 'Error opening explorer');
-                        } finally {
-                          setIsPickingPath(false);
+                        } catch (err) {
+                          // 2. Si el motor local no está corriendo, intentar el fallback de API route
+                          try {
+                            const res = await fetch('/api/setup/pick-folder');
+                            const data = await res.json();
+                            if (data.success && data.path) {
+                              selectedPath = data.path;
+                            } else if (data.error) {
+                              toast.info(lang === 'es' ? 'Ingresa o pega la ruta de tu carpeta local en el campo de texto.' : 'Please type or paste your local folder path in the input.');
+                            }
+                          } catch (e) {
+                            toast.info(lang === 'es' ? 'Puedes escribir la ruta de tu carpeta deseada directamente.' : 'You can type your desired folder path directly.');
+                          }
                         }
+
+                        if (selectedPath) {
+                          let p = selectedPath;
+                          if (!p.toLowerCase().endsWith('autoprodai')) {
+                            const separator = p.includes('\\') ? '\\' : '/';
+                            p = p.endsWith(separator) ? `${p}AutoProdAI` : `${p}${separator}AutoProdAI`;
+                          }
+                          setInstallPath(p);
+                        }
+
+                        setIsPickingPath(false);
                       }}
                       className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded font-bold transition-colors cursor-pointer text-xs whitespace-nowrap disabled:opacity-50"
                     >
                       {isPickingPath ? '...' : (lang === 'es' ? '📂 Explorar' : '📂 Browse')}
                     </button>
                   </div>
+
                 </div>
 
                 <button
