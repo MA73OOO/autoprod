@@ -38,25 +38,27 @@ flowchart LR
 
 ---
 
-## 📦 4. Empaquetado y Distribución Binaria (PyInstaller)
+## 📦 4. Distribución Profesional (Windows Setup & macOS DMG)
 
-- **Compilador Automático:** [`scripts/build-motor.bat`](file:///e:/autoprod/scripts/build-motor.bat) — Empaqueta el servidor FastAPI, routers y dependencias en un único ejecutable independiente: `dist/autoprod-motor.exe`.
-- **Protección de Código:** El código fuente Python queda compilado en el binario sin exponer archivos `.py` planos al usuario final.
-- **Cero Dependencias para el Usuario:** Con `autoprod-motor.exe`, el usuario final **no necesita instalar Python, ni `venv`, ni ejecutar comandos `pip`**.
-- **Instalador Windows:** [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat) — Detecta y despliega automáticamente `autoprod-motor.exe` o recurre a modo desarrollo si no existe el binario.
-- **Instalador macOS:** [`scripts/installer/install-macos.sh`](file:///e:/autoprod/scripts/installer/install-macos.sh) — Selector nativo de Finder vía AppleScript, soporte universal/Apple Silicon y genera `start_motor.sh`.
-- **Endpoint de Descarga:** [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts) con detección automática del SO y formato CRLF estricto.
+- **Windows (`AutoProd-Setup.exe`):** Compilado con **Inno Setup** ([`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss)) y automatizado en [`scripts/build/build-windows.bat`](file:///e:/autoprod/scripts/build/build-windows.bat).
+  - Asistente gráfico nativo con branding oficial e idiomas (Español / Inglés).
+  - Instalación de `autoprod-motor.exe`, `bin/` (`ffmpeg.exe`, `yt-dlp.exe`), configuración inicial y accesos directos en Escritorio y Menú Inicio.
+  - Generador de desinstalador limpio en Panel de Control.
+- **macOS (`AutoProd-Setup.dmg`):** Empaquetador nativo en [`scripts/build/build-macos.sh`](file:///e:/autoprod/scripts/build/build-macos.sh) para distribución en imagen de disco DMG / paquete `.app`.
+- **Cero Terminales y Cero Código Expuesto:** El usuario final solo descarga un archivo `.exe` o `.dmg` y sigue el asistente visual en 1 clic.
+- **Endpoint de Entrega:** [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts) con redirección automática al CDN de GitHub Releases oficial (`MA73OOO/autoprod`) o entrega del instalador binario compilado local.
 
 ---
 
 ## 📂 5. Archivos Involucrados
 
 - [`controlador/main.py`](file:///e:/autoprod/controlador/main.py): Entrada de Uvicorn, soporte para binario congelado (`sys.frozen` / `freeze_support`), CORS y montaje de routers.
-- [`scripts/build-motor.bat`](file:///e:/autoprod/scripts/build-motor.bat): Script de construcción con PyInstaller a binario único `.exe`.
+- [`scripts/build/build-windows.bat`](file:///e:/autoprod/scripts/build/build-windows.bat): Generador de `autoprod-motor.exe` y empaquetador `AutoProd-Setup.exe`.
+- [`scripts/build/build-macos.sh`](file:///e:/autoprod/scripts/build/build-macos.sh): Generador de binario y empaquetador `AutoProd-Setup.dmg`.
+- [`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss): Script oficial de Inno Setup.
 - [`controlador/routers/workspace.py`](file:///e:/autoprod/controlador/routers/workspace.py): CRUD y lectura dinámica de `.autoprod-config.json`.
 - [`controlador/routers/video_looper.py`](file:///e:/autoprod/controlador/routers/video_looper.py): Procesamiento FFmpeg.
-- [`controlador/routers/subtitles.py`](file:///e:/autoprod/controlador/routers/subtitles.py): Transcripción de audio.
+- [`controlador/routers/subtitles.py`](file:///e:/autoprod/controlador/routers/subtitles.py): Transcripción de audio Whisper.
 - [`lib/controlador-client.ts`](file:///e:/autoprod/lib/controlador-client.ts): Conector HTTP TypeScript cliente.
-- [`scripts/installer/install-windows.bat`](file:///e:/autoprod/scripts/installer/install-windows.bat): Instalador Windows optimizado.
-- [`scripts/installer/install-macos.sh`](file:///e:/autoprod/scripts/installer/install-macos.sh): Instalador macOS.
+- [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts): Endpoint de entrega directa del instalador.
 

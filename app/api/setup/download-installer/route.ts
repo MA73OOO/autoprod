@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import path from 'path';
 
 export async function GET(req: NextRequest) {
@@ -10,31 +11,81 @@ export async function GET(req: NextRequest) {
 
     const isMac = osParam === 'mac' || osParam === 'macos' || (!osParam && userAgent.includes('mac'));
 
-    let fileName = isMac ? 'install-macos.sh' : 'install-windows.bat';
-    let downloadName = isMac ? 'autoprod-setup.sh' : 'autoprod-setup.bat';
-    let contentType = isMac ? 'application/x-sh' : 'application/x-bat';
+    // 1. Streaming nativo desde GitHub Releases (oculta la URL del repositorio al usuario)
+    const githubRepo = process.env.GITHUB_REPO || 'MA73OOO/autoprod';
+    const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_RELEASE_TOKEN;
+    const targetFileName = isMac ? 'AutoProd-Setup.dmg' : 'AutoProd-Setup.exe';
+    const contentType = isMac ? 'application/x-apple-diskimage' : 'application/vnd.microsoft.portable-executable';
 
-    const scriptPath = path.join(process.cwd(), 'scripts', 'installer', fileName);
-    
-    // Leer el script instalador
-    let fileContent = await fs.readFile(scriptPath, 'utf-8');
-    if (!isMac) {
-      // Forzar formato CRLF para Windows batch files
-      fileContent = fileContent.replace(/\r?\n/g, '\r\n');
+    if (githubRepo) {
+      const releaseUrl = `https://github.com/${githubRepo}/releases/latest/download/${targetFileName}`;
+      
+      const fetchHeaders: HeadersInit = {
+        'User-Agent': 'AutoProd-Installer-Downloader'
+      };
+      if (githubToken) {
+        fetchHeaders['Authorization'] = `token ${githubToken}`;
+      }
+
+      try {
+        const response = await fetch(releaseUrl, {
+          headers: fetchHeaders,
+          redirect: 'follow',
+          cache: 'no-store'
+        });
+
+        if (response.ok && response.body) {
+          const headers = new Headers();
+          headers.set('Content-Type', contentType);
+          headers.set('Content-Disposition', `attachment; filename="${targetFileName}"`);
+          headers.set('Cache-Control', 'public, max-age=3600');
+          
+          const contentLength = response.headers.get('content-length');
+          if (contentLength) {
+            headers.set('Content-Length', contentLength);
+          }
+
+          return new NextResponse(response.body as any, {
+            status: 200,
+            headers
+          });
+        }
+      } catch (fetchError) {
+        console.warn('Fallo al obtener release remoto de GitHub, intentando fallback local...', fetchError);
+      }
     }
 
-    return new NextResponse(fileContent, {
-      status: 200,
-      headers: {
-        'Content-Type': contentType,
-        'Content-Disposition': `attachment; filename="${downloadName}"`,
-        'Cache-Control': 'no-store, max-age=0'
-      }
-    });
-  } catch (error: any) {
-    console.error('Error serving installer script:', error);
+    // 2. Servir archivo binario compilado local si existe en el servidor
+    const fallbackExeName = isMac ? 'autoprod-motor' : 'autoprod-motor.exe';
+    let filePath = path.join(process.cwd(), 'dist', targetFileName);
+    if (!fsSync.existsSync(filePath)) {
+      filePath = path.join(process.cwd(), 'dist', fallbackExeName);
+    }
+
+    if (fsSync.existsSync(filePath)) {
+      const fileBuffer = await fs.readFile(filePath);
+
+      return new NextResponse(fileBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': contentType,
+          'Content-Disposition': `attachment; filename="${targetFileName}"`,
+          'Cache-Control': 'no-store, max-age=0'
+        }
+      });
+    }
+
     return NextResponse.json(
-      { success: false, error: 'No se pudo generar el instalador' },
+      {
+        success: false,
+        error: 'El instalador oficial no está disponible en este momento. Por favor compila el paquete ejecutando scripts/build/build-windows.bat'
+      },
+      { status: 404 }
+    );
+  } catch (error: any) {
+    console.error('Error serving installer binary:', error);
+    return NextResponse.json(
+      { success: false, error: 'No se pudo generar la descarga del instalador' },
       { status: 500 }
     );
   }
