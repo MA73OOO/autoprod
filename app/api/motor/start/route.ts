@@ -32,6 +32,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const compiledExe = path.join(process.cwd(), 'dist', 'autoprod-motor.exe');
+    const localExe = path.join(process.cwd(), 'autoprod-motor.exe');
+
+    if (fs.existsSync(compiledExe) || fs.existsSync(localExe)) {
+      const exeToRun = fs.existsSync(compiledExe) ? compiledExe : localExe;
+      const child = spawn(exeToRun, [], {
+        cwd: path.dirname(exeToRun),
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true,
+        env: { ...process.env, PATH: `${localBin}${path.delimiter}${process.env.PATH}` }
+      });
+      child.unref();
+      return NextResponse.json({ success: true, message: 'Motor compilado arrancado en segundo plano' });
+    }
+
     // Spawn the python process detached so it runs in the background
     const child = spawn(pythonCmd, ['-m', 'uvicorn', 'main:app', '--port', String(port)], {
       cwd,
