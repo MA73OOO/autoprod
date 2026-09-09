@@ -8,6 +8,7 @@ interface Props {
   onSelect: (role: 'channel' | 'video' | 'script' | 'prompt' | 'import_channel') => void;
   onSelectLooper?: () => void;
   onSelectSubtitles?: () => void;
+  onSelectTTS?: () => void;
   onSelectAssets?: () => void;
   onSelectImages?: () => void;
   motorStatus?: boolean;
@@ -181,6 +182,31 @@ export default function Launchpad({
             </div>
           </button>
 
+          {/* Locución & TTS Studio */}
+          <button
+            onClick={onSelectTTS ? onSelectTTS : () => toast.info(lang === 'es' ? 'Locución Text-to-Speech' : 'Voiceover TTS')}
+            className="h-44 text-left bg-gradient-to-b from-[#1b1420] to-[#140e18] border border-purple-500/30 hover:border-purple-500/80 rounded-2xl p-4 flex flex-col justify-between hover:scale-[1.02] transition-all group shadow-lg cursor-pointer relative overflow-hidden"
+          >
+            <div className="flex justify-between items-start">
+              <div className="h-10 w-10 rounded-xl bg-purple-600/20 border border-purple-500/40 flex items-center justify-center text-xl text-purple-300 group-hover:scale-110 transition-transform">
+                🎙️
+              </div>
+              <span className="text-[9px] px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                MULTI-MOTOR
+              </span>
+            </div>
+            <div className="space-y-1">
+              <h4 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                {lang === 'es' ? 'Locución & Voz en Off' : 'Voiceover & Speech'}
+              </h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed line-clamp-3">
+                {lang === 'es'
+                  ? 'Convierte tus guiones en audio con opción gratuita ilimitada o voces premium de OpenAI.'
+                  : 'Synthesize your scripts into audio with unlimited free tier or premium OpenAI voices.'}
+              </p>
+            </div>
+          </button>
+
           {/* Subtitulador Whisper Studio */}
           <button
             onClick={onSelectSubtitles ? onSelectSubtitles : () => toast.info(lang === 'es' ? 'Subtitulado automático' : 'Auto subtitles')}
@@ -188,7 +214,7 @@ export default function Launchpad({
           >
             <div className="flex justify-between items-start">
               <div className="h-10 w-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-xl text-emerald-300 group-hover:scale-110 transition-transform">
-                🎙️
+                🎧
               </div>
               <span className="text-[9px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
                 SINCRONIZADO

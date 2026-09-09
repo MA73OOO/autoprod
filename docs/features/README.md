@@ -51,6 +51,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 | **FEAT-12** | **Gobernanza de Canales (localPath, niche, Guardrail IA)** | Next.js / Prisma / AI SDK | [Ficha Técnica](file:///e:/autoprod/docs/features/channel_governance/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_governance/idea.md) |
 | **FEAT-13** | **Rediseño Integral de Frontend (Landing & Consola)** | Next.js / React 19 / Tailwind | [Ficha Técnica](file:///e:/autoprod/docs/features/landing_and_console_revamp/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/landing_and_console_revamp/idea.md) |
 | **FEAT-14** | **Sistema Anti-Abuso, Rate Limiting & HMAC IP Hashing** | Next.js / Crypto / RAM Cache | [Ficha Técnica](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/idea.md) |
+| **FEAT-15** | **Text-to-Speech Multi-Motor (Edge-TTS & OpenAI)** | FastAPI / Edge-TTS / OpenAI | [Ficha Técnica](file:///e:/autoprod/docs/features/text_to_speech/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/text_to_speech/idea.md) |
 
 
 ---
@@ -59,7 +60,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 
 | ID | Funcionalidad | Prioridad | Esfuerzo | Estado | Descripción & Dependencias |
 |---|---|:---:|:---:|:---:|---|
-| **PIPE-01** | **Instalador Automático 1-Clic (`autoprod-setup` Win/Mac)** | `P1` | `L` | `✅ HECHO` | Selector de carpeta nativo, creación de bin/ y workspace/, descarga de FFmpeg/yt-dlp, configuración venv y lanzador start_motor. |
+| **PIPE-01** | **Instalador Automático 1-Clic (`AutoProd-Setup.exe` / `.dmg`)** | `P1` | `L` | `✅ HECHO` | Compilación Inno Setup / DMG, distribución de `autoprod-motor.exe` con binarios (`ffmpeg`, `yt-dlp`) y entrega vía `/api/setup/download-installer`. |
 | **PIPE-02** | **Wizards Modales de Creación Rápida** | `P2` | `M` | `📋 PLANIFICADO` | Flujos paso a paso para nuevo canal, nuevo video y nuevo guion antes de iniciar el chat libre, inyectando respuestas al prompt maestro del sistema. |
 | **PIPE-03** | **Calendario de Publicación & Cron Automatizado** | `P2` | `L` | `📋 PLANIFICADO` | Vista de calendario mensual (`/dashboard/calendar`) con drag & drop para programar videos a fechas/horas específicas y disparo desatendido con cron. |
 
@@ -72,7 +73,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 | ID | Idea | Prioridad | Esfuerzo | Estado | Hipótesis / Valor de Negocio |
 |---|---|:---:|:---:|:---:|---|
 | **IDEA-A1** | **B-Roll Auto-Finder & Scraper Local** | `P1` | `L` | `💡 IDEA` | Agente que analiza el guion y descarga clips libres de derechos (Pexels, Pixabay) o fragmentos de referencia vía yt-dlp. |
-| **IDEA-A2** | **Motor TTS Multi-Voz con Edge-TTS Gratuito + ElevenLabs** | `P0` | `M` | `💡 IDEA` | Generador de voz en off integrado: opción gratuita ilimitada local (Microsoft Edge-TTS) y opción hiperrealista premium (ElevenLabs). |
+| **IDEA-A2** | **Expansión TTS Hiperrealista (ElevenLabs & Cartesia)** | `P1` | `M` | `💡 IDEA` | Expansión del motor TTS existente (FEAT-15): agregar ElevenLabs y Cartesia Sonic como motores adicionales de ultra fidelidad. |
 | **IDEA-A3** | **Render Batch en Cola de Producción** | `P1` | `L` | `💡 IDEA` | Capacidad de poner múltiples videos en cola para renderizar consecutivamente de noche aprovechando la GPU desocupada. |
 | **IDEA-A4** | **Auto-Corte de Videos a YouTube Shorts / TikTok** | `P2` | `XL` | `💡 IDEA` | Detección de momentos con mayor energía en videos largos para re-encuadrar a formato vertical (9:16) con subtítulos cinemáticos. |
 

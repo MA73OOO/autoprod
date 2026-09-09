@@ -520,6 +520,90 @@ export class ControladorClient {
     }
   }
 
+  // ──────────────────────────────────────────────
+  // Text-to-Speech (Locución Multi-Motor)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Obtiene el catálogo de voces de Edge-TTS y OpenAI TTS
+   */
+  static async getTTSVoices(): Promise<TTSVoicesResponse> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/tts/voices`);
+      if (!response.ok) {
+        throw new Error('Error al consultar voces del motor');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: getTTSVoices failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera un fragmento de audio MP3 para previsualización inmediata
+   */
+  static async previewTTS(params: {
+    provider: 'edge_tts' | 'openai';
+    voice: string;
+    text: string;
+    apiKey?: string;
+    rate?: string;
+  }): Promise<Blob> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/tts/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: params.provider,
+          voice: params.voice,
+          text: params.text,
+          api_key: params.apiKey || null,
+          rate: params.rate || '+0%',
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error en preview de voz');
+      }
+      return await response.blob();
+    } catch (error) {
+      console.error('Controlador Client: previewTTS failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera el archivo MP3 completo de locución en el workspace local
+   */
+  static async generateTTS(params: TTSGenerateParams): Promise<TTSGenerateResponse> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: params.provider,
+          voice: params.voice,
+          text: params.text,
+          target_path: params.targetPath || null,
+          channel_name: params.channelName || null,
+          video_title: params.videoTitle || null,
+          filename: params.filename || null,
+          api_key: params.apiKey || null,
+          rate: params.rate || '+0%',
+        }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail || 'Error generando archivo de locución');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: generateTTS failed', error);
+      throw error;
+    }
+  }
+
   /**
    * Abre el explorador de archivos nativo de Windows / macOS / Linux en la carpeta del archivo
    */

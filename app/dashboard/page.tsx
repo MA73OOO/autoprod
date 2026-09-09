@@ -17,6 +17,7 @@ import VideoLooperStudio from '@/components/dashboard/VideoLooperStudio';
 import { VideoSubtitlesStudio } from '@/components/dashboard/VideoSubtitlesStudio';
 import AssetLibraryView from '@/components/dashboard/AssetLibraryView';
 import ImageStudio from '@/components/dashboard/ImageStudio';
+import TextToSpeechStudio from '@/components/dashboard/TextToSpeechStudio';
 import FilePreviewer from '@/components/dashboard/FilePreviewer';
 import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
 import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
@@ -256,7 +257,7 @@ export default function Dashboard() {
   };
 
   // ── Navigation State ──
-  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper' | 'subtitles' | 'assets' | 'images'>('home');
+  const [activeView, setActiveView] = useState<'home' | 'chat' | 'editor' | 'looper' | 'subtitles' | 'assets' | 'images' | 'tts'>('home');
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [activeEditorPath, setActiveEditorPath] = useState<string | null>(null);
 
@@ -974,6 +975,7 @@ export default function Dashboard() {
             onOpenSubtitles={() => setActiveView('subtitles')}
             onOpenAssets={() => setActiveView('assets')}
             onOpenImages={() => setActiveView('images')}
+            onOpenTTS={() => setActiveView('tts')}
           />
         </aside>
 
@@ -993,6 +995,7 @@ export default function Dashboard() {
               onSelectSubtitles={() => setActiveView('subtitles')}
               onSelectAssets={() => setActiveView('assets')}
               onSelectImages={() => setActiveView('images')}
+              onSelectTTS={() => setActiveView('tts')}
               motorStatus={motorStatus}
               workspacePath={workspacePath}
               channelsCount={channels.length}
@@ -1028,6 +1031,7 @@ export default function Dashboard() {
               onOpenLooper={() => setActiveView('looper')}
               onOpenSubtitles={() => setActiveView('subtitles')}
               onOpenImageStudio={() => setActiveView('images')}
+              onOpenTTS={() => setActiveView('tts')}
             />
           ) : activeView === 'images' ? (
             <ImageStudio
@@ -1036,6 +1040,16 @@ export default function Dashboard() {
               workspacePath={workspacePath}
               onBackToDashboard={() => setActiveView('home')}
               onOpenAssets={() => setActiveView('assets')}
+            />
+          ) : activeView === 'tts' ? (
+            <TextToSpeechStudio
+              lang={lang}
+              channels={channels}
+              workspacePath={workspacePath}
+              workspaceTree={workspaceTree}
+              motorStatus={motorStatus}
+              onBackToDashboard={() => setActiveView('home')}
+              onOpenSubtitlesStudio={() => setActiveView('subtitles')}
             />
           ) : (
             <ChatPanel

@@ -35,6 +35,7 @@ interface Props {
   onOpenLooper?: () => void;
   onOpenSubtitles?: () => void;
   onOpenImageStudio?: () => void;
+  onOpenTTS?: () => void;
 }
 
 export default function AssetLibraryView({
@@ -46,6 +47,7 @@ export default function AssetLibraryView({
   onOpenLooper,
   onOpenSubtitles,
   onOpenImageStudio,
+  onOpenTTS,
 }: Props) {
   const [assets, setAssets] = useState<AssetRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -402,6 +404,17 @@ export default function AssetLibraryView({
           </button>
 
           {/* Quick Create Studio Shortcuts */}
+          {onOpenTTS && (
+            <button
+              onClick={onOpenTTS}
+              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-zinc-800 hover:bg-zinc-700 text-zinc-100 hover:text-white border border-zinc-700 hover:border-purple-500/50 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title={lang === 'es' ? 'Generar locución y voz en off' : 'Generate voiceover'}
+            >
+              <span>🎙️</span>
+              <span>{lang === 'es' ? 'Voz en Off' : 'Voiceover'}</span>
+            </button>
+          )}
+
           {onOpenImageStudio && (
             <button
               onClick={onOpenImageStudio}
@@ -540,6 +553,14 @@ export default function AssetLibraryView({
               >
                 <span>🔄</span> {lang === 'es' ? 'Sincronizar Disco Local' : 'Sync Local Disk'}
               </button>
+              {onOpenTTS && (
+                <button
+                  onClick={onOpenTTS}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 hover:text-white border border-zinc-700 text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                >
+                  🎙️ {lang === 'es' ? 'Generar Locución' : 'Generate Voiceover'}
+                </button>
+              )}
               {onOpenImageStudio && (
                 <button
                   onClick={onOpenImageStudio}

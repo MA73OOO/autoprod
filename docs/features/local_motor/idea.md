@@ -19,8 +19,9 @@
 | **Servidor FastAPI en Puerto 8000** | `✅ HECHO` | Uvicorn con CORS seguro para desarrollo y producción. |
 | **Integración con Diálogos Nativos de Windows/macOS** | `✅ HECHO` | Selector nativo de carpetas sin inputs file limitados de HTML. |
 | **Control de Acceso por Licenciamiento (Tiers)** | `✅ HECHO` | Exclusivo para suscriptores Starter, Pro y Enterprise. |
+| **Empaquetado en Ejecutable Único (`autoprod-motor.exe`)** | `✅ HECHO` | Compilado nativamente con PyInstaller (`autoprod-motor.spec`) sin requerir Python en la máquina del usuario. |
+| **Instalador Oficial Asistido (`AutoProd-Setup.exe` / `.dmg`)** | `✅ HECHO` | Asistente de instalación en 1 clic compilado con Inno Setup, incluye binarios (`ffmpeg`, `yt-dlp`) y entrega vía `/api/setup/download-installer`. |
 | **Inicio en Segundo Plano / Servicio Silencioso** | `⏳ FALTANTE` | Iniciar como demonio/servicio de Windows sin ventana de terminal abierta. |
-| **Empaquetado en Ejecutable Único (`.exe`)** | `⏳ FALTANTE` | Empaquetar con PyInstaller o Tauri para evitar que el usuario instale Python. |
 | **Detección Automática de Actualizaciones de Versión** | `⏳ FALTANTE` | Alerta en el dashboard cuando hay un nuevo motor local disponible. |
 
 ---

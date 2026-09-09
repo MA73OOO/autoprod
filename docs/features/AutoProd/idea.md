@@ -35,11 +35,11 @@ La producción de videos para YouTube hoy en día está fragmentada y rota:
 | Dimensión | 📍 Lo que Tenemos Hoy (Estado Actual) | 🚀 Hacia Dónde Vamos (Visión Futura) |
 |---|---|---|
 | **Público Objetivo** | Creadores solistas técnicos que producen canales de música, lofi y contenido automatizado. | Creadores individuales, agencias de contenido, editores y equipos multi-canal (Modo Agencia y Multi-Tenant). |
-| **Distribución de Software** | Aplicación web (`localhost:3000`) que requiere que el usuario clone el repo y corra comandos en terminal (`pnpm dev`, `python main.py`). | **App de Escritorio Nativa (Tauri / Electron)** con instalador `.exe`/`.dmg` en 1 clic. El motor Python corre como servicio en segundo plano invisible. |
-| **Setup de Dependencias** | El usuario debe tener instalado Python, FFmpeg y librerías en su sistema operativo. | **`autoprod-setup` 100% automatizado:** Asistente integrado que descarga y configura FFmpeg, yt-dlp y modelos de Whisper sin tocar la terminal. |
+| **Distribución de Software** | Aplicación web en consola con Motor Local binario compilado (`autoprod-motor.exe`) e instalador asistente (`AutoProd-Setup.exe` / `.dmg`). | **App de Escritorio Nativa Todo-en-Uno (Tauri / Electron)** con ventana unificada y motor como servicio invisible. |
+| **Setup de Dependencias** | **`AutoProd-Setup.exe` 100% automatizado:** Asistente con Inno Setup que incluye `autoprod-motor.exe`, `ffmpeg.exe`, `yt-dlp.exe` y modelos locales sin tocar la terminal. | Actualizaciones automáticas silenciosas (OTA) del motor y modelos sin reinstalación manual. |
 | **Flujo de Video** | Video Looper con sincronización de música y previsualizador de 5 min (1 video a la vez). | **Fábrica de Contenido Batch & Pipeline Completo:** Cola de 50 videos que renderizan de noche + Auto-corte automático a YouTube Shorts/TikTok (9:16). |
-| **Voz & Narración** | Dependencia de pistas de audio preexistentes en la carpeta local. | **Generador TTS Multi-Voz Integrado:** Edge-TTS gratuito ilimitado local + ElevenLabs hiperrealista con clonación de voz. |
-| **Subtítulos** | Extracción Whisper con Silero VAD y exportación a archivos `.srt`/`.vtt` para CapCut. | **Editor de Timeline Visual Interactivo** con quemado hard/soft de subtítulos animados cinemáticos dentro de AutoProd. |
+| **Voz & Narración** | **Generador TTS Multi-Voz Integrado (FEAT-15):** Edge-TTS gratuito ilimitado local ($0) + OpenAI TTS con control de créditos y BYOK. | Expansión a ElevenLabs hiperrealista y Cartesia Sonic con clonación de voz. |
+| **Subtítulos** | Extracción Faster-Whisper (CTranslate2) con Silero VAD y timestamps palabra por palabra ($0 costo API). | **Editor de Timeline Visual Interactivo** con quemado hard/soft de subtítulos animados cinemáticos dentro de AutoProd. |
 | **Integración con YouTube** | Extracción de metadatos de canales existentes con pgvector para enriquecer contexto. | **Ciclo Cerrado de Publicación (End-to-End):** OAuth 2.0, subida desatendida vía API v3, selector de miniaturas, programación en calendario y métricas de retención en vivo. |
 | **Inteligencia Agéntica** | Chat multi-provider con tool calls para leer/escribir archivos locales. | **Agentes Autónomos Especializados:** Agente Investigador de Tendencias, Agente Analista de Retención de Guiones y Simulador A/B de Miniaturas. |
 | **Monetización** | Planes Starter ($70), Pro ($100) y Enterprise ($150) vía Lemon Squeezy y Nequi manual. | SaaS global con facturación automática, licencias por máquina offline, add-ons de créditos y Marketplace de Plantillas de la comunidad. |
@@ -51,19 +51,20 @@ La producción de videos para YouTube hoy en día está fragmentada y rota:
 ```mermaid
 timeline
     title Hoja de Ruta Evolutiva de AutoProd
-    Horizonte 1 (MVP Robusto & Flujo Cerrado) : Video Looper Estable : Whisper Local : Subida YouTube API v3 : Setup Asistido : Monetización Lemon Squeezy
-    Horizonte 2 (IDE de Automatización Completa) : App de Escritorio Tauri : Render Batch Nocturno : Generador TTS Multi-Voz : Auto-Corte Shorts : Editor Visual Subtítulos
+    Horizonte 1 (MVP Robusto & Flujo Cerrado) : Video Looper Estable : Faster-Whisper Local : Instalador AutoProd-Setup.exe : Generador TTS Multi-Voz : Monetización Lemon Squeezy
+    Horizonte 2 (IDE de Automatización Completa) : App de Escritorio Tauri : Render Batch Nocturno : Subida YouTube API v3 : Auto-Corte Shorts : Editor Visual Subtítulos
     Horizonte 3 (Ecosistema SaaS & Agencias) : Modo Multi-Canal y Equipos : Scraping de Tendencias IA : Simulador A/B CTR : Marketplace de Plantillas
 ```
 
 ### 🟢 Horizonte 1: El Loop de Producción Cerrado (Presente Inmediato)
-- Terminar las dependencias del instalador local (`autoprod-setup`).
+- Instalador local empaquetado (`AutoProd-Setup.exe` y `.dmg`) con entrega directa desde `/api/setup/download-installer`.
+- Motor local compilado (`autoprod-motor.exe`) con CTranslate2 (Faster-Whisper), FFmpeg y Edge-TTS integrados.
+- Generador de voz en off (TTS) con opción gratuita ilimitada y opción de créditos.
 - Cerrar el ciclo: que el video terminado se suba automáticamente a YouTube con sus tags, descripción SEO y miniatura sin salir de AutoProd.
-- Consolidar la adquisición de los primeros 100 clientes de pago en los planes de $70, $100 y $150 USD.
 
 ### 🟡 Horizonte 2: La Suite Todo-en-Uno (Mediano Plazo)
-- Eliminar la fricción de instalación técnica creando el ejecutable de escritorio `.exe`.
-- Integrar generación de voz (TTS) para no depender de grabaciones manuales de locutores.
+- Envolver la UI web en aplicación de escritorio nativa (Tauri / Electron).
+- Integrar ElevenLabs y Cartesia como opciones adicionales de ultra alta fidelidad.
 - Implementar cola de producción en segundo plano (Batch Queue) para que el computador trabaje mientras el creador duerme.
 
 ### 🟣 Horizonte 3: La Plataforma de Escala Masiva (Largo Plazo)

@@ -33,6 +33,9 @@ Herramientas de bajo nivel registradas en el catálogo de Prisma:
 | `crear_carpetas` | Crea canal y subcarpetas en bloque | `POST /workspace/create` | `✅ ACTIVA` |
 | `eliminar_carpetas` | Elimina una o varias carpetas | `POST /workspace/delete_folder` | `✅ ACTIVA` |
 | `extraer_canal_youtube` | Extrae metadatos y contexto vectorial de un canal de YouTube | `/api/tools/extraer_canal_youtube` | `✅ ACTIVA` |
+| `tts_voices` | Lista voces disponibles de Edge-TTS y OpenAI | `GET /tts/voices` | `✅ ACTIVA` |
+| `tts_preview` | Preescucha en streaming Base64 de muestras de audio | `POST /tts/preview` | `✅ ACTIVA` |
+| `tts_generate` | Generación y guardado directo de locución en disco | `POST /tts/generate` | `✅ ACTIVA` |
 
 ---
 
@@ -45,6 +48,7 @@ Herramientas especializadas invocadas autónomamente por el Orquestador central 
 | `consultar_prompts` | Consultor de SOPs y Plantillas | `/api/tools/prompts` | Permite al cerebro consultar guías operativas, plantillas y taxonomía de carpetas bajo demanda | `✅ ACTIVA` |
 | `generar_info_canal` | Generador de Identidad de Canal | `/api/tools/generar_info_canal` | Diseña guía de branding (logo, banner) y crea `InfoCanal/Contexto_canal.md` | `✅ ACTIVA` |
 | `generar_metadatos_subida` | Generador de Metadatos y Estructura | `/api/tools/generar_metadatos_subida` | Genera títulos, tags, descripción y crea las 5 carpetas de producción del video | `✅ ACTIVA` |
+| `generar_locucion` | Generador de Locución y Voz en Off | `/api/tools/generar_locucion` | Genera narraciones con Edge-TTS ($0) u OpenAI con control de créditos | `✅ ACTIVA` |
 | `estado_sistema` | Verificador de Diagnóstico | `/api/tools/estado_sistema` | Reporta dependencias locales instaladas (FFmpeg, Python, Node) | `✅ ACTIVA` |
 
 ---
@@ -57,16 +61,15 @@ Herramientas especializadas invocadas autónomamente por el Orquestador central 
 |---|---|:---:|---|
 | Subida directa de video a YouTube (OAuth + Upload API v3) | Integración YouTube | `📋 PLANIFICADO` | [Idea](file:///e:/autoprod/docs/features/youtube_channel_extractor/idea.md) |
 | Editor/Parseador visual de `config_subida.md` | Frontend | `📋 PLANIFICADO` | — |
-| Instalador automático de dependencias (`autoprod-setup`) | Motor Local | `🔄 EN PROGRESO` | [Idea](file:///e:/autoprod/docs/features/local_motor/idea.md) |
 | Calendario de publicación y cron automatizado | Scheduler | `📋 PLANIFICADO` | [Idea](file:///e:/autoprod/docs/features/README.md) |
-| Motor TTS Multi-Voz (Edge-TTS + ElevenLabs) | Multimedia | `💡 IDEA` | — |
+| Expansión TTS Hiperrealista (ElevenLabs & Cartesia) | Multimedia | `💡 IDEA` | [Idea](file:///e:/autoprod/docs/features/text_to_speech/idea.md) |
 | Render batch nocturno en cola | Multimedia | `💡 IDEA` | — |
 | Auto-corte a YouTube Shorts / TikTok (9:16) | Multimedia | `💡 IDEA` | — |
 | Agente A/B Testing de Miniaturas | IA Agéntica | `💡 IDEA` | — |
 | Dashboard de Analíticas de YouTube | Integración YouTube | `💡 IDEA` | — |
 | Webhooks de alerta a Discord / Telegram | Notificaciones | `💡 IDEA` | — |
 | Modo Agencia y Multi-Canal con roles | SaaS | `💡 IDEA` | — |
-| Empaquetador de escritorio (Tauri / Electron `.exe`) | Distribución | `💡 IDEA` | — |
+| App de Escritorio Todo-en-Uno (Tauri / Electron) | Distribución UI | `💡 IDEA` | — |
 
 ---
 

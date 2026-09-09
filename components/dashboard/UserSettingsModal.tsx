@@ -411,27 +411,27 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
                 <div className="flex flex-col sm:flex-row gap-2 pt-1">
                   <a
                     href="/api/setup/download-installer?os=windows"
-                    download="autoprod-setup.bat"
+                    download="AutoProd-Setup.exe"
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-95 text-white font-bold rounded-lg text-xs transition-opacity shadow-sm cursor-pointer"
                   >
                     <span>🪟</span>
-                    <span>{lang === 'es' ? 'Descargar para Windows (.bat)' : 'Download for Windows (.bat)'}</span>
+                    <span>{lang === 'es' ? 'Descargar para Windows (.exe)' : 'Download for Windows (.exe)'}</span>
                   </a>
                   <a
                     href="/api/setup/download-installer?os=mac"
-                    download="autoprod-setup.sh"
+                    download="AutoProd-Setup.dmg"
                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg text-xs transition-colors border border-zinc-700 shadow-sm cursor-pointer"
                   >
                     <span>🍎</span>
-                    <span>{lang === 'es' ? 'Descargar para macOS (.sh)' : 'Download for macOS (.sh)'}</span>
+                    <span>{lang === 'es' ? 'Descargar para macOS (.dmg)' : 'Download for macOS (.dmg)'}</span>
                   </a>
                 </div>
 
                 <div className="text-[11px] text-zinc-400 bg-black/40 rounded-lg p-2.5 space-y-1 border border-zinc-800/60">
                   <div className="font-semibold text-zinc-200">{lang === 'es' ? 'Pasos rápidos:' : 'Quick steps:'}</div>
                   <ol className="list-decimal list-inside space-y-0.5 text-zinc-400">
-                    <li>{lang === 'es' ? 'Descarga el archivo y ejecútalo con doble clic en tu PC.' : 'Download the file and double-click to run it on your PC.'}</li>
-                    <li>{lang === 'es' ? 'Se abrirá la ventana de Windows/Finder para elegir dónde guardar tu workspace.' : 'A native folder dialog will appear to choose where your workspace lives.'}</li>
+                    <li>{lang === 'es' ? 'Descarga el instalador (.exe o .dmg) y ejecútalo en tu PC.' : 'Download the installer (.exe or .dmg) and run it on your PC.'}</li>
+                    <li>{lang === 'es' ? 'El asistente configurará las herramientas y te pedirá elegir la carpeta de tu canal.' : 'The wizard will set up the tools and prompt you to choose your channel folder.'}</li>
                     <li>{lang === 'es' ? '¡Listo! El motor arrancará y esta consola se conectará en verde de inmediato.' : 'Ready! The motor starts and this console connects in green right away.'}</li>
                   </ol>
                 </div>

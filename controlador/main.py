@@ -4,7 +4,7 @@ import threading
 import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import workspace, chat, video_looper, subtitles
+from routers import workspace, chat, video_looper, subtitles, tts
 from hardware import governor
 
 import sys
@@ -45,6 +45,7 @@ app.include_router(workspace.router)
 app.include_router(chat.router)
 app.include_router(video_looper.router)
 app.include_router(subtitles.router)
+app.include_router(tts.router)
 
 @app.get("/status")
 def get_status():
