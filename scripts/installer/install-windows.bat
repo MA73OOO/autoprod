@@ -1,11 +1,10 @@
 @echo off
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 title AutoProd - Instalador del Motor Local
 
 echo ==============================================================================
-echo                 ⚡ AUTOPROD AI - INSTALADOR DEL MOTOR LOCAL ⚡
+echo                 AUTOPROD AI - INSTALADOR DEL MOTOR LOCAL
 echo ==============================================================================
 echo.
 echo Bienvenido al asistente de instalacion del Motor Local de AutoProd.
@@ -15,7 +14,8 @@ echo.
 
 :: 1. Seleccion de Carpeta Nativa de Windows
 echo [1/6] Selecciona la carpeta donde deseas instalar AutoProd...
-for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Add-Type -AssemblyName System.windows.forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Selecciona la carpeta donde deseas instalar AutoProd'; $f.ShowNewFolderButton = $true; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { Write-Output $f.SelectedPath }"`) do (
+set "CHOSEN_DIR="
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $f = New-Object System.Windows.Forms.FolderBrowserDialog; $f.Description = 'Selecciona la carpeta donde deseas instalar AutoProd'; $f.ShowNewFolderButton = $true; if ($f.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Console]::WriteLine($f.SelectedPath) }"`) do (
     set "CHOSEN_DIR=%%I"
 )
 
@@ -43,8 +43,10 @@ if not exist "!INSTALL_DIR!\workspace" mkdir "!INSTALL_DIR!\workspace"
 
 :: Copiar archivos del motor si el instalador se ejecuta desde el repo o subcarpeta
 if exist "%~dp0..\..\controlador" (
-    echo Copiando archivos del motor local...
+    echo Copiando archivos del motor local desde el repositorio...
     xcopy /s /e /y /q "%~dp0..\..\controlador\*" "!INSTALL_DIR!\motor\" >nul
+) else if exist "%~dp0controlador" (
+    xcopy /s /e /y /q "%~dp0controlador\*" "!INSTALL_DIR!\motor\" >nul
 ) else if exist "%~dp0motor" (
     xcopy /s /e /y /q "%~dp0motor\*" "!INSTALL_DIR!\motor\" >nul
 )
@@ -76,18 +78,24 @@ if not exist "!INSTALL_DIR!\bin\ffmpeg.exe" (
 :: 4. Configuracion de Python y Entorno Virtual
 echo.
 echo [4/6] Verificando entorno de Python...
+set "PY_CMD=python"
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ⚠️ No se detecto Python en el sistema.
-    echo Descargando e instalando Python 3.10 portable/asistido...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe' -OutFile '!INSTALL_DIR!\python_installer.exe'"
-    start /wait "" "!INSTALL_DIR!\python_installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
-    del /f /q "!INSTALL_DIR!\python_installer.exe" 2>nul
+    py --version >nul 2>&1
+    if not errorlevel 1 (
+        set "PY_CMD=py"
+    ) else (
+        echo [AVISO] No se detecto Python en el sistema.
+        echo Descargando e instalando Python 3.10...
+        powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe' -OutFile '!INSTALL_DIR!\python_installer.exe'"
+        start /wait "" "!INSTALL_DIR!\python_installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0
+        del /f /q "!INSTALL_DIR!\python_installer.exe" 2>nul
+    )
 )
 
 echo Creando entorno virtual aislado (venv)...
 if not exist "!INSTALL_DIR!\venv" (
-    python -m venv "!INSTALL_DIR!\venv"
+    !PY_CMD! -m venv "!INSTALL_DIR!\venv"
 )
 
 echo Instalando dependencias del motor local...
@@ -119,20 +127,21 @@ echo cd /d "%%~dp0"
 echo set "PATH=%%~dp0bin;%%PATH%%"
 echo call "%%~dp0venv\Scripts\activate.bat"
 echo echo ===================================================
-echo echo       ⚡ AUTOPROD MOTOR LOCAL EN EJECUCION ⚡
+echo echo       AUTOPROD MOTOR LOCAL EN EJECUCION
 echo echo       Puerto: http://127.0.0.1:8000
 echo echo ===================================================
 echo cd motor
 echo python -m uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+echo pause
 ) > "!INSTALL_DIR!\start_motor.bat"
 
-:: Crear acceso directo en el Escritorio si es posible
+:: Crear acceso directo en el Escritorio
 powershell -NoProfile -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\AutoProd Motor.lnk'); $s.TargetPath = '!INSTALL_DIR!\start_motor.bat'; $s.WorkingDirectory = '!INSTALL_DIR!'; $s.IconLocation = 'shell32.dll,43'; $s.Save()" 2>nul
 
 :: 6. Iniciar el Motor Local y Abrir el Navegador
 echo.
-echo [6/6] ✅ Instalacion completada exitosamente!
-echo Iniciando el Motor Local en segundo plano...
+echo [6/6] Instalacion completada exitosamente!
+echo Iniciando el Motor Local...
 
 start "" "!INSTALL_DIR!\start_motor.bat"
 
@@ -144,7 +153,7 @@ start "" "https://autoprod.io/dashboard" 2>nul || start "" "http://localhost:300
 
 echo.
 echo ==============================================================================
-echo  ¡TODO LISTO! Tu Motor Local de AutoProd ya esta corriendo y conectado.
+echo  TODO LISTO: Tu Motor Local de AutoProd ya esta configurado y conectado.
 echo  Puedes cerrar esta ventana.
 echo ==============================================================================
 pause

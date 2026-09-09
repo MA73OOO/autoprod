@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
     const scriptPath = path.join(process.cwd(), 'scripts', 'installer', fileName);
     
     // Leer el script instalador
-    const fileContent = await fs.readFile(scriptPath, 'utf-8');
+    let fileContent = await fs.readFile(scriptPath, 'utf-8');
+    if (!isMac) {
+      // Forzar formato CRLF para Windows batch files
+      fileContent = fileContent.replace(/\r?\n/g, '\r\n');
+    }
 
     return new NextResponse(fileContent, {
       status: 200,
