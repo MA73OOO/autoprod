@@ -35,6 +35,25 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
       const res = await fetch('/api/setup/status');
       const data = await res.json();
       setSystemDeps(data.dependencies || []);
+
+      // Cargar automáticamente la ruta activa de instalación/workspace
+      try {
+        const ws = await ControladorClient.getDefaultWorkspace();
+        if (ws && ws.path) {
+          setInstallPath(ws.path);
+        }
+      } catch {
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('autoprod_workspace_path') : null;
+        if (saved) {
+          setInstallPath(saved);
+        } else {
+          const wsRes = await fetch('/api/setup/workspace');
+          const wsData = await wsRes.json();
+          if (wsData.success && wsData.path) {
+            setInstallPath(wsData.path);
+          }
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {

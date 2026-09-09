@@ -25,13 +25,17 @@ def normalize_str(s: str) -> str:
     return unicodedata.normalize('NFKD', s).encode('ASCII', 'ignore').decode('utf-8').lower()
 
 def default_workspace_path() -> Path:
-    possible_config_paths = [
+    possible_config_paths = []
+    if getattr(sys, 'frozen', False):
+        possible_config_paths.append(Path(sys.executable).resolve().parent / ".autoprod-config.json")
+
+    possible_config_paths.extend([
         Path(__file__).resolve().parent.parent.parent / ".autoprod-config.json",
         Path(__file__).resolve().parent.parent / ".autoprod-config.json",
         Path.cwd() / ".autoprod-config.json",
         Path.home() / "AutoProdAI" / ".autoprod-config.json",
         Path.home() / ".autoprod-config.json",
-    ]
+    ])
     for config_path in possible_config_paths:
         if config_path.exists():
             try:

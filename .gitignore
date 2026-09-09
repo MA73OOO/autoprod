@@ -62,14 +62,23 @@ dist/
 /.cursor/
 /.devin/
 
-# Python / Motor Local
+# Python / Motor Local & PyInstaller
 __pycache__/
 *.py[cod]
-*$py.class
 venv/
 env/
 .env.motor
 /.autoprod/
+*.log
+motor.log
+*.spec
+build/
+dist/
+**/build/
+**/dist/
+**/*.spec
+**/*.toc
+**/*.pkg
 *.cjs
 scripts/seed-orchestrator.ts
 # Executables and Binaries
