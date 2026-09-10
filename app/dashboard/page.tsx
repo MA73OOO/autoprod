@@ -9,23 +9,27 @@ import { translations, Language } from '@/app/translations';
 import { createClient } from '@/lib/supabase/client';
 import { ControladorClient } from '@/lib/controlador-client';
 
-import UserSettingsModal from '@/components/dashboard/UserSettingsModal';
+import dynamic from 'next/dynamic';
+
 import ConversationSidebar from '@/components/dashboard/ConversationSidebar';
 import Launchpad from '@/components/dashboard/Launchpad';
 import ChatPanel from '@/components/dashboard/ChatPanel';
-import VideoLooperStudio from '@/components/dashboard/VideoLooperStudio';
-import { VideoSubtitlesStudio } from '@/components/dashboard/VideoSubtitlesStudio';
-import AssetLibraryView from '@/components/dashboard/AssetLibraryView';
-import ImageStudio from '@/components/dashboard/ImageStudio';
-import TextToSpeechStudio from '@/components/dashboard/TextToSpeechStudio';
-import FilePreviewer from '@/components/dashboard/FilePreviewer';
-import WorkspaceModal from '@/components/dashboard/WorkspaceModal';
-import ConfirmDeleteModal from '@/components/dashboard/ConfirmDeleteModal';
-import MarkdownEditor from '@/components/dashboard/MarkdownEditor';
 import CreditCounter from '@/components/dashboard/CreditCounter';
 import ProfileDropdown from '@/components/dashboard/ProfileDropdown';
 import { AutoProdLogo } from '@/components/AutoProdLogo';
-import SubscriptionPlansModal from '@/components/dashboard/SubscriptionPlansModal';
+
+// Dynamic lazy imports for heavy studios and modals to minimize initial bundle size and optimize PageSpeed
+const UserSettingsModal = dynamic(() => import('@/components/dashboard/UserSettingsModal'), { ssr: false });
+const SubscriptionPlansModal = dynamic(() => import('@/components/dashboard/SubscriptionPlansModal'), { ssr: false });
+const VideoLooperStudio = dynamic(() => import('@/components/dashboard/VideoLooperStudio'), { ssr: false });
+const VideoSubtitlesStudio = dynamic(() => import('@/components/dashboard/VideoSubtitlesStudio'), { ssr: false });
+const AssetLibraryView = dynamic(() => import('@/components/dashboard/AssetLibraryView'), { ssr: false });
+const ImageStudio = dynamic(() => import('@/components/dashboard/ImageStudio'), { ssr: false });
+const TextToSpeechStudio = dynamic(() => import('@/components/dashboard/TextToSpeechStudio'), { ssr: false });
+const FilePreviewer = dynamic(() => import('@/components/dashboard/FilePreviewer'), { ssr: false });
+const WorkspaceModal = dynamic(() => import('@/components/dashboard/WorkspaceModal'), { ssr: false });
+const ConfirmDeleteModal = dynamic(() => import('@/components/dashboard/ConfirmDeleteModal'), { ssr: false });
+const MarkdownEditor = dynamic(() => import('@/components/dashboard/MarkdownEditor'), { ssr: false });
 
 import { Conversation, Message } from '@/components/dashboard/types';
 import { FileNode } from '@/components/dashboard/FileTree';

@@ -683,3 +683,5 @@ export const VideoSubtitlesStudio: React.FC<VideoSubtitlesStudioProps> = ({
     </div>
   );
 };
+
+export default VideoSubtitlesStudio;

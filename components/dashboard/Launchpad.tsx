@@ -86,6 +86,7 @@ export default function Launchpad({
   onSelect,
   onSelectLooper,
   onSelectSubtitles,
+  onSelectTTS,
   onSelectAssets,
   onSelectImages,
   motorStatus = false,
