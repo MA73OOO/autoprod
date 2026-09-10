@@ -138,7 +138,7 @@ export async function POST(req: Request) {
     // ──────────────────────────────────────────────
     const workspaceRoot = _userContext?.workspacePath || getWorkspacePath();
     const cleanChannelName = sanitizeFolderName(channelData.channel.title);
-    const channelLocalPath = workspaceRoot ? path.join(workspaceRoot, cleanChannelName) : null;
+    const channelLocalPath = workspaceRoot ? path.join(/*turbopackIgnore: true*/ workspaceRoot, cleanChannelName) : null;
     const channelNiche = analytics.topTags?.[0]?.tag || channelData.channel.title;
 
     // 5a. Upsert del Canal en tabla Channel

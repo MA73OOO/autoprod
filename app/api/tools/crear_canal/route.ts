@@ -106,8 +106,8 @@ export async function POST(req: Request) {
       throw new Error('No hay ruta de workspace configurada en el sistema.');
     }
 
-    const channelLocalPath = path.join(workspaceRoot, cleanChannelName).replace(/\\/g, '/');
-    const infoCanalFolderPath = path.join(workspaceRoot, cleanChannelName, 'InfoCanal');
+    const channelLocalPath = path.join(/*turbopackIgnore: true*/ workspaceRoot, cleanChannelName).replace(/\\/g, '/');
+    const infoCanalFolderPath = path.join(/*turbopackIgnore: true*/ workspaceRoot, cleanChannelName, 'InfoCanal');
 
     // ──────────────────────────────────────────────
     // 3. Registrar o Actualizar en Base de Datos (Prisma & Supabase)

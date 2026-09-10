@@ -522,3 +522,5 @@ export const TextToSpeechStudio: React.FC<TextToSpeechStudioProps> = ({
     </div>
   );
 };
+
+export default TextToSpeechStudio;
