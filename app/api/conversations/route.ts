@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/src/prisma/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, ensureDbUser } from '@/lib/auth';
 
 export async function GET() {
   try {
     const auth = await getAuthUser();
     if (!auth.ok) return auth.response;
     const { user } = auth;
+
+    await ensureDbUser(user.id, user.email);
 
     // Fetch conversations lightweight (no messages included)
     const conversations = await db.conversation.findMany({
@@ -27,8 +29,23 @@ export async function POST(request: Request) {
     if (!auth.ok) return auth.response;
     const { user } = auth;
 
+    await ensureDbUser(user.id, user.email);
+
     const body = await request.json();
     const { title, channelId, videoId, systemPrompt, welcomeText } = body;
+
+    // Validate foreign keys to avoid FK constraint violation errors
+    let validChannelId: string | null = null;
+    if (channelId && typeof channelId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(channelId)) {
+      const ch = await db.channel.findFirst({ where: { id: channelId, userId: user.id } });
+      if (ch) validChannelId = ch.id;
+    }
+
+    let validVideoId: string | null = null;
+    if (videoId && typeof videoId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(videoId)) {
+      const vid = await db.video.findFirst({ where: { id: videoId, channel: { userId: user.id } } });
+      if (vid) validVideoId = vid.id;
+    }
 
     // Create the conversation
     const conversation = await db.conversation.create({
@@ -36,8 +53,8 @@ export async function POST(request: Request) {
         title: title || 'Nueva conversación',
         userId: user.id,
         systemPrompt: systemPrompt || null,
-        channelId: channelId || null,
-        videoId: videoId || null,
+        channelId: validChannelId,
+        videoId: validVideoId,
       }
     });
 

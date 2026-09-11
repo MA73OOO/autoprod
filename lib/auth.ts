@@ -75,6 +75,38 @@ function decodeJwt(token: string): { sub: string; email: string } | null {
   }
 }
 
+import { db } from '@/src/prisma/db';
+
+/**
+ * Ensures the user exists in PostgreSQL public.user table to prevent FK violations.
+ */
+export async function ensureDbUser(userId: string, email: string, name?: string) {
+  try {
+    const existing = await db.user.findUnique({
+      where: { id: userId },
+    });
+    if (existing) return existing;
+
+    const existingByEmail = await db.user.findUnique({
+      where: { email },
+    });
+    if (existingByEmail) return existingByEmail;
+
+    const role = email === 'mateo@autoprod.io' ? 'ADMIN' : 'USER';
+    return await db.user.create({
+      data: {
+        id: userId,
+        email,
+        name: name || email.split('@')[0],
+        role,
+      },
+    });
+  } catch (err) {
+    console.error('Error in ensureDbUser:', err);
+    return await db.user.findUnique({ where: { id: userId } }).catch(() => null);
+  }
+}
+
 /**
  * Lightweight, 0ms latency auth guard for API routes.
  * Decodes the user session síncronamente from the JWT cookie.

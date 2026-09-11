@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/src/prisma/db';
-import { getAuthUser } from '@/lib/auth';
+import { getAuthUser, ensureDbUser } from '@/lib/auth';
 import { PLANS_CONFIG } from '@/lib/pricing-config';
 import { createClient } from '@supabase/supabase-js';
 
@@ -15,6 +15,8 @@ export async function GET() {
     const auth = await getAuthUser();
     if (!auth.ok) return auth.response;
     const { user } = auth;
+
+    await ensureDbUser(user.id, user.email);
 
     // 1. Obtener canales desde Prisma (sin relación context inexistente en Prisma)
     const channels = await db.channel.findMany({
@@ -60,6 +62,8 @@ export async function POST(req: Request) {
     const auth = await getAuthUser();
     if (!auth.ok) return auth.response;
     const { user } = auth;
+
+    await ensureDbUser(user.id, user.email);
 
     const body = await req.json().catch(() => ({}));
     const { name, localPath, niche, description } = body;
