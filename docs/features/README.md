@@ -53,6 +53,7 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 | **FEAT-14** | **Sistema Anti-Abuso, Rate Limiting & HMAC IP Hashing** | Next.js / Crypto / RAM Cache | [Ficha Técnica](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/anti_abuse_and_rate_limit/idea.md) |
 | **FEAT-15** | **Text-to-Speech Multi-Motor (Edge-TTS & OpenAI)** | FastAPI / Edge-TTS / OpenAI | [Ficha Técnica](file:///e:/autoprod/docs/features/text_to_speech/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/text_to_speech/idea.md) |
 | **FEAT-16** | **Orquestación de Canales, Capa de Video (`config_video.md`) & Interactive Question Cards** | Next.js / React 19 / Prisma | [Ficha Técnica](file:///e:/autoprod/docs/features/channel_and_video_orchestration/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/channel_and_video_orchestration/idea.md) |
+| **FEAT-17** | **Instalador Oficial Standalone (`AutoProd-Setup.exe` / `.dmg`)** | Inno Setup / PyInstaller / GitHub Releases | [Ficha Técnica](file:///e:/autoprod/docs/features/standalone_installer/ficha_tecnica.md) \| [Idea & Escalabilidad](file:///e:/autoprod/docs/features/standalone_installer/idea.md) |
 
 ---
 
