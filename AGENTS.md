@@ -66,10 +66,11 @@ El sistema de archivos de AutoProd se organiza de forma estricta en 3 niveles je
         └── 📁 Ambiente/                        (Efectos SFX y atmósferas sonoras)
 ```
 
-**Reglas de Reconocimiento:**
+**Reglas de Reconocimiento y Filosofía de Organización:**
 - **Canal:** Carpeta de Nivel 1 en la raíz del Workspace.
-- **`InfoCanal/`:** Carpeta de Nivel 2 exclusiva para la memoria e identidad del canal. **NUNCA** es un video.
-- **Video:** Carpeta de Nivel 2 dentro de un canal (hermana de `InfoCanal/`) que contiene los 5 subdirectorios de producción.
+- **`InfoCanal/`:** Carpeta de Nivel 2 exclusiva para la memoria, directivas e identidad del canal. **NUNCA** es un video.
+- **Proyecto de Video:** Carpeta de Nivel 2 dentro de un canal (hermana de `InfoCanal/`).
+- **Plantilla Base Modular (Nivel 3):** Las subcarpetas (`Guiones/`, `Videos/`, `Miniatura/`, `Musica/`, `Ambiente/`) constituyen la **estructura base recomendada** para mantener el espacio 100% ordenado y libre de caos. Sin embargo, AutoProd es un sistema adaptativo: **comprende y respeta los lineamientos específicos de cada creador**. No todo proyecto requiere los 5 recursos (ej. un canal Lo-Fi puede prescindir de guion y TTS; un videoblog utiliza el audio directo de su cámara). El Orquestador y el Video Studio operan de forma dinámica y modular sobre los recursos presentes sin imponer bloqueos artificiales.
 
 ---
 
