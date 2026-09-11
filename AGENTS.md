@@ -40,6 +40,10 @@ No asumas la arquitectura. Navega a `docs/index.md`, lee el contexto de tu tarea
 - **Diferencial de Ejecución:** *«Tu contenido. Tu equipo. Tu control»* (velocidad nativa, costo predecible y soberanía absoluta sobre los archivos).
 - **PROHIBIDO:** En cualquier texto visible al usuario (landing, dashboard, tooltips, modales), exponer tecnologías internas (FastAPI, Python, FFmpeg, Whisper, CUDA, DALL-E, pgvector, tokens) o recurrir a clichés de marketing agresivo ("viral", "ganchos de retención", "fórmulas mágicas", "bots que hacen videos solos"). Comunicar siempre desde la capacidad, la organización y el beneficio real para el creador.
 
+### 6. SOBERANÍA Y EXCLUSIVIDAD DE EJECUCIÓN DE ARNESES (`harness/`)
+- **PROHIBIDO** para la IA ejecutar comandos de arneses (`pnpm db:migrate`, `pnpm deploy:prod`, `pnpm deploy:vercel`, `pnpm build:exe`, scripts de `harness/`) de forma autónoma.
+- La IA puede crear, optimizar, documentar y mantener los scripts y herramientas dentro de `harness/`, pero **ÚNICAMENTE el usuario tiene la potestad de disparar su ejecución manual** desde su terminal cuando lo considere pertinente.
+
 ---
 
 ## 📁 TAXONOMÍA Y ORGANIZACIÓN DEL ESPACIO DE TRABAJO (WORKSPACE)

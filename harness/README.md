@@ -4,10 +4,13 @@ Este directorio contiene scripts y herramientas de automatización para validaci
 
 ## 📂 Estructura del Módulo
 
-- **`validations/`**: Scripts de PowerShell para pre-validación de entornos y estado de Git.
-  - `check-env.ps1`: Valida la existencia de las variables de entorno necesarias.
-  - `git-prep.ps1`: Verifica que el repositorio local esté listo y limpio para desplegar.
+- **`db/`**: Harness de migraciones y sincronización de PostgreSQL.
+  - `migrate.ts`: Ejecución secuencial transaccional de `migrations/*.sql` con checksums, tracking en `_autoprod_migrations` y auto-regeneración de Prisma Client (`pnpm db:migrate` / `pnpm db:status`).
 - **`build/`**: Harness de compilación y empaquetado del Motor Local.
   - `compile-exe.ts`: Compilador automatizado con liberación de bloqueos de procesos, PyInstaller y verificación de dependencias portables (`pnpm build:exe`).
-- **`deploy/`**: Scripts de automatización para el despliegue en la nube.
-  - `deploy-vercel.js`: Coordina el despliegue del proyecto Next.js en Vercel.
+- **`validations/`**: Scripts de pre-validación de entornos y estado de Git.
+  - `check-env.ts` / `check-env.ps1`: Valida variables de entorno críticas (`pnpm check:env`).
+  - `git-prep.ts` / `git-prep.ps1`: Verifica que el repositorio local esté limpio para desplegar (`pnpm check:git`).
+- **`setup/`**: Detección y aprovisionamiento de binarios del sistema operativo (FFmpeg, Whisper, Python).
+- **`deploy/`**: Pipeline de despliegue a producción seguro y automatizado.
+  - `deploy-vercel.ts`: Valida variables (.env), aplica migraciones en Supabase, ejecuta build de prueba y prepara/lanza el despliegue a Vercel (`pnpm deploy:prod` / `pnpm deploy:vercel`).

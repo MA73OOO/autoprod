@@ -10,6 +10,12 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "build:exe": "tsx harness/build/compile-exe.ts",
+    "db:migrate": "tsx harness/db/migrate.ts",
+    "db:status": "tsx harness/db/migrate.ts --status",
+    "check:env": "tsx harness/validations/check-env.ts",
+    "check:git": "tsx harness/validations/git-prep.ts",
+    "deploy:prod": "tsx harness/deploy/deploy-vercel.ts",
+    "deploy:vercel": "tsx harness/deploy/deploy-vercel.ts --vercel-cli",
     "test:crud": "tsx tests/folder-crud.test.ts",
     "test:proxy": "tsx tests/proxy-normalization.test.ts",
     "test:e2e": "tsx tests/e2e-openai.test.ts"

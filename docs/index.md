@@ -80,3 +80,6 @@ Esta carpeta contiene el detalle de las mecánicas centrales y el seguimiento de
    - Notificarle que esa funcionalidad no está implementada aún.
    - Preguntarle si quiere que la gestionemos: registrarla en el Master Tracker (`docs/features/README.md`) y/o crear su carpeta `docs/features/{slug}/` con `idea.md`.
    - **Nunca improvisar código ni asumir que existe un endpoint para algo que no está catalogado.**
+6. **Soberanía y Exclusividad de Ejecución de Arneses (`harness/`):**
+   - **PROHIBIDO** para el agente ejecutar comandos de despliegue, migración o compilación de arneses (`pnpm db:migrate`, `pnpm deploy:prod`, `pnpm build:exe`, etc.) de forma autónoma.
+   - El agente puede crear, refactorizar y documentar el código de los arneses, pero **su ejecución queda reservada exclusivamente al usuario humano** desde su consola.
