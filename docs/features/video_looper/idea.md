@@ -63,3 +63,8 @@ Para maximizar la productividad y evitar que el creador tenga que saltar entre h
 - **Cero Duplicación de Archivos:** No se genera un "video de prueba" intermedio. El creador edita en memoria virtual sobre la vista previa.
 - **Single-Pass Final Render:** Al presionar "Exportar Video Final", FFmpeg en el PC local procesa el bucle, la música y los overlays en **una sola pasada con aceleración por GPU (NVENC/VideoToolbox)** a costo $0 de servidor.
 - **Streaming por Rango (HTTP 206):** El navegador web solo solicita los bytes del segundo exacto que se está reproduciendo, permitiendo previsualizar videos de 3 horas sin congelar la máquina.
+
+### 4.3. Soporte para Videoblogs y Metraje Largo (Cortes Virtuales):
+- **Cortes Virtuales en Memoria:** Cortar un video de 1 hora no crea archivos físicos ni consume RAM adicional. Cada corte es una simple tupla de texto (`{ clip, start, end }`). 200 cortes ocupan menos de 30 KB en la memoria del navegador.
+- **Salto Instantáneo entre Cortes:** El reproductor web salta entre los puntos de corte en <10ms directamente desde el SSD NVMe local sin interrupciones perceptibles.
+- **Generación Automática de Proxies para 4K:** En metrajes pesados, el motor local genera en segundo plano copias de trabajo en 720p para corte y edición fluida a 60 FPS, aplicando los cortes al archivo 4K original únicamente al momento de la exportación final.
