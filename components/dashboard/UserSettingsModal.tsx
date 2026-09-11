@@ -28,6 +28,7 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
   const [isInstalling, setIsInstalling] = useState(false);
   const [installPath, setInstallPath] = useState('');
   const [isPickingPath, setIsPickingPath] = useState(false);
+  const [motorInfo, setMotorInfo] = useState<{ status: string; version: string; workspace_path: string } | null>(null);
 
   const checkSystemStatus = async () => {
     setIsSystemDetecting(true);
@@ -36,21 +37,39 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
       const data = await res.json();
       setSystemDeps(data.dependencies || []);
 
-      // Cargar automáticamente la ruta activa de instalación/workspace
+      // 1. Consultar estado y versión del Motor Local
       try {
-        const ws = await ControladorClient.getDefaultWorkspace();
-        if (ws && ws.path) {
-          setInstallPath(ws.path);
+        const mInfo = await ControladorClient.getMotorInfo();
+        if (mInfo) {
+          setMotorInfo(mInfo);
+          if (mInfo.workspace_path) {
+            setInstallPath(mInfo.workspace_path);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('autoprod_workspace_path', mInfo.workspace_path);
+            }
+          }
         }
-      } catch {
-        const saved = typeof window !== 'undefined' ? localStorage.getItem('autoprod_workspace_path') : null;
-        if (saved) {
-          setInstallPath(saved);
-        } else {
-          const wsRes = await fetch('/api/setup/workspace');
-          const wsData = await wsRes.json();
-          if (wsData.success && wsData.path) {
-            setInstallPath(wsData.path);
+      } catch (err) {
+        setMotorInfo(null);
+      }
+
+      // 2. Fallback de workspace si no se obtuvo del motor
+      if (!installPath) {
+        try {
+          const ws = await ControladorClient.getDefaultWorkspace();
+          if (ws && ws.path) {
+            setInstallPath(ws.path);
+          }
+        } catch {
+          const saved = typeof window !== 'undefined' ? localStorage.getItem('autoprod_workspace_path') : null;
+          if (saved) {
+            setInstallPath(saved);
+          } else {
+            const wsRes = await fetch('/api/setup/workspace');
+            const wsData = await wsRes.json();
+            if (wsData.success && wsData.path) {
+              setInstallPath(wsData.path);
+            }
           }
         }
       }
@@ -439,145 +458,89 @@ export default function UserSettingsModal({ isOpen, onClose, lang, user, isAdmin
               </div>
 
 
-              <p className="text-xs text-zinc-400">
-                {lang === 'es'
-                  ? 'Gestiona las dependencias locales necesarias (Python, FFmpeg, Whisper, yt-dlp).'
-                  : 'Manage local dependencies needed (Python, FFmpeg, Whisper, yt-dlp).'}
-              </p>
-              <div className="bg-[#18181b] border border-zinc-800 rounded-lg p-4 space-y-3">
-                <div className="flex justify-between items-center mb-2">
-                  <h5 className="text-xs font-bold text-zinc-200">Dependencias</h5>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-zinc-400">
+                  {lang === 'es'
+                    ? 'Estado del Motor Local y sincronización del espacio de trabajo.'
+                    : 'Local Motor status and workspace synchronization.'}
+                </p>
+                <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 ${
+                  motorInfo?.status === 'online'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${motorInfo?.status === 'online' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`}></span>
+                  {motorInfo?.status === 'online' 
+                    ? `Motor v${motorInfo.version || '1.0.0'} Online` 
+                    : 'Motor Desconectado'}
+                </span>
+              </div>
+
+              {/* ── Tarjeta de Workspace Canónico (Fijado por el Instalador) ── */}
+              <div className="bg-[#18181b] border border-zinc-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📁</span>
+                    <div>
+                      <h5 className="text-xs font-bold text-zinc-200">
+                        {lang === 'es' ? 'Workspace Canónico de AutoProd' : 'AutoProd Canonical Workspace'}
+                      </h5>
+                      <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                        <span className="w-1 h-1 rounded-full bg-emerald-400"></span>
+                        {lang === 'es' ? 'Fijado por el Instalador' : 'Locked by Installer'}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await ControladorClient.openWorkspaceFolder(installPath);
+                        toast.success(lang === 'es' ? 'Carpeta abierta en el explorador.' : 'Folder opened in explorer.');
+                      } catch (e: any) {
+                        toast.error(lang === 'es' ? 'No se pudo abrir la carpeta.' : 'Could not open folder.');
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Abrir en el Explorador de archivos del sistema"
+                  >
+                    📂 {lang === 'es' ? 'Abrir Carpeta' : 'Open Folder'}
+                  </button>
+                </div>
+
+                <div className="bg-black/60 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs font-mono text-zinc-300 break-all select-all flex items-center justify-between">
+                  <span>{installPath || (lang === 'es' ? 'Detectando ruta...' : 'Detecting path...')}</span>
+                  <span className="text-[10px] text-zinc-500 font-sans ml-2 shrink-0">Solo Lectura</span>
+                </div>
+
+                <p className="text-[11px] text-zinc-500 leading-relaxed">
+                  {lang === 'es'
+                    ? 'Esta es la ubicación única oficial. Toda la producción, canales, videos, audios y renders se almacenan y sincronizan automáticamente en esta ruta.'
+                    : 'This is the single official location. All production, channels, videos, audio, and renders are automatically stored and synced here.'}
+                </p>
+              </div>
+
+              {/* ── Lista de Dependencias ── */}
+              <div className="bg-[#18181b] border border-zinc-800 rounded-xl p-4 space-y-2.5">
+                <div className="flex justify-between items-center mb-1">
+                  <h5 className="text-xs font-bold text-zinc-200">
+                    {lang === 'es' ? 'Componentes del Sistema' : 'System Components'}
+                  </h5>
                   <button 
                     onClick={checkSystemStatus}
-                    className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2 py-1 rounded transition-colors"
+                    className="text-[10px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors flex items-center gap-1"
                   >
                     {isSystemDetecting ? '↻...' : '↻ Refrescar'}
                   </button>
                 </div>
                 {systemDeps.map(dep => (
-                  <div key={dep.id} className="flex items-center justify-between py-1.5 border-t border-zinc-800/50">
-                    <span className="text-xs text-zinc-300">{dep.name}</span>
+                  <div key={dep.id} className="flex items-center justify-between py-1.5 border-t border-zinc-800/50 text-xs">
+                    <span className="text-zinc-300 font-medium">{dep.name}</span>
                     <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${dep.status === 'installed' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                       {dep.status === 'installed' ? '🟢 Instalado' : '🔴 Faltante'}
                     </span>
                   </div>
                 ))}
-              </div>
-
-              <div className="flex flex-col gap-3 pt-2">
-                <div>
-                  <label className="text-zinc-500 block mb-1 text-xs font-bold">
-                    {lang === 'es' ? 'Ruta de Instalación' : 'Installation Path'}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={installPath}
-                      onChange={(e) => setInstallPath(e.target.value)}
-                      placeholder={lang === 'es' ? "Ej: C:\\AutoProdAI o selecciona..." : "E.g. C:\\AutoProdAI or browse..."}
-                      className="w-full bg-[#18181b] border border-zinc-800 rounded p-2 text-white focus:outline-none text-xs"
-                    />
-                    <button
-                      type="button"
-                      disabled={isPickingPath}
-                      onClick={async () => {
-                        setIsPickingPath(true);
-                        let selectedPath = '';
-
-                        // 1. Intentar abrir explorador nativo a través del Motor Local (localhost:8000)
-                        try {
-                          const localPick = await ControladorClient.pickWorkspace();
-                          if (localPick && localPick.path) {
-                            selectedPath = localPick.path;
-                          }
-                        } catch (err) {
-                          // 2. Si el motor local no está corriendo, intentar el fallback de API route
-                          try {
-                            const res = await fetch('/api/setup/pick-folder');
-                            const data = await res.json();
-                            if (data.success && data.path) {
-                              selectedPath = data.path;
-                            } else if (data.error) {
-                              toast.info(lang === 'es' ? 'Ingresa o pega la ruta de tu carpeta local en el campo de texto.' : 'Please type or paste your local folder path in the input.');
-                            }
-                          } catch (e) {
-                            toast.info(lang === 'es' ? 'Puedes escribir la ruta de tu carpeta deseada directamente.' : 'You can type your desired folder path directly.');
-                          }
-                        }
-
-                        if (selectedPath) {
-                          let p = selectedPath;
-                          if (!p.toLowerCase().endsWith('autoprodai')) {
-                            const separator = p.includes('\\') ? '\\' : '/';
-                            p = p.endsWith(separator) ? `${p}AutoProdAI` : `${p}${separator}AutoProdAI`;
-                          }
-                          setInstallPath(p);
-                        }
-
-                        setIsPickingPath(false);
-                      }}
-                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded font-bold transition-colors cursor-pointer text-xs whitespace-nowrap disabled:opacity-50"
-                    >
-                      {isPickingPath ? '...' : (lang === 'es' ? '📂 Explorar' : '📂 Browse')}
-                    </button>
-                  </div>
-
-                </div>
-
-                <button
-                  disabled={isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))}
-                  onClick={async () => {
-                    if (!installPath && !(systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))) {
-                      toast.error(lang === 'es' ? 'Selecciona una ruta de instalación primero.' : 'Select an installation path first.');
-                      return;
-                    }
-                    setIsInstalling(true);
-                    setInstallLogs([]);
-                    try {
-                      await fetch('/api/setup/install', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ basePath: installPath })
-                      });
-                      const eventSource = new EventSource('/api/setup/stream');
-                      
-                      eventSource.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        if (data.log) {
-                          setInstallLogs(prev => [...prev, data.log]);
-                        }
-                        if (data.status === 'complete' || data.error) {
-                          eventSource.close();
-                          setIsInstalling(false);
-                          checkSystemStatus();
-                          if (data.status === 'complete') {
-                            localStorage.removeItem('autoprod_workspace_path'); // Force dashboard to resync
-                            window.location.reload();
-                          }
-                        }
-                      };
-                    } catch (err) {
-                      toast.error('Error iniciando setup');
-                      setIsInstalling(false);
-                    }
-                  }}
-                  className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-2 ${
-                    isInstalling || (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
-                      ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                      : 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer'
-                  }`}
-                >
-                  {isInstalling 
-                    ? (lang === 'es' ? 'Instalando...' : 'Installing...')
-                    : (systemDeps.length > 0 && systemDeps.every(d => d.status === 'installed'))
-                      ? (lang === 'es' ? 'Todo Instalado' : 'All Installed')
-                      : (lang === 'es' ? 'Instalar Motor' : 'Install Motor')}
-                </button>
-                {installLogs.length > 0 && (
-                  <div className="bg-black border border-zinc-800 rounded p-2 mt-4 max-h-32 overflow-y-auto font-mono text-[10px] text-zinc-400 minimal-scrollbar flex flex-col-reverse">
-                    {installLogs.slice().reverse().map((log, i) => <div key={i}>{log}</div>)}
-                  </div>
-                )}
               </div>
             </div>
           )}

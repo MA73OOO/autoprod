@@ -72,10 +72,11 @@ Cada funcionalidad cuenta con su **Ficha Técnica** (código, endpoints y arquit
 ### 🎬 A. Producción Multimedia & Edición Avanzada
 | ID | Idea | Prioridad | Esfuerzo | Estado | Hipótesis / Valor de Negocio |
 |---|---|:---:|:---:|:---:|---|
-| **IDEA-A1** | **B-Roll Auto-Finder & Scraper Local** | `P1` | `L` | `💡 IDEA` | Agente que analiza el guion y descarga clips libres de derechos (Pexels, Pixabay) o fragmentos de referencia vía yt-dlp. |
+| **IDEA-A1** | **B-Roll Auto-Finder & AI Video Studio** | `P1` | `L` | `💡 IDEA` | Agente que analiza el guion y descarga clips libres de derechos (Pexels, Pixabay) o genera video sintético IA. [Ver Ficha](file:///e:/autoprod/docs/features/ai_video_and_broll/ficha_tecnica.md) \| [Ver Idea](file:///e:/autoprod/docs/features/ai_video_and_broll/idea.md) |
 | **IDEA-A2** | **Expansión TTS Hiperrealista (ElevenLabs & Cartesia)** | `P1` | `M` | `💡 IDEA` | Expansión del motor TTS existente (FEAT-15): agregar ElevenLabs y Cartesia Sonic como motores adicionales de ultra fidelidad. |
 | **IDEA-A3** | **Render Batch en Cola de Producción** | `P1` | `L` | `💡 IDEA` | Capacidad de poner múltiples videos en cola para renderizar consecutivamente de noche aprovechando la GPU desocupada. |
 | **IDEA-A4** | **Auto-Corte de Videos a YouTube Shorts / TikTok** | `P2` | `XL` | `💡 IDEA` | Detección de momentos con mayor energía en videos largos para re-encuadrar a formato vertical (9:16) con subtítulos cinemáticos. |
+| **IDEA-A5** | **Generador de Música IA & Soundscapes (AI Music Studio)** | `P1` | `L` | `💡 IDEA` | Generación de pistas musicales de fondo y soundscapes sin copyright (MusicGen local / BYOK) con bucles perfectos. [Ver Ficha](file:///e:/autoprod/docs/features/music_generator/ficha_tecnica.md) \| [Ver Idea](file:///e:/autoprod/docs/features/music_generator/idea.md) |
 
 ### 🤖 B. Inteligencia Artificial Agéntica & Optimización SEO
 | ID | Idea | Prioridad | Esfuerzo | Estado | Hipótesis / Valor de Negocio |

@@ -118,6 +118,45 @@ export class ControladorClient {
   }
 
   /**
+   * Abre la carpeta del workspace en el explorador de archivos nativo de Windows / macOS
+   */
+  static async openWorkspaceFolder(folderPath?: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/workspace/open_folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: folderPath || null }),
+      });
+      if (!response.ok) {
+        throw new Error('No se pudo abrir la carpeta en el explorador');
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Controlador Client: openWorkspaceFolder failed', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtiene la información detallada del motor local (versión, ruta, estado)
+   */
+  static async getMotorInfo(): Promise<{ status: string; message: string; version: string; workspace_path: string } | null> {
+    try {
+      const response = await fetch(`${getControladorUrl()}/status`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
    * Lista el contenido del workspace.
    */
   static async getWorkspace(basePath: string) {

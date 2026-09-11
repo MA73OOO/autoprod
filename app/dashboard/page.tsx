@@ -97,38 +97,39 @@ export default function Dashboard() {
       if (isOnline) {
         // Only load tree if we haven't loaded it yet since coming online
         if (!treeLoaded) {
-          let savedPath = localStorage.getItem('autoprod_workspace_path');
-          if (!savedPath) {
-            try {
-              // 1. Intentar leer la ruta maestra directamente desde el Motor Local (localhost:8000)
-              const localWs = await ControladorClient.getDefaultWorkspace();
-              if (localWs && localWs.path) {
-                savedPath = localWs.path;
-                localStorage.setItem('autoprod_workspace_path', savedPath);
-                setWorkspacePath(savedPath);
-              }
-            } catch (e) {
-              // 2. Fallback a API de servidor
-              try {
-                const res = await fetch('/api/setup/workspace');
-                if (res.ok) {
-                  const data = await res.json();
-                  if (data.success && data.path) {
-                    savedPath = data.path;
-                    localStorage.setItem('autoprod_workspace_path', savedPath!);
-                    setWorkspacePath(savedPath);
-                  }
-                }
-              } catch (err) {
-                console.warn("Could not get default workspace path");
-              }
+          let resolvedPath: string | null = null;
+          try {
+            // 1. Siempre priorizar la ruta maestra directamente desde el Motor Local (localhost:8000)
+            const localWs = await ControladorClient.getDefaultWorkspace();
+            if (localWs && localWs.path) {
+              resolvedPath = localWs.path;
             }
-          }
-          if (savedPath) {
-            loadWorkspaceTree(savedPath);
-            treeLoaded = true;
+          } catch (e) {
+            // Motor no respondió al endpoint de workspace
           }
 
+          if (!resolvedPath) {
+            // 2. Fallback a API de servidor Next.js
+            try {
+              const res = await fetch('/api/setup/workspace');
+              if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.path) {
+                  resolvedPath = data.path;
+                }
+              }
+            } catch (err) {
+              // Fallback final a localStorage
+              resolvedPath = localStorage.getItem('autoprod_workspace_path');
+            }
+          }
+
+          if (resolvedPath) {
+            localStorage.setItem('autoprod_workspace_path', resolvedPath);
+            setWorkspacePath(resolvedPath);
+            loadWorkspaceTree(resolvedPath);
+            treeLoaded = true;
+          }
         }
       } else {
         treeLoaded = false;

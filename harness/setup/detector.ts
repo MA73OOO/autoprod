@@ -40,7 +40,14 @@ export function getLocalBinPath(): string | null {
 
 export function getWorkspacePath(): string | null {
   const root = getAutoProdRoot();
-  return root ? path.join(root, 'youtube') : null;
+  if (!root) return null;
+  if (fsSync.existsSync(path.join(root, 'workspace'))) {
+    return path.join(root, 'workspace');
+  }
+  if (fsSync.existsSync(path.join(root, 'youtube'))) {
+    return path.join(root, 'youtube');
+  }
+  return root;
 }
 
 export async function detectDependencies(): Promise<DependencyInfo[]> {

@@ -47,9 +47,27 @@ app.include_router(video_looper.router)
 app.include_router(subtitles.router)
 app.include_router(tts.router)
 
+@app.get("/")
+def root():
+    ws_path = str(workspace.default_workspace_path().as_posix())
+    return {
+        "status": "online",
+        "service": "AutoProd Local Motor",
+        "version": "1.0.0",
+        "workspace_path": ws_path,
+        "docs": "/docs",
+        "status_url": "/status"
+    }
+
 @app.get("/status")
 def get_status():
-    return {"status": "online", "message": "Motor local conectado correctamente."}
+    ws_path = str(workspace.default_workspace_path().as_posix())
+    return {
+        "status": "online",
+        "message": "Motor local conectado correctamente.",
+        "version": "1.0.0",
+        "workspace_path": ws_path
+    }
 
 @app.get("/system/hardware")
 def get_system_hardware():

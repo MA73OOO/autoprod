@@ -87,6 +87,25 @@ def default_workspace():
     """Retorna la ruta por defecto donde se ubican los canales leyendo la configuración."""
     return {"path": default_workspace_path().as_posix()}
 
+@router.post("/open_folder")
+def open_folder(payload: Optional[dict] = None):
+    """Abre la carpeta del workspace en el explorador de archivos nativo del SO."""
+    target = default_workspace_path()
+    if payload and isinstance(payload, dict) and payload.get("path"):
+        p = Path(payload["path"])
+        if p.exists():
+            target = p
+    try:
+        if sys.platform == "win32":
+            os.startfile(str(target))
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(target)])
+        else:
+            subprocess.run(["xdg-open", str(target)])
+        return {"success": True, "path": str(target)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error abriendo explorador: {str(e)}")
+
 @router.get("/pick")
 def pick_workspace():
     """Abre el explorador de archivos nativo del SO para elegir una carpeta."""

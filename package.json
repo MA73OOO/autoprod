@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate",
+    "build:exe": "tsx harness/build/compile-exe.ts",
     "test:crud": "tsx tests/folder-crud.test.ts",
     "test:proxy": "tsx tests/proxy-normalization.test.ts",
     "test:e2e": "tsx tests/e2e-openai.test.ts"
