@@ -68,3 +68,12 @@ Para maximizar la productividad y evitar que el creador tenga que saltar entre h
 - **Cortes Virtuales en Memoria:** Cortar un video de 1 hora no crea archivos físicos ni consume RAM adicional. Cada corte es una simple tupla de texto (`{ clip, start, end }`). 200 cortes ocupan menos de 30 KB en la memoria del navegador.
 - **Salto Instantáneo entre Cortes:** El reproductor web salta entre los puntos de corte en <10ms directamente desde el SSD NVMe local sin interrupciones perceptibles.
 - **Generación Automática de Proxies para 4K:** En metrajes pesados, el motor local genera en segundo plano copias de trabajo en 720p para corte y edición fluida a 60 FPS, aplicando los cortes al archivo 4K original únicamente al momento de la exportación final.
+
+### 4.4. Composición Dinámica y Modular (Cero Rigidez):
+- **Contenedores, no Requisitos Obligatorios:** Las subcarpetas del proyecto (`Guiones/`, `Videos/`, `Musica/`, etc.) son espacios de trabajo disponibles, nunca una lista de tareas bloqueantes.
+- **Adaptabilidad a Diversos Arquetipos:**
+  - *Canales Lo-Fi / Ambiente:* Solo Video + Música (sin guion, sin TTS, sin subtítulos).
+  - *Videoblogs / IRL / Clips de Streamers:* Video con audio real de cámara + Subtítulos y Overlays (sin TTS sintetizado).
+  - *Canales Automatizados / Ensayos:* Pipeline completo (Guion + TTS + B-roll + Música + Subtítulos).
+  - *Shorts / Reels:* Video vertical 9:16 + Subtítulos cinemáticos.
+- **Renderizado Selectivo:** El motor local compila exclusivamente las pistas que el creador decide activar en su línea de tiempo, sin generar advertencias falsas de archivos faltantes.
