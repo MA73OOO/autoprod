@@ -42,3 +42,24 @@
    - Superponer capas de lluvia, nieve o polvo flotante transparente sobre cualquier video estático antes de compilar el bucle.
 3. **Control de Normalización de Volumen (Loudness EBU R128):**
    - Normalizar automáticamente el volumen de todas las pistas de música de la carpeta para que no haya canciones más fuertes que otras.
+---
+
+## 🎬 4. Arquitectura Definitiva: Video Studio Unificado (Looper Express + Timeline Pro)
+
+Para maximizar la productividad y evitar que el creador tenga que saltar entre herramientas o recurrir a CapCut, **VideoLooper queda INTEGRADO (JUNTO)** dentro del **Video Studio** de AutoProd bajo un modelo dual no destructivo:
+
+### 4.1. Los 2 Modos de Trabajo en la Misma Interfaz:
+1. **Modo Looper Express (1-Clic):**
+   - Para creadores de canales de música Lo-Fi, fondos relajantes o podcasts estáticos.
+   - Flujo directo: Arrastras tu video de 10s + carpeta de canciones y FFmpeg genera el bucle de 1 a 3 horas en **15 segundos** usando *Stream Copy* (`-c:v copy`), sin pasar por renderizados pesados.
+2. **Modo Timeline Pro (Línea de Tiempo Multipista):**
+   - Para creadores que sobre ese bucle (o sobre clips de streamers/vlogs) necesitan agregar:
+     - **Pista de Overlays:** Botón animado de *"Suscríbete"*, logo del canal (`InfoCanal/logo.png`), marcas de agua y CTAs con posicionamiento arrastrable (Drag & Drop) sobre el canvas.
+     - **Pista de Subtítulos:** Subtítulos sincronizados palabra por palabra con Faster-Whisper.
+     - **Pista de Audio con Ducking:** La música de fondo baja de volumen suavemente cuando la voz en off habla.
+   - **Bucle Virtual (0 Lag en Web):** En la línea de tiempo el bucle se representa como **un solo bloque continuo** (no 360 cortes). El navegador solo reproduce el clip de 15 MB en bucle con el atributo nativo `loop`, consumiendo prácticamente 0% de RAM.
+
+### 4.2. Gobernanza de Hardware, Red y PC:
+- **Cero Duplicación de Archivos:** No se genera un "video de prueba" intermedio. El creador edita en memoria virtual sobre la vista previa.
+- **Single-Pass Final Render:** Al presionar "Exportar Video Final", FFmpeg en el PC local procesa el bucle, la música y los overlays en **una sola pasada con aceleración por GPU (NVENC/VideoToolbox)** a costo $0 de servidor.
+- **Streaming por Rango (HTTP 206):** El navegador web solo solicita los bytes del segundo exacto que se está reproduciendo, permitiendo previsualizar videos de 3 horas sin congelar la máquina.
