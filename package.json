@@ -10,6 +10,7 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "build:exe": "tsx harness/build/compile-exe.ts",
+    "build:mac": "tsx harness/build/compile-mac.ts",
     "db:migrate": "tsx harness/db/migrate.ts",
     "db:status": "tsx harness/db/migrate.ts --status",
     "check:env": "tsx harness/validations/check-env.ts",

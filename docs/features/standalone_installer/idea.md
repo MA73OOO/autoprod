@@ -1,7 +1,7 @@
 # 💡 Idea de Negocio & Escalabilidad: Instalador Oficial 1-Clic (`AutoProd-Setup.exe`)
 
 > **Ruta:** `docs/features/standalone_installer/idea.md`  
-> **Estado:** `✅ HECHO (Windows)` \| `📋 PLANIFICADO (macOS)`  
+> **Estado:** `✅ HECHO (Windows: AutoProd-Setup.exe & macOS: AutoProd-Setup.dmg)`  
 > **Propósito:** Empaquetar todo el motor local de procesamiento pesado, dependencias y binarios en un único instalador profesional de escritorio, eliminando terminales, dependencias manuales y fricción para el creador de contenido.
 
 ---
@@ -36,8 +36,9 @@
 | Instalador Gráfico Inno Setup (`AutoProd-Setup.exe`) | `✅ HECHO` | Asistente en español e inglés con desinstalador limpio. |
 | Inyección de Binarios Portables (`ffmpeg`, `yt-dlp`) | `✅ HECHO` | Alojados en `{app}\bin\` y añadidos al PATH del proceso. |
 | Entrega CDN vía GitHub Releases (`/api/setup/download-installer`) | `✅ HECHO` | Descarga de la última release publicada en Windows. |
-| Arnés de Compilación en 1 Comando (`pnpm build:exe`) | `✅ HECHO` | Automatizado en `harness/build/compile-exe.ts`. |
-| Empaquetado macOS (`AutoProd-Setup.dmg`) | `📋 PLANIFICADO` | Script base `build-macos.sh` creado; requiere runner macOS o GitHub Actions para compilar el release. |
+| Arnés de Compilación en 1 Comando (`pnpm build:exe` / `pnpm build:mac`) | `✅ HECHO` | Automatizado en `harness/build/`. |
+| Empaquetado macOS (`AutoProd-Setup.dmg`) | `✅ HECHO` | Script `build-macos.sh` y workflow GitHub Actions (`macos-latest`). |
+| Pipeline CI/CD Multiplataforma (`.github/workflows/release-installers.yml`) | `✅ HECHO` | Compilación dual en la nube y subida a GitHub Releases. |
 | Auto-Actualizador Silencioso (Silent Updater) | `📋 PLANIFICADO` | Verificación en background de nuevas versiones sin reinstalar. |
 | Firma Digital de Código (Certificado EV Code Signing) | `💡 IDEA` | Para evitar la advertencia azul de Windows SmartScreen. |
 

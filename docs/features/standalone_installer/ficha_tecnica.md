@@ -1,92 +1,88 @@
-# ⚙️ Ficha Técnica: Instalador Autónomo & Empaquetado (`AutoProd-Setup.exe`)
+# ⚙️ Ficha Técnica: Instalador Autónomo & Empaquetado (`AutoProd-Setup.exe` & `AutoProd-Setup.dmg`)
 
 > **Ruta:** `docs/features/standalone_installer/ficha_tecnica.md`  
-> **Estado:** `✅ HECHO (Windows: AutoProd-Setup.exe)` \| `📋 PLANIFICADO (macOS: AutoProd-Setup.dmg)`  
-> **Capa Técnica:** PyInstaller (One-File) + Inno Setup 6 + Binarios Portables + GitHub Releases CDN + Next.js API Routes
+> **Estado:** `✅ HECHO (Windows: AutoProd-Setup.exe & macOS: AutoProd-Setup.dmg)`  
+> **Capa Técnica:** PyInstaller (One-File) + Inno Setup 6 + macOS hdiutil (.dmg) + GitHub Actions Multiplataforma + GitHub Releases CDN + Next.js API Routes
 
 ---
 
-## 🛠️ 1. Pipeline de Compilación & Empaquetado
+## 🛠️ 1. Pipeline de Compilación & Empaquetado Multiplataforma
 
 ```mermaid
 flowchart TD
     subgraph Fase_1_PyInstaller [Fase 1: PyInstaller Motor Local]
-        A[controlador/main.py] -->|python -m PyInstaller| B[autoprod-motor.exe]
-        A1[Librerías: uvicorn, fastapi, faster_whisper, edge_tts] --> B
+        A[controlador/main.py] -->|python -m PyInstaller| B[autoprod-motor / autoprod-motor.exe]
+        A1[Librerías: uvicorn, fastapi, faster_whisper, edge_tts, ctranslate2] --> B
         A2[Routers: workspace, video_looper, subtitles, tts, chat] --> B
     end
 
-    subgraph Fase_2_InnoSetup [Fase 2: Asistente Inno Setup]
-        B --> C[setup.iss]
-        D[bin/ffmpeg.exe + bin/yt-dlp.exe] --> C
-        C -->|ISCC.exe| E[AutoProd-Setup.exe ~115 MB]
+    subgraph Fase_2_Empaquetado [Fase 2: Empaquetadores Nativos]
+        B -->|Windows: Inno Setup 6| C[AutoProd-Setup.exe]
+        B -->|macOS: hdiutil DMG| D[AutoProd-Setup.dmg]
+        E[Binarios Portables: ffmpeg, ffprobe, yt-dlp] --> C
+        E --> D
     end
 
-    subgraph Fase_3_Distribucion [Fase 3: Distribución a Clientes]
-        E -->|Upload manual o script| F[GitHub Releases: Tag v1.1.0]
-        G[Usuario hace clic en 'Descargar'] --> H[app/api/setup/download-installer]
-        H -->|Redirect / Proxy| F
-        F -->|Descarga Ultra-Rápida CDN| I[PC del Creador]
+    subgraph Fase_3_CI_CD [Fase 3: GitHub Actions & Distribución CDN]
+        C -->|CI/CD Runner windows-latest| F[.github/workflows/release-installers.yml]
+        D -->|CI/CD Runner macos-latest| F
+        F -->|Release Tag / Manual Dispatch| G[GitHub Releases CDN]
+        H[Usuario en Dashboard / Settings] --> I[app/api/setup/download-installer]
+        I -->|Redirect / Streaming| G
     end
 ```
 
 ---
 
-## 🔌 2. Endpoints y Automatización del Harness
+## 🔌 2. Endpoints, CI/CD y Automatización de Arneses
 
 ### A. Endpoint de Descarga Oficial
 
 | Endpoint | Método | Parámetros Clave | Descripción |
 |---|:---:|---|---|
-| `/api/setup/download-installer` | `GET` | `os?: 'windows' \| 'mac'` | Sirve el instalador oficial. Consulta automáticamente la última release pública en GitHub (`/releases/latest/download/AutoProd-Setup.exe`) con fallback al binario local en `dist/`. |
+| `/api/setup/download-installer` | `GET` | `os?: 'windows' \| 'mac'` | Sirve el instalador oficial para el sistema operativo detectado o solicitado (`AutoProd-Setup.exe` o `AutoProd-Setup.dmg`). Consulta automáticamente la última release pública en GitHub con fallback al binario local en `dist/`. |
 
-### B. Comando Oficial de Compilación
+### B. Comandos Oficiales de Compilación (Harness)
 
-```bash
-pnpm build:exe
-```
-* **Script:** [`harness/build/compile-exe.ts`](file:///e:/autoprod/harness/build/compile-exe.ts)
-* **Acciones:**
-  1. Cierra instancias activas de `autoprod-motor.exe` vía `taskkill` para liberar bloqueos.
-  2. Actualiza dependencias de `requirements.txt` en el entorno de Python.
-  3. Ejecuta PyInstaller con las directivas `--collect-all` y `--hidden-import` requeridas.
-  4. Deposita el ejecutable listo en `dist/autoprod-motor.exe`.
+1. **Compilación de Windows:**
+   ```bash
+   pnpm build:exe
+   ```
+   * **Script:** [`harness/build/compile-exe.ts`](file:///e:/autoprod/harness/build/compile-exe.ts) y [`scripts/build/build-windows.bat`](file:///e:/autoprod/scripts/build/build-windows.bat).
+
+2. **Compilación de macOS:**
+   ```bash
+   pnpm build:mac
+   ```
+   * **Script:** [`harness/build/compile-mac.ts`](file:///e:/autoprod/harness/build/compile-mac.ts) y [`scripts/build/build-macos.sh`](file:///e:/autoprod/scripts/build/build-macos.sh).
+
+3. **Compilación Automatizada en la Nube (GitHub Actions):**
+   * **Workflow:** [`.github/workflows/release-installers.yml`](file:///e:/autoprod/.github/workflows/release-installers.yml).
+   * Corre runners paralelos en `windows-latest` y `macos-latest` para generar ambos binarios sin requerir hardware Mac local, publicando directamente en GitHub Releases.
 
 ---
 
-## 🎛️ 3. Especificaciones del Script de Instalación (`setup.iss`)
+## 🎛️ 3. Especificaciones de Instalación
 
-Ubicado en [`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss):
+### Windows (`setup.iss`):
+- **Ubicación:** [`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss)
+- **Directorio:** `{autopf}\AutoProdAI`
+- **Componentes:** `autoprod-motor.exe`, `.autoprod-config.json`, `bin/` (`ffmpeg.exe`, `ffprobe.exe`, `yt-dlp.exe`), `workspace/`.
 
-1. **Directorio por Defecto:**
-   - `{autopf}\AutoProdAI` (habitualmente `C:\Users\{Usuario}\AppData\Local\Programs\AutoProdAI` o `C:\Program Files\AutoProdAI`).
-2. **Estructura Creada en la Máquina del Cliente:**
-   ```
-   📁 AutoProdAI/
-   ├── 📄 autoprod-motor.exe        <-- Binario autónomo del motor FastAPI
-   ├── 📄 .autoprod-config.json     <-- Configuración generada en ssPostInstall
-   ├── 📁 bin/
-   │   ├── ffmpeg.exe               <-- Motor de render y transcodificación
-   │   ├── ffprobe.exe              <-- Inspector de medios
-   │   └── yt-dlp.exe               <-- Extractor de medios y referencias
-   └── 📁 workspace/                <-- Espacio de trabajo canónico persistente
-   ```
-3. **Rutina Pascal `ssPostInstall`:**
-   Genera automáticamente el archivo `.autoprod-config.json` fijando:
-   ```json
-   {
-     "basePath": "{app}\\workspace"
-   }
-   ```
-4. **Preservación de Datos:**
-   Durante una actualización o desinstalación, la carpeta `workspace/` no se elimina, garantizando que el usuario conserve todos sus canales y proyectos.
+### macOS (`build-macos.sh` / `AutoProd-Setup.dmg`):
+- **Ubicación:** [`scripts/build/build-macos.sh`](file:///e:/autoprod/scripts/build/build-macos.sh)
+- **Directorio:** `~/AutoProdAI`
+- **Componentes:** `autoprod-motor`, `start_motor.sh`, `.autoprod-config.json`, `bin/` (`ffmpeg`, `yt-dlp`), `workspace/`.
 
 ---
 
 ## 📂 4. Archivos Involucrados
 
-- [`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss): Definición formal del instalador de Windows.
-- [`scripts/build/build-windows.bat`](file:///e:/autoprod/scripts/build/build-windows.bat): Script batch de compilación completa.
-- [`harness/build/compile-exe.ts`](file:///e:/autoprod/harness/build/compile-exe.ts): Arnés oficial en TypeScript (`pnpm build:exe`).
+- [`.github/workflows/release-installers.yml`](file:///e:/autoprod/.github/workflows/release-installers.yml): Pipeline de CI/CD para compilar y publicar releases para Windows y macOS.
+- [`scripts/build/build-macos.sh`](file:///e:/autoprod/scripts/build/build-macos.sh): Script de compilación y creación de `.dmg` para macOS.
+- [`scripts/build/build-windows.bat`](file:///e:/autoprod/scripts/build/build-windows.bat): Script batch de compilación completa para Windows.
+- [`scripts/installer/windows/setup.iss`](file:///e:/autoprod/scripts/installer/windows/setup.iss): Definición formal de Inno Setup.
+- [`harness/build/compile-exe.ts`](file:///e:/autoprod/harness/build/compile-exe.ts): Arnés oficial para Windows (`pnpm build:exe`).
+- [`harness/build/compile-mac.ts`](file:///e:/autoprod/harness/build/compile-mac.ts): Arnés oficial para macOS (`pnpm build:mac`).
 - [`app/api/setup/download-installer/route.ts`](file:///e:/autoprod/app/api/setup/download-installer/route.ts): Endpoint de entrega directa y streaming CDN.
 - [`controlador/main.py`](file:///e:/autoprod/controlador/main.py): Manejo de ejecución en modo binario congelado (`getattr(sys, 'frozen', False)`).
